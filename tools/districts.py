@@ -1,4 +1,5 @@
-"""Real district areas of Yopougon from OpenStreetMap places (Babi Life data, ODbL).
+"""Run from the repo root: pip install shapely scipy; python tools/districts.py
+Real district areas of Yopougon from OpenStreetMap places (Babi Life data, ODbL).
 Each OSM quarter goes to the nearest game district; every place point gets its district; a Voronoi diagram of
 all the points, merged per district and clipped to the commune's outline (concave hull of all places), gives
 the areas. Output: GeoJSON of the game districts (index = order in turf.ts)."""
@@ -8,8 +9,10 @@ from shapely.geometry import MultiPoint, Point, mapping, box
 from shapely.ops import unary_union, voronoi_diagram
 from shapely import concave_hull
 
-SRC = '/home/user/myahse/babi-life/backend/internal/world/osm/yopougon.json'
-OUT = '/home/user/babiland-boss/web/public/assets/maps/yopougon.json'
+import os
+# the OSM places of the commune, from Babi Life (github.com/Myahse/babi-life, backend/internal/world/osm/)
+SRC = os.environ.get('SRC', '../babi-life/backend/internal/world/osm/yopougon.json')
+OUT = os.environ.get('OUT', 'web/public/assets/maps/yopougon.json')
 GAME = ['Selmer', 'Wassakara', 'Siporex', 'Score', 'Banco\xa02', 'Sogefiha Solic 1 & 2', 'Quartier Maroc', 'Port-Bouët II', 'Micao', 'Gesco', 'Zone Industrielle', 'Koweit']
 
 d = json.load(open(SRC))
