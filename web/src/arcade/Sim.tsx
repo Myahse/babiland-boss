@@ -49,7 +49,7 @@ export const view = { zoom: 1 }
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
-type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[] }
+type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
@@ -180,9 +180,12 @@ export function Sim({ name }: { name: string }) {
       }
       // at the counter, the plates go down one by one, each in the column of its dish
       if (carried.length > 0 && player.pos.distanceTo(COUNTER) < 1.35) {
-        const k = carried[carried.length - 1]
-        if (counter[k] < COUNTER_MAX) {
-          carried.pop()
+        // the highest plate in the stack whose dish still has room on the counter (a full column must not block the rest)
+        let idx = -1
+        for (let j = carried.length - 1; j >= 0; j--) if (counter[carried[j]] < COUNTER_MAX) { idx = j; break }
+        const k = idx >= 0 ? carried[idx] : -1
+        if (idx >= 0) {
+          carried.splice(idx, 1)
           counter[k]++
           changed = true
           fly('plate', hands(player, () => carried.length)(), COUNTER_TOP(k))
@@ -200,9 +203,11 @@ export function Sim({ name }: { name: string }) {
             break
           }
         if (w.state === 'toCounter' && wCarried.length > 0 && w.pos.distanceTo(COUNTER_BACK) < 0.5) {
-          const k = wCarried[wCarried.length - 1]
-          if (counter[k] < COUNTER_MAX) {
-            wCarried.pop()
+          let idx = -1
+          for (let j = wCarried.length - 1; j >= 0; j--) if (counter[wCarried[j]] < COUNTER_MAX) { idx = j; break }
+          const k = idx >= 0 ? wCarried[idx] : -1
+          if (idx >= 0) {
+            wCarried.splice(idx, 1)
             counter[k]++
             changed = true
             fly('plate', hands(w, () => wCarried.length)(), COUNTER_TOP(k))
@@ -287,7 +292,7 @@ export function Sim({ name }: { name: string }) {
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
       const dish = menu.length === 1 || r < 0.55 ? 0 : menu[1 + Math.floor(Math.random() * (menu.length - 1))]
-      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0, path: [] })
+      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0 })
       nextId.current++
       bump()
     }
@@ -302,6 +307,18 @@ export function Sim({ name }: { name: string }) {
       }
       // someone has to be at the till: Tantie Aya herself, or the cashier once hired
       const tillManned = unlocks.caisse || player.pos.distanceTo(COUNTER) < 1.8
+      // the first in line loses patience if their dish never comes: they leave, the next one steps up
+      if (k === 0 && !r.moving && c.state === 'line') {
+        c.wait += dt
+        if (c.wait > 25 && c.got === 0) {
+          c.state = 'out'
+          c.moving = true
+          c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+          popText(`${DISHES[placeDishes(place)[c.dish]].icon} Trop long… le client est parti`)
+          bump()
+          return
+        }
+      }
       if (k === 0 && !r.moving && tillManned && counter[c.dish] > 0 && c.got < c.want && acc.current < dt) {
         counter[c.dish]--
         c.got++
