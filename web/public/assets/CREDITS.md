@@ -23,3 +23,8 @@ Fichiers : `people/<perso>.glb` (perso) et `people/<perso>-<action>.glb` (animat
 
 Persos de [Quaternius](https://quaternius.com) « Ultimate Modular Characters » et « Ultimate Modular Women »,
 licence **CC0**, avec leurs 24 animations, recolorés dans le jeu (peau, pagnes, cheveux).
+
+## Persos cartoon du jeu arcade (`toon/`)
+
+Faits avec Meshy (style « film d'animation »), même squelette que les autres persos Meshy :
+les animations enregistrées (attendre, parler…) servent pour tous, sans en racheter.

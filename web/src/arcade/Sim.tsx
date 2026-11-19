@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { Avatar } from './Avatar'
+import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
 import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SOLIDS, START, STATIONS, TABLE, V, type Unlock } from './layout'
@@ -252,8 +253,8 @@ function Mover({ who, obj, carried = 0, children }: { who: PersonId; obj: { pos:
   })
   return (
     <group ref={ref}>
-      <Avatar who={who} moving={moving} carrying={carried > 0} />
-      {carried > 0 && <PlateStack count={carried} wobble position={[0, 0.88, 0.42]} />}
+      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
+      {carried > 0 && <PlateStack count={carried} wobble position={[0, 1.0, 0.45]} />}
       {children}
     </group>
   )
