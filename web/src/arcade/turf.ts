@@ -80,6 +80,8 @@ type Turf = {
   rentT: number
   result: { won: boolean; name: string; boss: string } | null
   panel: boolean
+  /** a district just won: the 3D conquest animation plays before the result card */
+  conquest: { place: PlaceId; idx: number } | null
 }
 
 const KEY = 'babiland-turf-v2' // v2: the real districts of Yopougon
@@ -91,7 +93,7 @@ function load(): Partial<Turf> {
   }
 }
 
-export const useTurf = create<Turf>(() => ({ owners: {}, duel: null, cooldown: 0, rentT: 0, result: null, panel: false, ...load() }))
+export const useTurf = create<Turf>(() => ({ owners: {}, duel: null, cooldown: 0, rentT: 0, result: null, panel: false, conquest: null, ...load() }))
 useTurf.subscribe((s) => {
   try {
     localStorage.setItem(KEY, JSON.stringify({ owners: s.owners }))
@@ -140,7 +142,7 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
     if (nd.mine >= DUEL_TARGET) {
       const owners = [...ownersOf(place, s)]
       owners[d.idx] = 'me'
-      Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss } })
+      Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss }, conquest: REAL_MAP.includes(place) ? { place, idx: d.idx } : null, panel: false })
     } else if (nd.rival >= DUEL_TARGET || nd.left <= 0) {
       Object.assign(patch, { duel: null, cooldown: COOLDOWN, result: { won: false, name: D0.name, boss: D0.boss } })
     } else patch.duel = nd

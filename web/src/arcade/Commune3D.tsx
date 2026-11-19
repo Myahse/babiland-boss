@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import type { PlaceId } from './places'
 import { canAttack, DISTRICTS } from './turf'
+import { sfx } from './sfx'
 
 // A little 3D model of the commune, in the game's style: the real outline of each district (from OpenStreetMap,
 // public/assets/maps/<place>.json) as a raised block coloured by its owner, small houses, the maquis of each
@@ -65,6 +66,31 @@ function labelTexture(text: string, w = 640) {
 const BOSS = ['#ff8787', '#ffa94d', '#fcc2d7', '#d0bfff', '#ffd43b', '#91a7ff', '#e599f7', '#99c1f2', '#ffc078', '#a5d8ff', '#f783ac', '#eebefa'] // no green: green means « yours »
 const MINE = '#69db7c'
 const flagOf = (i: number, mine: boolean) => (mine ? '#2f9e44' : new THREE.Color(BOSS[i % BOSS.length]).multiplyScalar(0.7).getStyle())
+
+/** Timeline of a conquest (seconds since it started): camera flies in, the boss flag comes down,
+ *  your green spreads from the maquis, your flag goes up with confetti, then the result card. */
+export type ConquestClock = { t: number; idx: number }
+const CQ = { flagDown: [1.0, 1.8], spread: [1.8, 3.4], flagUp: [1.9, 2.9], confetti: 1.9, done: 4.0 }
+const ramp = (t: number, [a, b]: number[]) => THREE.MathUtils.clamp((t - a) / (b - a), 0, 1)
+const ease = (k: number) => 1 - Math.pow(1 - k, 3)
+
+/** A material whose colour turns from `from` to `to` inside a circle of radius uR around uC (the paint wave). */
+function spreadMaterial() {
+  const u = { uR: { value: 1e4 }, uC: { value: new THREE.Vector2() }, uFrom: { value: new THREE.Color() }, uTo: { value: new THREE.Color() } }
+  const m = new THREE.MeshStandardMaterial({ roughness: 0.85 })
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u)
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vW;').replace('#include <project_vertex>', '#include <project_vertex>\nvW = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vW; uniform float uR; uniform vec2 uC; uniform vec3 uFrom; uniform vec3 uTo;')
+      .replace(
+        'vec4 diffuseColor = vec4( diffuse, opacity );',
+        'float dd = distance(vW.xz, uC); float k = smoothstep(uR - 2.5, uR, dd); vec3 col = mix(uTo, uFrom, k); col += (1.0 - smoothstep(0.0, 3.0, abs(dd - uR))) * 0.45 * step(uR, 9000.0); vec4 diffuseColor = vec4(col, opacity);',
+      )
+  }
+  m.customProgramCacheKey = () => 'spread'
+  return { m, u }
+}
 
 const WALLS = ['#ffd8a8', '#a5d8ff', '#ffc9c9', '#d3f9d8', '#fff3bf', '#e5dbff', '#ffe8cc', '#c5f6fa']
 const ROOF = '#c3c9cf' // tin roofs
@@ -150,10 +176,24 @@ function Houses({ list }: { list: DistrictGeo['houses'] }) {
 }
 
 /** The boss's maquis (or yours) with its sign and flag. */
-function Maquis({ name, mine, home, color }: { name: string; mine: boolean; home: boolean; color: string }) {
+function Maquis({ name, mine, home, color, oldColor, cq }: { name: string; mine: boolean; home: boolean; color: string; oldColor?: string; cq?: ConquestClock }) {
   const flag = useRef<THREE.Mesh>(null)
+  const fm = useRef<THREE.MeshStandardMaterial>(null)
+  // during a conquest the maquis keeps the boss's colours until your flag starts going up
+  const [swapped, setSwapped] = useState(!cq || !oldColor)
+  const look = swapped ? color : oldColor!
   useFrame(({ clock }) => {
-    if (flag.current) flag.current.rotation.y = Math.sin(clock.elapsedTime * 3) * 0.25
+    if (!swapped && cq && cq.t >= CQ.flagUp[0]) setSwapped(true)
+    const f = flag.current
+    if (!f) return
+    f.rotation.y = Math.sin(clock.elapsedTime * 3) * 0.25
+    if (!cq || !oldColor) return
+    // the boss's flag comes down, then yours goes up
+    const down = ease(ramp(cq.t, CQ.flagDown))
+    const upk = ease(ramp(cq.t, CQ.flagUp))
+    const raised = cq.t < CQ.flagUp[0]
+    f.position.y = 1.2 + 2 + 6.2 * (raised ? 1 - down : upk)
+    fm.current?.color.set(raised ? oldColor : color)
   })
   return (
     <group>
@@ -162,18 +202,18 @@ function Maquis({ name, mine, home, color }: { name: string; mine: boolean; home
       </RoundedBox>
       <mesh position={[0, 1.2 + 3.6, 0]} castShadow>
         <boxGeometry args={[6.6, 0.4, 5.1]} />
-        <meshStandardMaterial color={color} roughness={0.6} />
+        <meshStandardMaterial color={look} roughness={0.6} />
       </mesh>
       {/* striped awning */}
       {[0, 1, 2, 3, 4, 5].map((k) => (
         <mesh key={k} position={[-2.5 + k, 1.2 + 2.5, 2.6]} rotation={[0.5, 0, 0]}>
           <boxGeometry args={[1, 0.08, 1.2]} />
-          <meshStandardMaterial color={k % 2 ? '#ffffff' : color} />
+          <meshStandardMaterial color={k % 2 ? '#ffffff' : look} />
         </mesh>
       ))}
       <mesh position={[0, 1.2 + 4.6, 2.2]}>
         <planeGeometry args={[6, 1.4]} />
-        <meshBasicMaterial map={signTexture(name.toUpperCase(), color, '#fff', 512, 120)} toneMapped={false} side={2} />
+        <meshBasicMaterial map={signTexture(name.toUpperCase(), look, '#fff', 512, 120)} toneMapped={false} side={2} />
       </mesh>
       {/* flag of the owner */}
       <mesh position={[3.6, 1.2 + 4.5, -1.5]} castShadow>
@@ -182,7 +222,7 @@ function Maquis({ name, mine, home, color }: { name: string; mine: boolean; home
       </mesh>
       <mesh ref={flag} position={[3.6, 1.2 + 8.2, -1.5]}>
         <boxGeometry args={[3, 1.8, 0.08]} />
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial ref={fm} color={cq && oldColor ? oldColor : color} />
       </mesh>
     </group>
   )
@@ -261,7 +301,7 @@ function Landmark({ kind }: { kind: string }) {
   return null
 }
 
-function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: DistrictGeo; place: PlaceId; owner: 'me' | 'boss'; owners: ('me' | 'boss')[]; selected: boolean; onPick: () => void }) {
+function DistrictBlock({ d, place, owner, owners, selected, onPick, cq }: { d: DistrictGeo; place: PlaceId; owner: 'me' | 'boss'; owners: ('me' | 'boss')[]; selected: boolean; onPick: () => void; cq?: ConquestClock }) {
   const info = DISTRICTS[place][d.i]
   const mine = owner === 'me'
   const g = useRef<THREE.Group>(null)
@@ -272,6 +312,17 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: Distr
     g.current.position.y += ((selected ? 3 : 0) - g.current.position.y) * Math.min(1, dt * 6)
   })
   const open = d.i === 0 ? !mine : canAttack(place, d.i, owners)
+  // the ground colour, with the paint wave of a conquest
+  const paint = useMemo(() => spreadMaterial(), [])
+  const reach = useMemo(() => d.poly.reduce((r, p) => Math.max(r, p.distanceTo(d.label)), 0) + 4, [d])
+  useEffect(() => {
+    paint.u.uTo.value.set(mine ? MINE : BOSS[d.i % BOSS.length])
+    paint.u.uFrom.value.set(BOSS[d.i % BOSS.length])
+    paint.u.uC.value.copy(d.label)
+  }, [mine, paint, d])
+  useFrame(() => {
+    paint.u.uR.value = cq ? reach * ease(ramp(cq.t, CQ.spread)) : 1e4
+  })
   const roadGeom = useMemo(() => new THREE.ShapeGeometry(d.road), [d.road])
   const marker = useRef<THREE.Sprite>(null)
   useFrame(({ clock }) => {
@@ -293,7 +344,7 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: Distr
           onPick()
         }}
       >
-        <meshStandardMaterial color={mine ? MINE : BOSS[d.i % BOSS.length]} roughness={0.85} />
+        <primitive object={paint.m} attach="material" />
       </mesh>
       {selected && (
         <mesh geometry={geom} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} scale={[1, 1, 1.15]}>
@@ -304,7 +355,7 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: Distr
       <Trees list={d.trees} />
       <group position={[d.label.x, 0, d.label.y]}>
         <group scale={1.7}>
-        <Maquis name={info.name} mine={mine} home={d.i === 0} color={flagOf(d.i, mine)} />
+        <Maquis name={info.name} mine={mine} home={d.i === 0} color={flagOf(d.i, mine)} oldColor={cq ? flagOf(d.i, false) : undefined} cq={cq} />
         {info.bonus && <Landmark kind={info.bonus.icon} />}
         </group>
         {(open || mine) && (
@@ -418,16 +469,74 @@ function Clouds({ c }: { c: THREE.Vector2 }) {
 }
 
 /** The camera flies down from the sky onto your district when the screen opens. */
-function FlyIn({ to }: { to: THREE.Vector3 }) {
+function FlyIn({ to, close = false }: { to: THREE.Vector3; close?: boolean }) {
   const t = useRef(0)
   useFrame(({ camera }, dt) => {
     if (t.current >= 1) return
-    t.current = Math.min(1, t.current + dt / 2.2)
+    t.current = Math.min(1, t.current + dt / (close ? 1.6 : 2.2))
     const k = 1 - Math.pow(1 - t.current, 3)
-    camera.position.set(to.x + 70 * k, 420 - 245 * k, to.z + 40 + 110 * k)
+    const [ox, oy, oz] = close ? [45, 105, 85] : [70, 175, 150]
+    camera.position.set(to.x + ox * k, 420 - (420 - oy) * k, to.z + 40 + (oz - 40) * k)
     camera.lookAt(to.x, 0, to.z)
   })
   return null
+}
+
+/** Advances the conquest clock, fires the confetti and the fanfare, and says when it is over. */
+function ConquestRun({ cq, at, onDone }: { cq: ConquestClock; at: THREE.Vector2; onDone: () => void }) {
+  const bits = useRef<THREE.InstancedMesh>(null)
+  const parts = useMemo(() => {
+    const r = rng(5)
+    return Array.from({ length: 120 }, () => {
+      const a = r() * Math.PI * 2
+      const sp = 6 + r() * 14
+      return { p: new THREE.Vector3(), v: new THREE.Vector3(Math.cos(a) * sp, 18 + r() * 22, Math.sin(a) * sp), c: ['#ff6b6b', '#fcc419', '#51cf66', '#339af0', '#cc5de8', '#ffffff'][Math.floor(r() * 6)], rot: r() * 6 }
+    })
+  }, [])
+  const fired = useRef(false)
+  const done = useRef(false)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  useEffect(() => {
+    const m = bits.current
+    if (!m) return
+    const col = new THREE.Color()
+    parts.forEach((q, k) => m.setColorAt(k, col.set(q.c)))
+    if (m.instanceColor) m.instanceColor.needsUpdate = true
+  }, [parts])
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.05)
+    cq.t += dt
+    if (!fired.current && cq.t >= CQ.confetti) {
+      fired.current = true
+      parts.forEach((q) => q.p.set(at.x, 16, at.y))
+      sfx.unlock()
+    }
+    const m = bits.current
+    if (m) {
+      parts.forEach((q, k) => {
+        if (fired.current) {
+          q.v.y -= 30 * dt
+          q.p.addScaledVector(q.v, dt)
+          q.rot += dt * 8
+        }
+        dummy.position.copy(fired.current && q.p.y > 0 ? q.p : new THREE.Vector3(0, -50, 0))
+        dummy.rotation.set(q.rot, q.rot * 0.7, 0)
+        dummy.updateMatrix()
+        m.setMatrixAt(k, dummy.matrix)
+      })
+      m.instanceMatrix.needsUpdate = true
+    }
+    if (!done.current && cq.t >= CQ.done) {
+      done.current = true
+      onDone()
+    }
+  })
+  return (
+    <instancedMesh ref={bits} args={[undefined, undefined, parts.length]} frustumCulled={false}>
+      <boxGeometry args={[0.9, 0.2, 1.4]} />
+      <meshBasicMaterial />
+    </instancedMesh>
+  )
 }
 
 function Forest({ center }: { center: THREE.Vector2 }) {
@@ -453,7 +562,8 @@ function Forest({ center }: { center: THREE.Vector2 }) {
   )
 }
 
-export function Commune3D({ place, owners, selected, onPick }: { place: PlaceId; owners: ('me' | 'boss')[]; selected: number; onPick: (i: number) => void }) {
+export function Commune3D({ place, owners, selected, onPick, conquer = -1, onConquestDone }: { place: PlaceId; owners: ('me' | 'boss')[]; selected: number; onPick: (i: number) => void; conquer?: number; onConquestDone?: () => void }) {
+  const cq = useMemo<ConquestClock | null>(() => (conquer >= 0 ? { t: 0, idx: conquer } : null), [conquer])
   const geo = useGeo(place)
   const ds = useMemo(() => (geo ? buildDistricts(geo) : []), [geo])
   const box = useMemo(() => {
@@ -464,7 +574,7 @@ export function Commune3D({ place, owners, selected, onPick }: { place: PlaceId;
   if (!geo) return <div className="grid h-full w-full place-items-center text-sm font-bold">Chargement de la commune…</div>
   const c = box.getCenter(new THREE.Vector2())
   const size = box.getSize(new THREE.Vector2())
-  const home = ds[0]?.label ?? c
+  const home = (cq ? ds[cq.idx]?.label : ds[0]?.label) ?? c
   return (
     <Canvas shadows dpr={[1, 2]} camera={{ fov: 40, position: [home.x + 70, 175, home.y + 150], near: 1, far: 2000 }}>
       <color attach="background" args={['#bfe6ff']} />
@@ -482,11 +592,12 @@ export function Commune3D({ place, owners, selected, onPick }: { place: PlaceId;
       </mesh>
       <Forest center={new THREE.Vector2(box.max.x + 28, c.y - size.y * 0.15)} />
       {ds.map((d) => (
-        <DistrictBlock key={d.i} d={d} place={place} owner={owners[d.i]} owners={owners} selected={selected === d.i} onPick={() => onPick(d.i)} />
+        <DistrictBlock key={d.i} d={d} place={place} owner={owners[d.i]} owners={owners} selected={selected === d.i} onPick={() => onPick(d.i)} cq={cq && cq.idx === d.i ? cq : undefined} />
       ))}
       <Traffic ds={ds} />
       <Clouds c={c} />
-      <FlyIn to={new THREE.Vector3(home.x, 0, home.y)} />
+      <FlyIn to={new THREE.Vector3(home.x, 0, home.y)} close={!!cq} />
+      {cq && <ConquestRun cq={cq} at={home} onDone={() => onConquestDone?.()} />}
       <MapControls target={[home.x, 0, home.y]} maxPolarAngle={1.2} minDistance={40} maxDistance={420} enableDamping />
     </Canvas>
   )

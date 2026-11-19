@@ -195,6 +195,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
 function DuelHud() {
   const duel = useTurf((s) => s.duel)
   const result = useTurf((s) => s.result)
+  const conquering = useTurf((s) => s.conquest)
   if (duel) {
     const d = DISTRICTS[duel.place][duel.idx]
     const bar = (v: number, color: string, who: string) => (
@@ -221,7 +222,8 @@ function DuelHud() {
       </div>
     )
   }
-  if (!result) return null
+  // after a win, the result card waits for the end of the conquest animation
+  if (!result || conquering) return null
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onPointerDown={stop} onClick={() => useTurf.setState({ result: null })}>
       <div className="card pop w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
@@ -258,11 +260,31 @@ export function TurfButton() {
 }
 
 /** The panel and the duel display, drawn over the whole screen. */
+/** The conquest: the 3D commune, the camera on the district just won, flag, paint wave, confetti. */
+function ConquestScreen({ place, idx }: { place: PlaceId; idx: number }) {
+  useTurf((s) => s.owners)
+  const owners = ownersOf(place)
+  const d = DISTRICTS[place][idx]
+  return (
+    <div className="pointer-events-auto absolute inset-0 z-40 bg-[#bfe6ff]" onPointerDown={stop}>
+      <Commune3D place={place} owners={owners} selected={idx} onPick={() => {}} conquer={idx} onConquestDone={() => useTurf.setState({ conquest: null })} />
+      <div className="pointer-events-none absolute inset-x-0 top-10 flex justify-center" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        <div className="pop rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-4 py-2 text-xl font-extrabold shadow-lg">⚔️ {d.name} tombe…</div>
+      </div>
+      <button className="absolute right-3 bottom-4 rounded-xl bg-white/90 px-3 py-1.5 text-xs font-extrabold shadow" onClick={() => useTurf.setState({ conquest: null })}>
+        Passer ⏭
+      </button>
+    </div>
+  )
+}
+
 export function TurfLayer() {
   const open = useTurf((s) => s.panel)
+  const conquest = useTurf((s) => s.conquest)
   return (
     <>
-      {open && <TurfPanel onClose={() => useTurf.setState({ panel: false })} />}
+      {conquest && <ConquestScreen place={conquest.place} idx={conquest.idx} />}
+      {open && !conquest && <TurfPanel onClose={() => useTurf.setState({ panel: false })} />}
       <DuelHud />
     </>
   )
