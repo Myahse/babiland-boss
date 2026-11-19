@@ -27,6 +27,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
   const sideCash = useArcade((s) => s.sideCash)
   const place = useArcade((s) => s.current)
   const level = useArcade((s) => levelOf(totalServed(s)))
+  const stage = useArcade((s) => s.stage)
   const buyer = useRef(0)
 
   useFrame((_, raw) => {
@@ -66,7 +67,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
     })
     // the pads: open a stand, then improve it
     SIDE_PAD.forEach((pad, i) => {
-      if (lv[i] >= SIDE_MAX || lvl < SIDE[i].level || money <= 0 || player.pos.distanceTo(pad) > 0.6) return
+      if (lv[i] >= SIDE_MAX || st.stage < 1 || lvl < SIDE[i].level || money <= 0 || player.pos.distanceTo(pad) > 0.6) return
       const price = sidePrice(i, lv[i])
       const give = Math.min(money, Math.ceil((price / 1.4) * dt), price - paid[i])
       money -= give
@@ -93,7 +94,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
           ) : (
             <Planter position={SIDE_POS[i]} />
           )}
-          {side[i] < SIDE_MAX && (
+          {side[i] < SIDE_MAX && stage >= 1 && (
             <Pad
               label={level < b.level ? `🔒 ${b.short} · niv ${b.level}` : side[i] ? `${b.short} · niv ${side[i] + 1}` : b.name}
               price={sidePrice(i, side[i])}

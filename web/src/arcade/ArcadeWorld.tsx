@@ -12,7 +12,8 @@ const SHOPS = [
   { x: 7.8, w: 3, h: 3.4, c: '#b197fc', sign: 'COIFFURE', b: '#c2255c' },
 ]
 
-export function ArcadeWorld() {
+/** `stage` 0 (a little corner on the pavement): bare packed earth instead of the maquis' wooden floor. */
+export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
   const wood = useMemo(() => woodTexture(), [])
   return (
     <>
@@ -38,7 +39,7 @@ export function ArcadeWorld() {
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow>
         <planeGeometry args={[11.4, 7.8]} />
-        <meshStandardMaterial map={wood} roughness={0.7} />
+        {stage >= 1 ? <meshStandardMaterial map={wood} roughness={0.7} /> : <meshStandardMaterial color="#d6b98c" roughness={0.95} />}
       </mesh>
       {/* low side wall with a red trim (the open side faces the camera) */}
       <mesh position={[-6.25, 0.8, 1.3]} castShadow receiveShadow>

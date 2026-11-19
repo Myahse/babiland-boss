@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { PlaceId } from './places'
 import { missionEvent } from './missions'
+import { addFame } from './store'
+import { FAME } from './growth'
 import { REAL_DISTRICTS, type RealDistrict } from './realDistricts'
 
 // The districts (quartiers) of each place and who owns them (docs/VISION.md, « clash » idea).
@@ -242,6 +244,7 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
       const owners = [...ownersOf(place, s)]
       owners[d.idx] = 'me'
       missionEvent('district')
+      addFame(FAME.district)
       Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss }, conquest: REAL_MAP.includes(place) ? { place, idx: d.idx } : null, panel: false, shields: { ...shields, [keyOf(place, d.idx)]: SHIELD } })
     } else if (nd.rival >= DUEL_TARGET || nd.left <= 0) {
       Object.assign(patch, { duel: null, cooldown: COOLDOWN, result: { won: false, name: D0.name, boss: D0.boss } })

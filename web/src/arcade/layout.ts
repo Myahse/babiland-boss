@@ -75,3 +75,8 @@ export const BULK_EVERY: [number, number] = [80, 140] // seconds between two ord
 export const BULK_MIN_SERVED = 10
 export const BULK_TIME = 100 // seconds to fill it
 export const BULK_PAY = 1.6 // x the price of a plate
+
+/** the pad to grow the place (little corner -> maquis -> restaurant -> grand restaurant) */
+export const GROW_PAD = V(-4.9, 1.75)
+/** what you can unlock while the place is still a little corner on the pavement */
+export const CORNER_PADS: Unlock[] = ['pan2', 'plateau']

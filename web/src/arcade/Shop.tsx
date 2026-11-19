@@ -7,6 +7,7 @@ import { Flat, Plate } from './Props'
 import { ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import type { Place } from './places'
+import { SLOT0, SLOT_STEP } from './layout'
 
 // The maquis building, its terraces, and the street corner around it — like a busy restaurant
 // in the shop games: two floors, a big sign on the roof, people eating on the terraces, taxis going by.
@@ -94,8 +95,35 @@ const UP_PEOPLE: { who: PersonId; x: number; z: number; r: number }[] = [
   { who: 'koffi', x: 3.9, z: -0.62, r: -Math.PI / 2 },
 ]
 
-export function Building({ name, place }: { name: string; place: Place }) {
-  const sign = useMemo(() => signTexture(`${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#c92a2a', '#ffe066', 1024, 192), [name, place])
+/** Rolling metal shutters of a shop that isn't yours yet. */
+function shutterTexture() {
+  const c = document.createElement('canvas')
+  c.width = 256
+  c.height = 256
+  const g = c.getContext('2d')!
+  for (let y = 0; y < 256; y += 16) {
+    g.fillStyle = y % 32 ? '#adb5bd' : '#ced4da'
+    g.fillRect(0, y, 256, 16)
+    g.fillStyle = '#868e96'
+    g.fillRect(0, y + 14, 256, 2)
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+/**
+ * The building, at each stage of the place (growth.ts): 0 a closed shop « À LOUER » behind your little table,
+ * 1 the maquis (open kitchen, awning, sign), 2 the restaurant (the upstairs terrace opens, the sign lights up),
+ * 3 the grand restaurant (golden sign, red carpet, lamps).
+ */
+export function Building({ name, place, stage = 2 }: { name: string; place: Place; stage?: number }) {
+  const sign = useMemo(
+    () => (stage >= 3 ? signTexture(`★ ${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()} ★`, '#2b1a12', '#ffd43b', 1024, 192) : signTexture(`${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#c92a2a', '#ffe066', 1024, 192)),
+    [name, place, stage],
+  )
+  const shutters = useMemo(() => shutterTexture(), [])
+  const forRent = useMemo(() => signTexture('À LOUER', '#ffffff', '#e03131', 384, 128), [])
   const lights = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     // the bulbs of the sign twinkle a little
@@ -117,13 +145,19 @@ export function Building({ name, place }: { name: string; place: Place }) {
       {[-4, -2.4, 1.6, 3.4].map((x) => (
         <Window key={x} x={x} y={1.55} />
       ))}
-      {/* wide open front where the kitchen is */}
+      {/* wide open front where the kitchen is (closed shutters while it isn't yours) */}
       <mesh position={[-0.4, 1.25, D / 2 + 0.01]}>
         <planeGeometry args={[2.2, 2.3]} />
-        <meshStandardMaterial color="#5c2d0c" roughness={0.9} />
+        {stage === 0 ? <meshStandardMaterial map={shutters} roughness={0.6} metalness={0.3} /> : <meshStandardMaterial color="#5c2d0c" roughness={0.9} />}
       </mesh>
+      {stage === 0 && (
+        <mesh position={[-0.4, 1.7, D / 2 + 0.03]} rotation={[0, 0, -0.06]}>
+          <planeGeometry args={[1.3, 0.42]} />
+          <meshStandardMaterial map={forRent} roughness={0.7} />
+        </mesh>
+      )}
       {/* striped awning */}
-      {Array.from({ length: 14 }, (_, i) => (
+      {stage >= 1 && Array.from({ length: 14 }, (_, i) => (
         <mesh key={i} castShadow position={[-W / 2 + 0.38 + i * 0.76, 2.55, D / 2 + 0.45]} rotation={[0.45, 0, 0]}>
           <boxGeometry args={[0.76, 0.04, 1.0]} />
           <Flat color={i % 2 ? place.awning[1] : place.awning[0]} />
@@ -140,30 +174,38 @@ export function Building({ name, place }: { name: string; place: Place }) {
       {[-3.5, -1, 1.5, 4].map((x) => (
         <Window key={x} x={x} y={H1 + 1.25} w={1.0} h={1.0} z={-D / 2 + 0.91} />
       ))}
-      {Array.from({ length: 27 }, (_, i) => (
+      {stage < 2 && (
+        <RoundedBox args={[W - 0.1, 2.1, D - 0.2]} radius={0.05} position={[0, H1 + 1.15, 0.1]} castShadow>
+          <Flat color={stage === 0 ? '#e9ecef' : place.wall} />
+        </RoundedBox>
+      )}
+      {stage < 2 && [-3.5, -1, 1.5, 4].map((x) => <Window key={`c${x}`} x={x} y={H1 + 1.15} w={0.9} h={0.9} z={D / 2 + 0.02} />)}
+      {stage >= 2 && Array.from({ length: 27 }, (_, i) => (
         <mesh key={i} position={[-W / 2 + 0.2 + i * 0.395, H1 + 0.45, D / 2 + 0.55]}>
           <boxGeometry args={[0.05, 0.7, 0.05]} />
           <Flat color="#495057" />
         </mesh>
       ))}
-      <mesh position={[0, H1 + 0.82, D / 2 + 0.55]}>
-        <boxGeometry args={[W + 0.1, 0.07, 0.08]} />
-        <Flat color="#495057" />
-      </mesh>
-      {[-1, 1].map((s) => (
+      {stage >= 2 && (
+        <mesh position={[0, H1 + 0.82, D / 2 + 0.55]}>
+          <boxGeometry args={[W + 0.1, 0.07, 0.08]} />
+          <Flat color="#495057" />
+        </mesh>
+      )}
+      {stage >= 2 && [-1, 1].map((s) => (
         <mesh key={s} position={[s * (W / 2 + 0.05), H1 + 0.45, 0.3]}>
           <boxGeometry args={[0.08, 0.75, D + 0.6]} />
           <Flat color="#495057" />
         </mesh>
       ))}
       {/* string lights along the railing */}
-      {Array.from({ length: 22 }, (_, i) => (
+      {stage >= 2 && Array.from({ length: 22 }, (_, i) => (
         <mesh key={i} position={[-W / 2 + 0.3 + i * 0.48, H1 + 1.05 + Math.sin((i % 4) * 0.8) * 0.06, D / 2 + 0.55]}>
           <sphereGeometry args={[0.045, 6, 5]} />
           <meshStandardMaterial color="#fff3bf" emissive="#ffd43b" emissiveIntensity={1.5} />
         </mesh>
       ))}
-      <group position={[0, H1 + 0.12, 0.55]}>
+      <group position={[0, H1 + 0.12, 0.55]} visible={stage >= 2}>
         {[-3.6, -1.1, 1.0, 3.3].map((x, i) => (
           <TerraceTable key={x} position={[x, 0, 0.2]} parasol={['#e03131', '#1c7ed6', '#2f9e44', '#f59f00'][i]} plates={1 + (i % 2)} />
         ))}
@@ -181,16 +223,16 @@ export function Building({ name, place }: { name: string; place: Place }) {
           <Flat color="#dee2e6" />
         </RoundedBox>
       ))}
-      <group position={[0.2, H1 + 3.0, -D / 2 + 0.95]}>
+      <group position={[0.2, H1 + 3.0, -D / 2 + 0.95]} visible={stage >= 1} scale={stage === 1 ? 0.8 : stage >= 3 ? 1.12 : 1}>
         <mesh castShadow>
           <boxGeometry args={[5.6, 1.05, 0.12]} />
-          <Flat color="#ffd43b" />
+          {stage >= 3 ? <meshStandardMaterial color="#fcc419" metalness={0.7} roughness={0.25} /> : <Flat color="#ffd43b" />}
         </mesh>
         <mesh position={[0, 0, 0.07]}>
           <planeGeometry args={[5.3, 0.9]} />
           <meshStandardMaterial map={sign} emissive="#ffffff" emissiveMap={sign} emissiveIntensity={0.35} roughness={0.4} />
         </mesh>
-        <group ref={lights}>
+        <group ref={lights} visible={stage >= 2}>
           {Array.from({ length: 24 }, (_, i) => {
             const t = i / 24
             const top = i < 12
@@ -213,7 +255,9 @@ export function Building({ name, place }: { name: string; place: Place }) {
       {[
         [`${place.dishLabel.toUpperCase()} ${place.plate}`, -1.9],
         ['LIVRAISON 🛵', 1.1],
-      ].map(([t, x]) => (
+      ]
+        .filter((_, k) => stage >= 1 || k === 0)
+        .map(([t, x]) => (
         <mesh key={t as string} position={[x as number, 1.9, D / 2 + 0.02]}>
           <planeGeometry args={[0.9, 0.3]} />
           <meshStandardMaterial map={signTexture(t as string, '#2b1a12', '#ffe066', 384, 128)} roughness={0.6} />
@@ -305,5 +349,39 @@ export function Streets() {
       <Taxi path={front} speed={0.045} offset={0.5} />
       <Taxi path={side} speed={0.04} offset={0.3} />
     </>
+  )
+}
+
+/** The grand restaurant: a red carpet under the queue and golden lamps on each side. */
+export function GrandDecor() {
+  const dir = Math.atan2(SLOT_STEP.x, SLOT_STEP.z)
+  const len = 7.2
+  const mid = SLOT0.clone().addScaledVector(SLOT_STEP.clone().normalize(), len / 2 - 0.4)
+  return (
+    <group>
+      <mesh position={[mid.x, 0.03, mid.z]} rotation={[-Math.PI / 2, 0, dir]} receiveShadow>
+        <planeGeometry args={[1.0, len]} />
+        <meshStandardMaterial color="#c92a2a" roughness={0.9} />
+      </mesh>
+      {[-0.55, 0.55].map((side) =>
+        [0.6, 3.2, 5.8].map((t) => {
+          const p = SLOT0.clone().addScaledVector(SLOT_STEP.clone().normalize(), t)
+          const nx = Math.cos(dir) * side
+          const nz = -Math.sin(dir) * side
+          return (
+            <group key={`${side}${t}`} position={[p.x + nx * 1.2, 0, p.z + nz * 1.2]}>
+              <mesh position={[0, 0.55, 0]} castShadow>
+                <cylinderGeometry args={[0.05, 0.08, 1.1, 8]} />
+                <meshStandardMaterial color="#fcc419" metalness={0.8} roughness={0.25} />
+              </mesh>
+              <mesh position={[0, 1.15, 0]}>
+                <sphereGeometry args={[0.13, 12, 10]} />
+                <meshStandardMaterial color="#fff9db" emissive="#ffd43b" emissiveIntensity={1.4} />
+              </mesh>
+            </group>
+          )
+        }),
+      )}
+    </group>
   )
 }

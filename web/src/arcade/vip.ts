@@ -1,5 +1,7 @@
 import { create } from 'zustand'
-import { dishPrice, PLACES, type Dish, type PlaceId } from './places'
+import type { Dish, PlaceId } from './places'
+import { sellPrice } from './growth'
+import { placeState } from './store'
 import { bonusOf, cutFor } from './turf'
 
 // VIP customers (docs/VISION.md: « sessions de cuisine à la Cooking Mama »). Now and then a VIP comes to the
@@ -50,7 +52,7 @@ export const starsOf = (score: number) => (score >= 0.85 ? 3 : score >= 0.55 ? 2
 
 /** What the VIP pays for his plates (the boss of your district still takes his cut), tip included. */
 export const vipPay = (place: PlaceId, want: number, score: number) =>
-  Math.round(want * dishPrice(PLACES[place], 0) * vipFactor(score) * (1 + bonusOf(place, 'sales')) * (1 - cutFor(place)) * (1 + 0.05 * starsOf(score)))
+  Math.round(want * sellPrice(place, 0, placeState(place).stage) * vipFactor(score) * (1 + bonusOf(place, 'sales')) * (1 - cutFor(place)) * (1 + 0.05 * starsOf(score)))
 
 type Vip = {
   /** the VIP waiting at the counter (the customer id), his name and how many plates he wants */

@@ -6,7 +6,7 @@ import { useGame } from '../store'
 import { Title } from '../ui/Hud'
 import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
-import { Building, Streets } from './Shop'
+import { Building, GrandDecor, Streets } from './Shop'
 import { stick } from './input'
 import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
@@ -15,7 +15,7 @@ import { TurfButton, TurfLayer } from './TurfUI'
 import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
-import { BulkBanner, MissionsButton } from './HudExtras'
+import { BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -117,7 +117,7 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
             ✕
           </button>
         </div>
-        <p className="mt-1 text-sm font-semibold">Monte de niveau (clients servis dans tous tes maquis), achète un maquis dans une autre commune, puis dans d’autres villes. Chaque maquis garde son matériel et son équipe.</p>
+        <p className="mt-1 text-sm font-semibold">Monte de niveau (clients servis partout), ouvre un petit coin dans une autre commune, puis dans d’autres villes. Chaque coin commence petit et grandit quand les gens te connaissent : maquis, restaurant, grand restaurant. Chacun garde son matériel et son équipe.</p>
         {[false, true].map((city) => (
           <div key={String(city)}>
             <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{city ? 'Autres villes' : 'Communes d’Abidjan'}</div>
@@ -193,6 +193,7 @@ function Hud() {
       </div>
       <div className="absolute top-20 left-3 flex flex-col items-start gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow">{place.name} · Niveau {level}</div>
+        <FameChip />
         <button
           className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#1c7ed6] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
           onPointerDown={(e) => e.stopPropagation()}
@@ -204,6 +205,7 @@ function Hud() {
         <MissionsButton />
       </div>
       <BulkBanner />
+      <NewsLayer />
       <VipLayer />
       <OfflinePanel />
       <TurfLayer />
@@ -221,7 +223,7 @@ function Hud() {
       {hint && (
         <div className="absolute inset-x-0 bottom-0 flex justify-center p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <div className="card pop max-w-md !p-3 text-center text-base font-bold">
-            Glisse ton doigt pour bouger. Prends les plats de {place.dishLabel.toLowerCase()} sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer.
+            Glisse ton doigt pour bouger. Prends les plats de {place.dishLabel.toLowerCase()} sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer. Plus tu sers, plus on te connaît : ton petit coin deviendra un maquis !
           </div>
         </div>
       )}
@@ -233,13 +235,15 @@ export default function ArcadeApp() {
   const phase = useGame((s) => s.phase)
   const name = useGame((s) => s.name)
   const current = useArcade((s) => s.current)
+  const stage = useArcade((s) => s.stage)
   return (
     <div className="relative h-full w-full">
       <Canvas shadows dpr={[1, 2]} camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}>
         <Suspense fallback={null}>
           <DishCtx.Provider value={PLACES[current].dish}>
-            <ArcadeWorld />
-            <Building name={name || 'Boss'} place={PLACES[current]} />
+            <ArcadeWorld stage={stage} />
+            <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} />
+            {stage >= 3 && <GrandDecor />}
             <Streets />
             {phase !== 'title' && <Sim key={current} name={name} />}
           </DishCtx.Provider>

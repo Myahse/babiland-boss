@@ -1,5 +1,6 @@
 import { STATION_LEVELS } from './layout'
-import { dishPrice, PLACES, type PlaceId } from './places'
+import { PLACES, type PlaceId } from './places'
+import { sellPrice } from './growth'
 import { placeState, useArcade } from './store'
 import { bonusOf, cutFor, ownersOf, RENT, RENT_EVERY } from './turf'
 import { SIDE, sidePerMin } from './side'
@@ -26,10 +27,10 @@ export const standsPerMinute = (id: PlaceId) => placeState(id).side.reduce((n, l
 export function idlePerMinute(id: PlaceId) {
   const p = placeState(id)
   const u = p.unlocks
-  if (!u.serveur || !u.caisse) return standsPerMinute(id)
+  if (p.stage < 1 || !u.serveur || !u.caisse) return standsPerMinute(id)
   const place = PLACES[id]
   const menu = [0, ...(u.plat1 ? [1] : []), ...(u.plat2 ? [2] : [])]
-  const price = menu.reduce((n, k) => n + dishPrice(place, k), 0) / menu.length
+  const price = menu.reduce((n, k) => n + sellPrice(id, k, p.stage), 0) / menu.length
   // faster stations, a fast server and the terrace all help
   const cook = p.level.reduce((n, l) => n + 2.6 / STATION_LEVELS[l - 1].cook, 0) / p.level.length
   const k = cook * (u.rapide ? 1.3 : 1) * (u.table ? 1.2 : 1) * (1 + 0.1 * (menu.length - 1))

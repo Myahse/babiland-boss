@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DISHES, placeDishes, PLACES } from './places'
+import { FAME_AT, fameLevel, fameNews, fameText, STAGES } from './growth'
 import { sfx } from './sfx'
 import { popText, useArcade } from './store'
 import { CHEST, claim, freshMissions, MISSION_ICON, missionText, readyCount, useMissions } from './missions'
@@ -124,5 +125,73 @@ export function BulkBanner() {
       </div>
       <div className="mt-0.5 text-[10px] leading-tight font-bold opacity-70">Pose les plats dans la caisse jaune, près de la rue</div>
     </div>
+  )
+}
+
+/** Who knows you here, and how far to the next level (under the place's name). */
+export function FameChip() {
+  const place = useArcade((s) => s.current)
+  const fame = useArcade((s) => s.fame)
+  const stage = useArcade((s) => s.stage)
+  const lv = fameLevel(fame)
+  const next = FAME_AT[lv + 1]
+  const k = next ? (fame - FAME_AT[lv]) / (next - FAME_AT[lv]) : 1
+  return (
+    <div className="w-52 rounded-2xl bg-white/90 px-2.5 py-1 shadow">
+      <div className="text-[11px] leading-tight font-extrabold">
+        {STAGES[stage].icon} {STAGES[stage].name}
+      </div>
+      <div className="text-[11px] leading-tight font-bold">📣 {fameText(place, lv)}</div>
+      <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
+        <div className="h-full rounded-full bg-gradient-to-r from-[#ffa94d] to-[#f76707] transition-all" style={{ width: `${k * 100}%` }} />
+      </div>
+    </div>
+  )
+}
+
+/** The place just grew (a big card), or more people know you (a banner that goes away by itself). */
+export function NewsLayer() {
+  const news = useArcade((s) => s.news)
+  const place = useArcade((s) => s.current)
+  useEffect(() => {
+    if (news?.kind !== 'fame') return
+    const t = setTimeout(() => useArcade.setState({ news: null }), 3800)
+    return () => clearTimeout(t)
+  }, [news])
+  if (!news) return null
+  if (news.kind === 'fame') {
+    const st = STAGES.find((x) => x.fame === news.level)
+    return (
+      <div key={news.id} className="pop pointer-events-none absolute inset-x-0 top-[22%] z-30 flex justify-center px-4">
+        <div className="max-w-sm rounded-3xl border-4 border-white bg-gradient-to-b from-[#ffa94d] to-[#f76707] px-5 py-3 text-center text-white shadow-xl" style={{ textShadow: '1px 1px 0 #a33a00' }}>
+          <div className="text-3xl">📣</div>
+          <div className="text-lg leading-tight font-extrabold">{fameText(place, news.level)} !</div>
+          <div className="text-sm font-bold">{fameNews(place, news.level)}</div>
+          {st && <div className="mt-1 rounded-xl bg-white/25 px-2 py-0.5 text-xs font-extrabold">{st.icon} Tu peux devenir un {st.name.toLowerCase()} : va sur le carré doré</div>}
+        </div>
+      </div>
+    )
+  }
+  const st = STAGES[news.level]
+  return createPortal(
+    <div className="pointer-events-auto fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onPointerDown={stop}>
+      <div className="card pop w-full max-w-sm !p-5 text-center">
+        <div className="text-6xl">{st.icon}</div>
+        <div className="mt-1 text-xs font-extrabold tracking-wide text-[#e8590c] uppercase">{PLACES[place].name} · ça grandit !</div>
+        <div className="text-2xl leading-tight font-extrabold">{news.level === 1 ? 'Ton petit coin devient un maquis !' : `Ton maquis devient un ${st.name.toLowerCase()} !`}</div>
+        <ul className="mt-3 space-y-1 text-left text-sm font-bold">
+          {st.news.map((n) => (
+            <li key={n} className="flex gap-2 rounded-xl bg-white px-2.5 py-1.5">
+              <span>✨</span>
+              <span>{n}</span>
+            </li>
+          ))}
+        </ul>
+        <button className="btn btn-green mt-4 w-full !py-3 !text-xl" onClick={() => useArcade.setState({ news: null })}>
+          On y va !
+        </button>
+      </div>
+    </div>,
+    document.body,
   )
 }

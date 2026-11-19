@@ -9,15 +9,19 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
-import { maxQueue, popText, priceLeft, useArcade } from './store'
+import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, tickTurf } from './turf'
-import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
+import { DISHES, placeDishes, PLACES, type Dish, type Place } from './places'
 import { missionEvent } from './missions'
+import { FAME, fameLevel, fameSpawn, sellPrice, stagePrice, STAGES } from './growth'
 import { RECIPES, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_SERVED, VIP_PATIENCE } from './vip'
+
+/** Can this pad show up here: a little corner only has a 2nd stove and a bigger tray to unlock. */
+const padOpen = (u: Unlock, stage: number) => stage >= 1 || CORNER_PADS.includes(u)
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
 const padLabel = (u: Unlock, p: Place) => (u === 'plat1' ? DISHES[p.extras[0]].label : u === 'plat2' ? DISHES[p.extras[1]].label : PADS[u].label)
@@ -295,7 +299,7 @@ export function Sim({ name }: { name: string }) {
     const paid = { ...st.paid }
     for (const u of Object.keys(PADS) as Unlock[]) {
       const need = PADS[u].needs
-      if (unlocks[u] || (need && !unlocks[need]) || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
+      if (unlocks[u] || !padOpen(u, st.stage) || (need && !unlocks[need]) || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
       const give = Math.min(money, Math.ceil((PADS[u].price / 1.4) * dt), priceLeft(u))
       money -= give
       paid[u] = (paid[u] ?? 0) + give
@@ -306,6 +310,26 @@ export function Sim({ name }: { name: string }) {
         popText(`Débloqué : ${padLabel(u, place)} !`)
         burst(PADS[u].pos)
         sfx.unlock()
+      }
+    }
+    // growing the place: once enough people know you, pay on the golden pad
+    let stage = st.stage
+    let growPaid = st.growPaid
+    const nextStage = STAGES[stage + 1]
+    if (nextStage && fameLevel(st.fame) >= nextStage.fame && money > 0 && player.pos.distanceTo(GROW_PAD) < 0.6) {
+      const price = stagePrice(st.current, stage + 1)
+      const give = Math.min(money, Math.ceil((price / 1.6) * dt), price - growPaid)
+      money -= give
+      growPaid += give
+      changed = true
+      if (growPaid >= price) {
+        stage++
+        growPaid = 0
+        missionEvent('unlock')
+        burst(GROW_PAD, 80)
+        burst(COUNTER, 60)
+        sfx.unlock()
+        celebrate('grow', stage)
       }
     }
     // station upgrades « Plus vite »: same idea, one pad beside each station
@@ -344,7 +368,8 @@ export function Sim({ name }: { name: string }) {
     const line = custs.current.filter((c) => c.state === 'line')
     if (spawn.current <= 0 && line.length < maxQueue()) {
       // key zone « zone industrielle »: more customers
-      spawn.current = (1.6 + Math.random() * 1.6) / (1 + bonusOf(st.current, 'customers'))
+      // more customers when the place is bigger and more people know you
+      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame))
       // what they want: mostly the main dish, sometimes a particular dish that is already on the menu
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
@@ -355,8 +380,8 @@ export function Sim({ name }: { name: string }) {
     }
     // now and then a VIP (golden crown): he wants the main dish cooked by hand (vip.ts)
     vipT.current -= dt
-    if (vipT.current <= 0 && st.served >= VIP_MIN_SERVED && RECIPES[place.dish] && !custs.current.some((c) => c.vip) && line.length < maxQueue()) {
-      vipT.current = VIP_EVERY[0] + Math.random() * (VIP_EVERY[1] - VIP_EVERY[0])
+    if (vipT.current <= 0 && st.stage >= 1 && st.served >= VIP_MIN_SERVED && RECIPES[place.dish] && !custs.current.some((c) => c.vip) && line.length < maxQueue()) {
+      vipT.current = (VIP_EVERY[0] + Math.random() * (VIP_EVERY[1] - VIP_EVERY[0])) * (st.stage >= 3 ? 0.6 : 1)
       const vip = VIPS[Math.floor(Math.random() * VIPS.length)]
       custs.current.push({ id: nextId.current, who: 'koffi', pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish: 0, want: 2 + Math.floor(Math.random() * 2), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0, vip })
       nextId.current++
@@ -395,6 +420,7 @@ export function Sim({ name }: { name: string }) {
         missionEvent('serve')
         missionEvent('vip')
         if (vd.score >= 0.85) missionEvent('vip3')
+        addFame(FAME.vip + FAME.vipStar * (vd.score >= 0.85 ? 3 : vd.score >= 0.55 ? 2 : 1))
         c.got = c.want
         for (let k = 0; k < 8; k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.35)
         popText(`👑 ${c.vip} : +${pay} FCFA`)
@@ -451,7 +477,8 @@ export function Sim({ name }: { name: string }) {
         bump()
         if (c.got >= c.want) {
           // while you work for the boss of the district, he takes his cut
-          cash += Math.round(c.want * dishPrice(place, c.dish) * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+          cash += Math.round(c.want * sellPrice(st.current, c.dish, st.stage) * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+          addFame(FAME.customer)
           served++
           missionEvent('serve')
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
@@ -542,9 +569,9 @@ export function Sim({ name }: { name: string }) {
           if (got >= delivery.want) {
             delivery = { ...delivery, state: 'away' }
             motoT.current = 0
-            cash += Math.round(delivery.want * PLACES[st.current].plate * 1.4 * (1 - cutFor(st.current)))
+            cash += Math.round(delivery.want * sellPrice(st.current, 0, st.stage) * 1.4 * (1 - cutFor(st.current)))
             for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
-            popText(`🛵 Livraison : +${delivery.want * Math.round(PLACES[st.current].plate * 1.4)} FCFA`)
+            popText(`🛵 Livraison : +${delivery.want * Math.round(sellPrice(st.current, 0, st.stage) * 1.4)} FCFA`)
             sfx.unlock()
           }
         }
@@ -565,7 +592,7 @@ export function Sim({ name }: { name: string }) {
     // 8. bulk orders: a restaurant phones in a big order of one dish; put the plates in the crate in time
     let bulk = st.bulk
     bulkT.current -= dt
-    if (!bulk && bulkT.current <= 0 && st.served >= BULK_MIN_SERVED) {
+    if (!bulk && bulkT.current <= 0 && st.stage >= 1 && st.served >= BULK_MIN_SERVED) {
       bulkT.current = BULK_EVERY[0] + Math.random() * (BULK_EVERY[1] - BULK_EVERY[0])
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const dish = menu[Math.floor(Math.random() * menu.length)]
@@ -590,13 +617,14 @@ export function Sim({ name }: { name: string }) {
       }
       const left = bulk.left - dt
       if (got >= bulk.want) {
-        const pay = Math.round(bulk.want * dishPrice(place, bulk.dish) * BULK_PAY * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+        const pay = Math.round(bulk.want * sellPrice(st.current, bulk.dish, st.stage) * BULK_PAY * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
         cash += pay
         for (let k = 0; k < 10; k++) fly('cash', up(CRATE, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.45)
         popText(`📦 ${bulk.name} : +${pay} FCFA`)
         burst(CRATE)
         sfx.unlock()
         missionEvent('bulk', 1)
+        addFame(FAME.bulk)
         bulk = null
         changed = true
       } else if (left <= 0) {
@@ -616,7 +644,7 @@ export function Sim({ name }: { name: string }) {
       sfx.cash()
       changed = true
     }
-    if (changed || carried.length !== st.carried.length) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery })
+    if (changed || carried.length !== st.carried.length) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery, stage, growPaid })
   })
 
   const dishes = placeDishes(PLACES[s.current])
@@ -641,7 +669,8 @@ export function Sim({ name }: { name: string }) {
         TABLES.map((t, i) => (
           <SquareTable key={i} position={t} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
-      {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] && (!PADS[u].needs || s.unlocks[PADS[u].needs!]) ? <Pad key={u} label={padLabel(u, PLACES[s.current])} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
+      {STAGES[s.stage + 1] && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
+      {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] && padOpen(u, s.stage) && (!PADS[u].needs || s.unlocks[PADS[u].needs!]) ? <Pad key={u} label={padLabel(u, PLACES[s.current])} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
       <Mover who="aya" obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />
       {s.unlocks.serveur && <Mover who="yao" obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} />}
       {s.unlocks.caisse && <Mover who="fatou" obj={cashier} />}
@@ -679,6 +708,34 @@ function Mover({ who, obj, carried = [], sitting = false, full = false, children
         </Html>
       )}
       {children}
+    </group>
+  )
+}
+
+/** The golden pad to grow the place, with what it becomes; locked until enough people know you. */
+function GrowPad({ stage, fame, paid }: { stage: number; fame: number; paid: number }) {
+  const place = useArcade((s) => s.current)
+  const next = STAGES[stage + 1]
+  const ok = fameLevel(fame) >= next.fame
+  const price = stagePrice(place, stage + 1)
+  const ring = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => {
+    if (ring.current) ring.current.rotation.z = clock.elapsedTime * 0.8
+  })
+  return (
+    <group position={GROW_PAD}>
+      <Pad label={ok ? `${next.icon} Agrandir : ${next.name}` : `🔒 ${next.name}`} price={price} left={price - paid} />
+      {ok && (
+        <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+          <ringGeometry args={[0.8, 0.9, 6]} />
+          <meshBasicMaterial color="#ffd43b" />
+        </mesh>
+      )}
+      {ok && (
+        <Html position={[0, 1.1, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+          <div className="vip-glow rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffe066] px-2.5 py-0.5 text-xs font-extrabold whitespace-nowrap shadow-lg">⬆️ Agrandir !</div>
+        </Html>
+      )}
     </group>
   )
 }
