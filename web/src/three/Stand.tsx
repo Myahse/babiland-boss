@@ -1,7 +1,7 @@
 import { RoundedBox } from '@react-three/drei'
 import { useGame } from '../store'
 import { Attieke, FishPiece, fishColor, Piment, PopIn, Slice } from './Food'
-import { RealPerson } from './RealPerson'
+import { Character } from './Character'
 import { Mat } from './Mat'
 import { signTexture } from './textures'
 import { Model } from './assets'
@@ -182,7 +182,7 @@ export function Stand() {
       <PlateContents />
 
       <Parasol />
-      <RealPerson who="aya" position={[0, 0, -0.8]} chopping={phase === 'cut'} action={phase === 'order' ? 'talk' : phase === 'result' ? 'serve' : 'idle'} />
+      <Character who="aya" position={[0, 0, -0.8]} chopping={phase === 'cut'} action={phase === 'order' ? 'talk' : phase === 'result' ? 'serve' : 'idle'} />
     </group>
   )
 }

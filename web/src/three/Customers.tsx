@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, type Order } from '../store'
-import { RealPerson } from './RealPerson'
+import { Character } from './Character'
 
 // Customers queue in a line beside the stand, like in the shop games: the first one orders,
 // the others wait; when the first is served they leave and everyone steps up one place.
@@ -59,7 +59,7 @@ function Walker({ order, to, front, leaving = false, onArrive, children }: { ord
     walking || leaving ? 'walk' : !front ? 'idle' : phase === 'order' ? 'talk' : phase === 'result' ? (stars === 3 ? 'happy' : stars === 2 ? 'ok' : 'angry') : 'idle'
   return (
     <group ref={ref} rotation={[0, -Math.PI / 2, 0]}>
-      <RealPerson who={order.customer.person} action={action} />
+      <Character who={order.customer.person} action={action} />
       {!walking && children}
     </group>
   )

@@ -18,3 +18,8 @@ Les 5 personnages (Tantie Aya, Koffi, Awa, Yao, Fatou) ont été générés avec
 (texte → 3D texturé → squelette) avec le compte du propriétaire du jeu. Leurs animations (marcher, attendre,
 parler, content, bof, fâché, servir) viennent de la bibliothèque de capture de mouvement de Meshy.
 Fichiers : `people/<perso>.glb` (perso) et `people/<perso>-<action>.glb` (animation seule).
+
+## Style simple (option `?look=simple`)
+
+Persos de [Quaternius](https://quaternius.com) « Ultimate Modular Characters » et « Ultimate Modular Women »,
+licence **CC0**, avec leurs 24 animations, recolorés dans le jeu (peau, pagnes, cheveux).
