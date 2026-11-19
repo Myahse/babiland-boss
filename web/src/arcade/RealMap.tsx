@@ -46,11 +46,14 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
     ;(async () => {
       const opts = {
         container: box.current!,
-        bounds: [geo.bounds[0], geo.bounds[1], geo.bounds[2], geo.bounds[3]],
-        fitBoundsOptions: { padding: 24 },
+        // close enough to see the relief: centred on your maquis' district, the rest just around
+        center: geo.features[0].properties.label,
+        zoom: 13.1,
         attributionControl: { compact: true },
-        dragRotate: false,
-        pitchWithRotate: false,
+        // 3D: the camera is tilted and a little turned, you can rotate / tilt with two fingers
+        pitch: 55,
+        bearing: -18,
+        maxPitch: 70,
       }
       let m: AnyMap
       if (TOKEN) {
@@ -69,13 +72,33 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
       map.current = m
       m.on('load', () => {
         m.addSource('districts', { type: 'geojson', data: geo })
+        // real buildings in relief (OpenFreeMap: « openmaptiles », Mapbox streets: « composite »)
+        const bsrc = TOKEN ? 'composite' : 'openmaptiles'
+        const h = TOKEN ? ['coalesce', ['get', 'height'], 8] : ['coalesce', ['get', 'render_height'], 8]
+        try {
+          m.addLayer({ id: 'b3d', type: 'fill-extrusion', source: bsrc, 'source-layer': 'building', minzoom: 12.5, paint: { 'fill-extrusion-color': '#efe3cf', 'fill-extrusion-height': h, 'fill-extrusion-opacity': 0.85 } })
+        } catch {
+          /* style without buildings */
+        }
+        // the districts as raised slabs: yours higher, the one you tapped higher still
+        m.addLayer({ id: 'd-fill', type: 'fill', source: 'districts', paint: { 'fill-color': ['case', ['get', 'mine'], '#40c057', '#fa5252'], 'fill-opacity': 0.18 } })
         m.addLayer({
-          id: 'd-fill',
-          type: 'fill',
+          id: 'd-3d',
+          type: 'fill-extrusion',
           source: 'districts',
-          paint: { 'fill-color': ['case', ['get', 'mine'], '#40c057', '#fa5252'], 'fill-opacity': ['case', ['get', 'sel'], 0.65, 0.42] },
+          paint: {
+            'fill-extrusion-color': ['case', ['get', 'mine'], '#40c057', '#fa5252'],
+            'fill-extrusion-height': ['case', ['get', 'sel'], 260, ['get', 'mine'], 130, 35],
+            'fill-extrusion-opacity': 0.38,
+            'fill-extrusion-vertical-gradient': true,
+          },
         })
         m.addLayer({ id: 'd-line', type: 'line', source: 'districts', paint: { 'line-color': ['case', ['get', 'sel'], '#ffffff', '#2b1a12'], 'line-width': ['case', ['get', 'sel'], 5, 2] } })
+        const click = (e: { features?: { properties: { i: number } }[] }) => {
+          const f = e.features?.[0]
+          if (f) pick.current(Number(f.properties.i))
+        }
+        m.on('click', 'd-3d', click)
         m.on('click', 'd-fill', (e: { features?: { properties: { i: number } }[] }) => {
           const f = e.features?.[0]
           if (f) pick.current(Number(f.properties.i))
