@@ -11,6 +11,8 @@ import { CameraRig } from './three/CameraRig'
 import { CutGame } from './game/Cut'
 import { FryGame } from './game/Fry'
 import { Hud } from './ui/Hud'
+import { LOOK } from './three/Character'
+import { DrawnLook } from './three/DrawnLook'
 
 function Scene() {
   const phase = useGame((s) => s.phase)
@@ -22,6 +24,7 @@ function Scene() {
       {phase === 'cut' && <CutGame />}
       {phase === 'fry' && <FryGame />}
       <CameraRig />
+      {LOOK === 'drawn' && <DrawnLook />}
       {/* ambient occlusion puts soft contact shadows in every corner: the main thing that makes it look solid */}
       <EffectComposer multisampling={0}>
         <N8AO aoRadius={0.5} intensity={1.6} distanceFalloff={0.5} quality="medium" />
