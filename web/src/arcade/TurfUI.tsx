@@ -3,6 +3,7 @@ import type { PlaceId } from './places'
 import { PLACES } from './places'
 import { useArcade } from './store'
 import { RealMap } from './RealMap'
+import { Commune3D } from './Commune3D'
 import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
@@ -108,6 +109,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
   const ds = DISTRICTS[place]
   const free = owners[0] === 'me'
   const [sel, setSel] = useState(free ? -1 : 0)
+  const [view, setView] = useState<'3d' | 'map'>('3d')
   const d = sel >= 0 ? ds[sel] : null
   const mine = sel >= 0 && owners[sel] === 'me'
   const price = sel === 0 ? BETRAY_PRICE : sel > 0 ? ATTACK_PRICE(place, sel) : 0
@@ -133,12 +135,23 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
             {keys.length > 0 && ` · ⭐ ${ownedKeys}/${keys.length} zones clés`}
           </div>
         </div>
+        {REAL_MAP.includes(place) && (
+          <button className="ml-auto mr-2 rounded-xl bg-white px-3 py-2 text-sm font-extrabold shadow" onClick={() => setView(view === '3d' ? 'map' : '3d')}>
+            {view === '3d' ? '🗺️ Vraie carte' : '🏙️ Vue 3D'}
+          </button>
+        )}
         <button className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xl font-extrabold shadow" onClick={onClose} aria-label="Fermer">
           ✕
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        {REAL_MAP.includes(place) ? <RealMap place={place} owners={owners} selected={sel} onPick={setSel} /> : <BigMap place={place} owners={owners} selected={sel} onPick={setSel} />}
+        {!REAL_MAP.includes(place) ? (
+          <BigMap place={place} owners={owners} selected={sel} onPick={setSel} />
+        ) : view === '3d' ? (
+          <Commune3D place={place} owners={owners} selected={sel} onPick={setSel} />
+        ) : (
+          <RealMap place={place} owners={owners} selected={sel} onPick={setSel} />
+        )}
       </div>
       <div className="bg-[var(--color-cream)] p-3 shadow-[0_-4px_12px_rgba(0,0,0,.15)]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {!d ? (
