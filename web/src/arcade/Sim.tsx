@@ -26,7 +26,7 @@ const padLabel = (u: Unlock, p: Place) => (u === 'plat1' ? DISHES[p.extras[0]].l
 //  - walking over the money collects it; standing on a pad spends it to unlock things,
 //  - the server (once hired) carries plates from the stations to the counter on his own.
 
-const SPEED = 2.8 // a brisk walk (faster looks like sliding)
+const SPEED = 2.5 // a brisk walk (faster looks like sliding)
 const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
 const COUNTER_MAX = 8 // per dish
 const TICK = 0.13 // one plate moves every TICK seconds

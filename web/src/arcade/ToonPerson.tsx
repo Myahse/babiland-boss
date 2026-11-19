@@ -87,8 +87,36 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
     return m
   }, [scene])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
+  const walkPace = useRef(1.25)
   const acts = useMemo(() => {
     const walk = mixer.clipAction(inPlace(walkFile.animations[0]))
+    // how fast this walk really goes (m/s at scale 1): the clips walk on the spot, so measure the step instead —
+    // how far a foot travels under the body in one cycle (it moves back by that much each half cycle on the ground)
+    let pace = 1.25
+    const foot = bone(model, 'leftfoot')
+    const hipsB = bone(model, 'hips')
+    if (foot && hipsB) {
+      const probe = new THREE.AnimationMixer(model)
+      const clip = walk.getClip()
+      probe.clipAction(clip).play()
+      let lo = Infinity
+      let hi = -Infinity
+      const fp = new THREE.Vector3()
+      const hp = new THREE.Vector3()
+      for (let i = 0; i <= 24; i++) {
+        probe.setTime((clip.duration * i) / 24)
+        model.updateMatrixWorld(true)
+        foot.getWorldPosition(fp)
+        hipsB.getWorldPosition(hp)
+        lo = Math.min(lo, fp.z - hp.z)
+        hi = Math.max(hi, fp.z - hp.z)
+      }
+      probe.stopAllAction()
+      probe.uncacheRoot(model)
+      const measured = (2 * (hi - lo)) / clip.duration
+      if (measured > 0.3 && measured < 4) pace = measured
+    }
+    walkPace.current = pace
     const run = mixer.clipAction(inPlace(runFile.animations[0]))
     // start at a random moment, so a line of people doesn't move in sync like robots
     ;[walk, run].forEach((a) => (a.time = Math.random() * a.getClip().duration))
@@ -149,7 +177,7 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
       if (sitting || v < 0.15) play(acts.idle)
       else {
         play(acts.walk)
-        acts.walk.timeScale = THREE.MathUtils.clamp(v / (1.25 * size), 0.6, 2.0)
+        acts.walk.timeScale = THREE.MathUtils.clamp(v / (walkPace.current * size), 0.6, 1.9)
       }
     }
     mixer.update(dt)
