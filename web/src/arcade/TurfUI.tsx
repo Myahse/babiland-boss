@@ -4,7 +4,7 @@ import { PLACES } from './places'
 import { useArcade } from './store'
 import { RealMap } from './RealMap'
 import { Commune3D } from './Commune3D'
-import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
+import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf, DEFEND_TARGET, SHIELD, GUARD_MAX, GUARD_PRICE, GUARD_SLOW, hireGuards, keyOf } from './turf'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 
@@ -115,6 +115,8 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
   const price = sel === 0 ? BETRAY_PRICE : sel > 0 ? ATTACK_PRICE(place, sel) : 0
   const respectOk = served >= RESPECT_FOR_BETRAYAL
   const canGo = sel === 0 ? !mine && respectOk : sel > 0 && canAttack(place, sel, owners)
+  const shield = useTurf((s) => (sel >= 0 ? (s.shields[keyOf(place, sel)] ?? 0) : 0))
+  const guards = useTurf((s) => (sel >= 0 ? (s.guards[keyOf(place, sel)] ?? 0) : 0))
 
   const act = () => {
     if (money < price || !canGo) return
@@ -172,9 +174,23 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
                 </div>
               )}
               {mine && sel > 0 && <div className="text-xs font-semibold">Loyer : +{RENT} F toutes les {RENT_EVERY} s</div>}
+              {mine && sel > 0 && shield > 0 && <div className="text-xs font-bold text-[#1c7ed6]">🛡️ Protégé encore {Math.ceil(shield)} s</div>}
+              {mine && sel > 0 && <div className="text-xs font-semibold">💪 Gros bras : niveau {guards}/{GUARD_MAX} (attaquants ralentis de {guards * GUARD_SLOW * 100} %)</div>}
               {sel === 0 && !mine && <div className="text-xs font-semibold">Respect : {Math.min(served, RESPECT_FOR_BETRAYAL)}/{RESPECT_FOR_BETRAYAL} clients servis</div>}
               {sel > 0 && !mine && !canGo && <div className="text-xs font-semibold opacity-75">{free ? '🔒 Prends d’abord un quartier voisin' : '🔒 Libère d’abord ton quartier'}</div>}
             </div>
+            {mine && sel > 0 && guards < GUARD_MAX && (
+              <button
+                className="btn btn-green shrink-0 !px-3 !py-2 !text-sm"
+                disabled={money < GUARD_PRICE(guards)}
+                onClick={() => {
+                  const price = hireGuards(place, sel, money)
+                  if (price) useArcade.setState({ money: money - price })
+                }}
+              >
+                💪 Gros bras · {GUARD_PRICE(guards)} F
+              </button>
+            )}
             {!mine && (
               <button className="btn shrink-0 !px-3 !py-2 !text-sm" disabled={!!duel || cooldown > 0 || money < price || !canGo} onClick={act}>
                 {cooldown > 0 ? `Attends ${Math.ceil(cooldown)} s` : `${sel === 0 ? '🗡️ Trahir' : '⚔️ Attaquer'} · ${price} F`}
@@ -196,42 +212,65 @@ function DuelHud() {
   const duel = useTurf((s) => s.duel)
   const result = useTurf((s) => s.result)
   const conquering = useTurf((s) => s.conquest)
+  const incoming = useTurf((s) => s.incoming)
+  if (incoming) {
+    const d = DISTRICTS[incoming.place][incoming.idx]
+    const boss = DISTRICTS[incoming.place][incoming.attacker].boss
+    return (
+      <div className="pointer-events-none absolute inset-x-3 top-1/3 z-30 flex justify-center">
+        <div className="pop w-full max-w-sm animate-pulse rounded-3xl border-[3px] border-white bg-[#e03131] p-4 text-center text-white shadow-2xl">
+          <div className="text-3xl">⚠️</div>
+          <div className="text-xl leading-tight font-extrabold">
+            {boss} attaque {d.name} !
+          </div>
+          <div className="mt-1 text-sm font-bold">Défends-toi dans {Math.ceil(incoming.warn)} s : sers {DEFEND_TARGET} clients ou tiens jusqu’à la fin.</div>
+        </div>
+      </div>
+    )
+  }
   if (duel) {
     const d = DISTRICTS[duel.place][duel.idx]
-    const bar = (v: number, color: string, who: string) => (
+    const enemy = duel.defend ? DISTRICTS[duel.place][duel.attacker ?? 0].boss : d.boss
+    const bar = (v: number, max: number, color: string, who: string) => (
       <div className="flex items-center gap-2 text-xs font-extrabold">
         <span className="w-20 truncate">{who}</span>
         <div className="h-4 flex-1 overflow-hidden rounded-full border-2 border-[var(--color-ink)] bg-white">
-          <div className="h-full transition-all" style={{ width: `${Math.min(1, v / DUEL_TARGET) * 100}%`, background: color }} />
+          <div className="h-full transition-all" style={{ width: `${Math.min(1, v / max) * 100}%`, background: color }} />
         </div>
         <span className="w-8 text-right">
-          {Math.floor(Math.min(v, DUEL_TARGET))}/{DUEL_TARGET}
+          {Math.floor(Math.min(v, max))}/{max}
         </span>
       </div>
     )
     return (
       <div className="absolute inset-x-3 bottom-4 z-30 flex justify-center" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="card !p-3 w-full max-w-sm space-y-1.5">
+        <div className={`card !p-3 w-full max-w-sm space-y-1.5 ${duel.defend ? '!border-[#e03131]' : ''}`}>
           <div className="flex items-center justify-between text-sm font-extrabold">
-            <span>⚔️ Duel pour {d.name}</span>
+            <span>{duel.defend ? `🛡️ Défends ${d.name}` : `⚔️ Duel pour ${d.name}`}</span>
             <span className={duel.left < 10 ? 'text-[#e03131]' : ''}>⏱️ {Math.ceil(duel.left)} s</span>
           </div>
-          {bar(duel.mine, 'var(--color-green)', 'Toi')}
-          {bar(duel.rival, '#e03131', d.boss)}
+          {bar(duel.mine, duel.defend ? DEFEND_TARGET : DUEL_TARGET, 'var(--color-green)', 'Toi')}
+          {bar(duel.rival, DUEL_TARGET, '#e03131', enemy)}
         </div>
       </div>
     )
   }
   // after a win, the result card waits for the end of the conquest animation
   if (!result || conquering) return null
+  const title = result.defend ? (result.won ? `${result.name} tient bon !` : `${result.name} est perdu…`) : result.won ? `${result.name} est à toi !` : `${result.boss} a gagné`
+  const text = result.defend
+    ? result.won
+      ? `Les gens de ${result.boss} sont repartis. ${result.name} est protégé ${SHIELD / 60} minutes.`
+      : `${result.boss} a repris le quartier. Embauche des gros bras pour la prochaine fois, puis reprends-le.`
+    : result.won
+      ? `${result.boss} est parti. Plus personne ne prend ta part ici.`
+      : 'Ses gens ont servi plus vite. Améliore ton maquis et réessaie.'
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onPointerDown={stop} onClick={() => useTurf.setState({ result: null })}>
       <div className="card pop w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
-        <div className="text-5xl">{result.won ? '👑' : '😤'}</div>
-        <h2 className="mt-1 text-2xl font-extrabold">{result.won ? `${result.name} est à toi !` : `${result.boss} a gagné`}</h2>
-        <p className="mt-1 text-sm font-semibold">
-          {result.won ? `${result.boss} est parti. Plus personne ne prend ta part ici.` : 'Ses gens ont servi plus vite. Améliore ton maquis et réessaie.'}
-        </p>
+        <div className="text-5xl">{result.won ? (result.defend ? '🛡️' : '👑') : '😤'}</div>
+        <h2 className="mt-1 text-2xl font-extrabold">{title}</h2>
+        <p className="mt-1 text-sm font-semibold">{text}</p>
         <button className="btn btn-green mt-3 w-full" onClick={() => useTurf.setState({ result: null })}>
           {result.won ? 'C’est doux !' : 'On va voir !'}
         </button>

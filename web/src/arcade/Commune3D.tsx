@@ -4,7 +4,7 @@ import { MapControls, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import type { PlaceId } from './places'
-import { canAttack, DISTRICTS } from './turf'
+import { canAttack, DISTRICTS, keyOf, useTurf } from './turf'
 import { sfx } from './sfx'
 
 // A little 3D model of the commune, in the game's style: the real outline of each district (from OpenStreetMap,
@@ -302,6 +302,7 @@ function Landmark({ kind }: { kind: string }) {
 }
 
 function DistrictBlock({ d, place, owner, owners, selected, onPick, cq }: { d: DistrictGeo; place: PlaceId; owner: 'me' | 'boss'; owners: ('me' | 'boss')[]; selected: boolean; onPick: () => void; cq?: ConquestClock }) {
+  const shielded = useTurf((s) => (s.shields[keyOf(place, d.i)] ?? 0) > 0)
   const info = DISTRICTS[place][d.i]
   const mine = owner === 'me'
   const g = useRef<THREE.Group>(null)
@@ -364,7 +365,7 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick, cq }: { d: D
           </sprite>
         )}
         <sprite position={[0, 24, 0]} scale={[46, 9.2, 1]}>
-          <spriteMaterial map={labelTexture(`${d.i === 0 ? '📍 ' : ''}${info.bonus ? `${info.bonus.icon} ` : ''}${mine ? '👑 ' : open ? (d.i === 0 ? '🗡️ ' : '⚔️ ') : ''}${info.name}`)} depthTest={false} transparent />
+          <spriteMaterial map={labelTexture(`${shielded ? '🛡️ ' : ''}${d.i === 0 ? '📍 ' : ''}${info.bonus ? `${info.bonus.icon} ` : ''}${mine ? '👑 ' : open ? (d.i === 0 ? '🗡️ ' : '⚔️ ') : ''}${info.name}`)} depthTest={false} transparent />
         </sprite>
       </group>
     </group>

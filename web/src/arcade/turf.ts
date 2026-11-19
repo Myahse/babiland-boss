@@ -70,15 +70,32 @@ export const DUEL_TARGET = 8
 export const COOLDOWN = 90 // seconds before trying again after losing
 export const RENT = 150 // what each district you own pays you every RENT_EVERY seconds
 export const RENT_EVERY = 30
+// counter-attacks: a neighbouring boss tries to take back one of your districts
+export const ATTACK_EVERY = [120, 240] // seconds of play between two counter-attacks (random in this range)
+export const WARNING = 8 // seconds of warning before the defence duel starts
+export const DEFEND_TARGET = 6 // serve this many to repel them (or hold until the end of the time)
+export const SHIELD = 180 // seconds a district is safe after you conquered or defended it
+export const GUARD_PRICE = (lvl: number) => 800 * (lvl + 1) // « gros bras » level 1, 2, 3
+export const GUARD_MAX = 3
+export const GUARD_SLOW = 0.2 // each level slows the attackers by 20 %
 
-export type Duel = { place: PlaceId; idx: number; left: number; mine: number; rival: number; startServed: number; rate: number }
+/** A duel for a district. `defend`: a boss is attacking one of yours (attacker = index of his district). */
+export type Duel = { place: PlaceId; idx: number; left: number; mine: number; rival: number; startServed: number; rate: number; defend?: boolean; attacker?: number }
+export type Incoming = { place: PlaceId; idx: number; attacker: number; warn: number }
 
 type Turf = {
   owners: Partial<Record<PlaceId, ('me' | 'boss')[]>>
   duel: Duel | null
   cooldown: number
   rentT: number
-  result: { won: boolean; name: string; boss: string } | null
+  result: { won: boolean; name: string; boss: string; defend?: boolean } | null
+  /** a counter-attack announced, the duel starts when `warn` reaches 0 */
+  incoming: Incoming | null
+  attackT: number
+  /** seconds of protection left per district (`place:idx`) */
+  shields: Record<string, number>
+  /** « gros bras » level per district (`place:idx`) */
+  guards: Record<string, number>
   panel: boolean
   /** a district just won: the 3D conquest animation plays before the result card */
   conquest: { place: PlaceId; idx: number } | null
@@ -87,16 +104,17 @@ type Turf = {
 const KEY = 'babiland-turf-v2' // v2: the real districts of Yopougon
 function load(): Partial<Turf> {
   try {
-    return { owners: JSON.parse(localStorage.getItem(KEY) || '{}').owners ?? {} }
+    const j = JSON.parse(localStorage.getItem(KEY) || '{}')
+    return { owners: j.owners ?? {}, guards: j.guards ?? {} }
   } catch {
     return {}
   }
 }
 
-export const useTurf = create<Turf>(() => ({ owners: {}, duel: null, cooldown: 0, rentT: 0, result: null, panel: false, conquest: null, ...load() }))
+export const useTurf = create<Turf>(() => ({ owners: {}, duel: null, cooldown: 0, rentT: 0, result: null, panel: false, conquest: null, incoming: null, attackT: 150, shields: {}, guards: {}, ...load() }))
 useTurf.subscribe((s) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ owners: s.owners }))
+    localStorage.setItem(KEY, JSON.stringify({ owners: s.owners, guards: s.guards }))
   } catch {
     /* private mode */
   }
@@ -114,6 +132,32 @@ export const bonusOf = (p: PlaceId, kind: Bonus['kind']) => {
 /** Do you still work for the boss of your home district (district 0)? */
 export const underBoss = (p: PlaceId) => ownersOf(p)[0] !== 'me'
 export const cutFor = (p: PlaceId) => (underBoss(p) ? CUT : 0)
+
+export const keyOf = (p: PlaceId, i: number) => `${p}:${i}`
+export const shieldLeft = (p: PlaceId, i: number) => useTurf.getState().shields[keyOf(p, i)] ?? 0
+export const guardsOf = (p: PlaceId, i: number) => useTurf.getState().guards[keyOf(p, i)] ?? 0
+
+/** Hire one more level of « gros bras » for one of your districts. Returns the price, or 0 if not possible. */
+export function hireGuards(p: PlaceId, i: number, money: number) {
+  const lvl = guardsOf(p, i)
+  const price = GUARD_PRICE(lvl)
+  if (lvl >= GUARD_MAX || money < price) return 0
+  useTurf.setState((s) => ({ guards: { ...s.guards, [keyOf(p, i)]: lvl + 1 } }))
+  return price
+}
+
+/** Pick a counter-attack: one of your districts (not your home, not shielded) that touches a boss's district. */
+function pickAttack(place: PlaceId, s: Turf): Incoming | null {
+  const owners = ownersOf(place, s)
+  const options: Incoming[] = []
+  owners.forEach((o, i) => {
+    if (o !== 'me' || i === 0 || (s.shields[keyOf(place, i)] ?? 0) > 0) return
+    neighbours(place, i)
+      .filter((j) => owners[j] !== 'me' && !DISTRICTS[place][j].forest)
+      .forEach((j) => options.push({ place, idx: i, attacker: j, warn: WARNING }))
+  })
+  return options.length ? options[Math.floor(Math.random() * options.length)] : null
+}
 
 /** Start a duel for district `idx` (0 = betray your own boss). The caller has checked respect and paid. */
 export function startDuel(place: PlaceId, idx: number, served: number) {
@@ -135,14 +179,51 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
     money = owned * RENT
   }
   const patch: Partial<Turf> = { rentT, cooldown: Math.max(0, s.cooldown - dt) }
+  // shields wear off
+  const shields: Record<string, number> = {}
+  for (const [k, v] of Object.entries(s.shields)) if (v - dt > 0) shields[k] = v - dt
+  patch.shields = shields
+  // counter-attacks: only in the place you are in, never during another duel or the conquest animation
+  if (!s.duel && !s.conquest && !s.result) {
+    if (s.incoming) {
+      const warn = s.incoming.warn - dt
+      if (warn <= 0) {
+        const inc = s.incoming
+        // the bodyguards slow the attackers down
+        const slow = 1 - GUARD_SLOW * (s.guards[keyOf(inc.place, inc.idx)] ?? 0)
+        const rate = (DUEL_TARGET / (DUEL_TIME * 0.9)) * slow
+        Object.assign(patch, { incoming: null, panel: false, duel: { place, idx: inc.idx, left: DUEL_TIME, mine: 0, rival: 0, startServed: served, rate, defend: true, attacker: inc.attacker } })
+      } else patch.incoming = { ...s.incoming, warn }
+    } else {
+      const attackT = s.attackT - dt
+      if (attackT <= 0) {
+        const inc = pickAttack(place, s)
+        patch.attackT = ATTACK_EVERY[0] + Math.random() * (ATTACK_EVERY[1] - ATTACK_EVERY[0])
+        if (inc) patch.incoming = inc
+      } else patch.attackT = attackT
+    }
+  }
   const d = s.duel
   if (d && d.place === place) {
     const nd = { ...d, left: d.left - dt, mine: served - d.startServed, rival: d.rival + d.rate * dt }
     const D0 = DISTRICTS[place][d.idx]
+    if (d.defend) {
+      const attacker = DISTRICTS[place][d.attacker ?? 0].boss
+      if (nd.mine >= DEFEND_TARGET || nd.left <= 0) {
+        // repelled (or they gave up): the district is safe for a while
+        Object.assign(patch, { duel: null, shields: { ...shields, [keyOf(place, d.idx)]: SHIELD }, result: { won: true, name: D0.name, boss: attacker, defend: true } })
+      } else if (nd.rival >= DUEL_TARGET) {
+        const owners = [...ownersOf(place, s)]
+        owners[d.idx] = 'boss'
+        Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: false, name: D0.name, boss: attacker, defend: true } })
+      } else patch.duel = nd
+      useTurf.setState(patch)
+      return money
+    }
     if (nd.mine >= DUEL_TARGET) {
       const owners = [...ownersOf(place, s)]
       owners[d.idx] = 'me'
-      Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss }, conquest: REAL_MAP.includes(place) ? { place, idx: d.idx } : null, panel: false })
+      Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss }, conquest: REAL_MAP.includes(place) ? { place, idx: d.idx } : null, panel: false, shields: { ...shields, [keyOf(place, d.idx)]: SHIELD } })
     } else if (nd.rival >= DUEL_TARGET || nd.left <= 0) {
       Object.assign(patch, { duel: null, cooldown: COOLDOWN, result: { won: false, name: D0.name, boss: D0.boss } })
     } else patch.duel = nd
