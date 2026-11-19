@@ -4,6 +4,48 @@ import { ATTACK_PRICE, BETRAY_PRICE, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, RENT
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 
+// A small drawn map of the commune: the 4 districts as areas, the lagoon along the south, roads between them.
+// The layout is stylised (the same shapes for every place), not the exact surveyed borders.
+const AREAS = [
+  { d: 'M70 70 L150 55 L165 120 L95 140 L60 115 Z', label: [110, 95] }, // 0: your home district, in the middle
+  { d: 'M10 60 L70 70 L60 115 L95 140 L80 175 L20 165 L5 110 Z', label: [40, 130] }, // 1: west
+  { d: 'M150 55 L230 40 L245 100 L200 130 L165 120 Z', label: [200, 85] }, // 2: north-east
+  { d: 'M165 120 L200 130 L245 100 L290 120 L280 170 L190 180 L95 140 Z', label: [215, 150] }, // 3: east, by the lagoon
+]
+
+function DistrictMap({ names, bosses, owners }: { names: string[]; bosses: string[]; owners: ('me' | 'boss')[] }) {
+  return (
+    <svg viewBox="0 0 300 215" className="mt-3 w-full rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#e9d8a6]">
+      {/* lagoon along the south */}
+      <path d="M0 185 Q60 170 120 188 T240 182 T300 178 L300 215 L0 215 Z" fill="#4dabf7" />
+      <path d="M0 192 Q60 180 120 196 T240 190 T300 187" fill="none" stroke="#a5d8ff" strokeWidth="2" />
+      <text x="250" y="206" fontSize="9" fontWeight="800" fill="#e7f5ff">Lagune</text>
+      {AREAS.map((a, i) => {
+        const mine = owners[i] === 'me'
+        return (
+          <g key={i}>
+            <path d={a.d} fill={mine ? '#69db7c' : '#ff8787'} stroke="#2b1a12" strokeWidth="2.5" strokeLinejoin="round" />
+            <text x={a.label[0]} y={a.label[1]} textAnchor="middle" fontSize="11" fontWeight="800" fill="#2b1a12">
+              {names[i]}
+            </text>
+            <text x={a.label[0]} y={a.label[1] + 12} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2b1a12">
+              {mine ? '👑 À toi' : `😎 ${bosses[i]}`}
+            </text>
+          </g>
+        )
+      })}
+      {/* main roads */}
+      <path d="M0 55 L300 30" stroke="#868e96" strokeWidth="5" strokeLinecap="round" />
+      <path d="M0 55 L300 30" stroke="#fff" strokeWidth="1" strokeDasharray="6 5" />
+      {/* your maquis */}
+      <g transform="translate(110 62)">
+        <path d="M0 0 C-9 -12 -9 -22 0 -22 C9 -22 9 -12 0 0 Z" fill="#e8590c" stroke="#fff" strokeWidth="2" />
+        <circle cx="0" cy="-15" r="3.5" fill="#fff" />
+      </g>
+    </svg>
+  )
+}
+
 /** The small district view of the place you are in: who owns what, betray / attack. */
 function TurfPanel({ onClose }: { onClose: () => void }) {
   const place = useArcade((s) => s.current)
@@ -37,7 +79,8 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
             ? 'Tu es ton propre boss ici. Prends les autres quartiers : chacun te paie un loyer.'
             : `Tu travailles pour ${ds[0].boss} : il garde ${CUT * 100} % de ce que tu gagnes. Gagne du respect, puis trahis-le.`}
         </p>
-        {/* the 4 districts as a little 2 x 2 block plan */}
+        <DistrictMap names={ds.map((d) => d.name)} bosses={ds.map((d) => d.boss)} owners={owners} />
+        {/* the 4 districts with their actions */}
         <div className="mt-3 grid grid-cols-2 gap-2">
           {ds.map((d, i) => {
             const mine = owners[i] === 'me'
