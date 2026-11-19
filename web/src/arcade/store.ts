@@ -32,6 +32,8 @@ type Arcade = PlaceState & {
   carried: number[] // plates in Tantie Aya's hands (dish slot of each, bottom to top)
   workerCarried: number[]
   pop: { id: number; text: string } | null
+  /** a bulk order from a restaurant (not saved): plates of one dish to put in the crate before the time runs out */
+  bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
 
 const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0] })
@@ -69,6 +71,7 @@ export const useArcade = create<Arcade>(() => ({
   carried: [],
   workerCarried: [],
   pop: null,
+  bulk: null,
   ...load(),
 }))
 
@@ -98,7 +101,7 @@ export function goTo(id: PlaceId) {
   const counter = [...s.counter]
   s.carried.forEach((k) => counter[k]++)
   const places = { ...s.places, [s.current]: { ...pick(s), counter } }
-  useArcade.setState({ places, current: id, ...norm(places[id]), carried: [], workerCarried: [], delivery: { want: 0, got: 0, state: 'none' } })
+  useArcade.setState({ places, current: id, ...norm(places[id]), carried: [], workerCarried: [], delivery: { want: 0, got: 0, state: 'none' }, bulk: null })
   popText(`Bienvenue à ${PLACES[id].name} !`)
 }
 

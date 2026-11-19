@@ -12,6 +12,7 @@ import { popText, totalServed, useArcade } from './store'
 import { SIDE, SIDE_MAX, SIDE_PAD, SIDE_POS, sideCap, sidePerMin, sidePrice } from './side'
 import { ToonPerson } from './ToonPerson'
 import { useVip } from './vip'
+import { missionEvent } from './missions'
 import type { PersonId } from '../three/RealPerson'
 
 // The three small businesses on the pavement of the maquis (side.ts): pads to open and improve them, the stands
@@ -57,6 +58,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
         money += v
         cash[i] -= v
         popText(`${SIDE[i].icon} +${v} FCFA`)
+        missionEvent('stand', v)
         sfx.cash()
         changed = true
       }
@@ -73,6 +75,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
       if (paid[i] >= price) {
         paid[i] = 0
         lv[i]++
+        missionEvent('unlock')
         popText(lv[i] === 1 ? `Nouveau business : ${SIDE[i].name} !` : `${SIDE[i].short} niveau ${lv[i]} !`)
         burst(up(SIDE_POS[i], 0.5))
         sfx.unlock()

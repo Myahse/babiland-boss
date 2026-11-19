@@ -15,6 +15,7 @@ import { TurfButton, TurfLayer } from './TurfUI'
 import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
+import { BulkBanner, MissionsButton } from './HudExtras'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -199,7 +200,9 @@ function Hud() {
           🗺️ Carte
         </button>
         <TurfButton />
+        <MissionsButton />
       </div>
+      <BulkBanner />
       <VipLayer />
       <OfflinePanel />
       <TurfLayer />

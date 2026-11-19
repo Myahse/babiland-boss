@@ -67,3 +67,11 @@ export const DELIVERY_PRICE = 700 // per plate delivered (more than at the count
 
 /** where a customer stands in the aisle before stepping into seat `i` */
 export const seatApproach = (i: number) => V(SEATS[i].x, TABLES[Math.floor(i / 2)].z - 0.85)
+
+/** Bulk orders (commandes en gros): the crate by the side street where the plates go, and the restaurant's boy. */
+export const CRATE = V(4.85, 2.15)
+export const BULK_CLIENTS = ['Restaurant Le Baobab', 'Hôtel Ivoire Star', 'Maquis Le Gbê', 'Cantine de l’usine', 'Mariage chez les Konan', 'Baptême à la cité', 'Bureau de la mairie', 'Chantier du nouveau pont']
+export const BULK_EVERY: [number, number] = [80, 140] // seconds between two orders
+export const BULK_MIN_SERVED = 10
+export const BULK_TIME = 100 // seconds to fill it
+export const BULK_PAY = 1.6 // x the price of a plate

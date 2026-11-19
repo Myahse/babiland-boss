@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { Avatar } from './Avatar'
 import { burst, fly, FX } from './fx'
@@ -9,13 +9,14 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, tickTurf } from './turf'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
+import { missionEvent } from './missions'
 import { RECIPES, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_SERVED, VIP_PATIENCE } from './vip'
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
@@ -122,6 +123,9 @@ export function Sim({ name }: { name: string }) {
   const nextId = useRef(0)
   const spawn = useRef(1)
   const vipT = useRef(VIP_FIRST)
+  const bulkT = useRef(45)
+  if (import.meta.env.DEV) Object.assign(window, { arcadeBulkT: bulkT })
+  const bulkAcc = useRef(0)
   if (import.meta.env.DEV) Object.assign(window, { arcadeVipT: vipT })
   // leaving this maquis: a VIP waiting here is gone
   useEffect(() => () => useVip.setState({ ready: null, open: false, done: null }), [])
@@ -298,6 +302,7 @@ export function Sim({ name }: { name: string }) {
       changed = true
       if (paid[u]! >= PADS[u].price) {
         unlocks[u] = true
+        missionEvent('unlock')
         popText(`Débloqué : ${padLabel(u, place)} !`)
         burst(PADS[u].pos)
         sfx.unlock()
@@ -315,6 +320,7 @@ export function Sim({ name }: { name: string }) {
       changed = true
       if (upPaid[i] >= price) {
         level[i]++
+        missionEvent('unlock')
         upPaid[i] = 0
         popText(level[i] === 3 ? 'Poste au MAX !' : 'Poste plus rapide !')
         burst(STATIONS[i])
@@ -386,6 +392,9 @@ export function Sim({ name }: { name: string }) {
         const pay = vipPay(st.current, c.want, vd.score)
         cash += pay
         served++
+        missionEvent('serve')
+        missionEvent('vip')
+        if (vd.score >= 0.85) missionEvent('vip3')
         c.got = c.want
         for (let k = 0; k < 8; k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.35)
         popText(`👑 ${c.vip} : +${pay} FCFA`)
@@ -444,6 +453,7 @@ export function Sim({ name }: { name: string }) {
           // while you work for the boss of the district, he takes his cut
           cash += Math.round(c.want * dishPrice(place, c.dish) * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
           served++
+          missionEvent('serve')
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()
           // with the terrace open, they go and sit to eat; otherwise they take it away
@@ -552,6 +562,52 @@ export function Sim({ name }: { name: string }) {
     moto.rot = mp.r
     moto.visible = mp.vis
 
+    // 8. bulk orders: a restaurant phones in a big order of one dish; put the plates in the crate in time
+    let bulk = st.bulk
+    bulkT.current -= dt
+    if (!bulk && bulkT.current <= 0 && st.served >= BULK_MIN_SERVED) {
+      bulkT.current = BULK_EVERY[0] + Math.random() * (BULK_EVERY[1] - BULK_EVERY[0])
+      const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
+      const dish = menu[Math.floor(Math.random() * menu.length)]
+      const want = 8 + 2 * Math.floor(Math.random() * 4) + (unlocks.plateau ? 4 : 0)
+      const name = BULK_CLIENTS[Math.floor(Math.random() * BULK_CLIENTS.length)]
+      bulk = { name, dish, want, got: 0, left: BULK_TIME, time: BULK_TIME }
+      popText(`📞 ${name} : ${want} ${DISHES[placeDishes(place)[dish]].label.toLowerCase()} !`)
+      sfx.unlock()
+    } else if (bulk) {
+      let { got } = bulk
+      bulkAcc.current += dt
+      while (bulkAcc.current >= TICK) {
+        bulkAcc.current -= TICK
+        const idx = carried.lastIndexOf(bulk.dish)
+        if (idx >= 0 && got < bulk.want && player.pos.distanceTo(CRATE) < 1.0) {
+          carried.splice(idx, 1)
+          got++
+          fly('plate', hands(player, () => carried.length)(), up(CRATE, 0.5 + Math.min(got, 12) * 0.04))
+          sfx.drop()
+          changed = true
+        }
+      }
+      const left = bulk.left - dt
+      if (got >= bulk.want) {
+        const pay = Math.round(bulk.want * dishPrice(place, bulk.dish) * BULK_PAY * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+        cash += pay
+        for (let k = 0; k < 10; k++) fly('cash', up(CRATE, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.45)
+        popText(`📦 ${bulk.name} : +${pay} FCFA`)
+        burst(CRATE)
+        sfx.unlock()
+        missionEvent('bulk', 1)
+        bulk = null
+        changed = true
+      } else if (left <= 0) {
+        popText(`📦 Trop tard… ${bulk.name} a annulé`)
+        sfx.wrong()
+        bulk = null
+      } else if (got !== bulk.got || Math.ceil(left) !== Math.ceil(bulk.left)) bulk = { ...bulk, got, left }
+      else bulk.left = left
+    }
+    if (bulk !== st.bulk) set({ bulk })
+
     // districts: duel progress, and rent from the districts you own
     const rent = tickTurf(st.current, served, dt)
     if (rent > 0) {
@@ -578,6 +634,7 @@ export function Sim({ name }: { name: string }) {
       )}
       <FX />
       <SideStands player={player} />
+      {s.bulk && <Crate dish={dishes[s.bulk.dish]} got={s.bulk.got} want={s.bulk.want} />}
       <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&
@@ -622,6 +679,38 @@ function Mover({ who, obj, carried = [], sitting = false, full = false, children
         </Html>
       )}
       {children}
+    </group>
+  )
+}
+
+/** The crate of a bulk order, filling up with plates, and the restaurant's boy waiting next to it. */
+function Crate({ dish, got, want }: { dish: Dish; got: number; want: number }) {
+  const ring = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => {
+    if (ring.current) ring.current.scale.setScalar(1 + Math.sin(clock.elapsedTime * 4) * 0.06)
+  })
+  return (
+    <group position={CRATE}>
+      <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <ringGeometry args={[0.72, 0.86, 32]} />
+        <meshBasicMaterial color="#ffd43b" transparent opacity={0.85} />
+      </mesh>
+      <RoundedBox args={[0.8, 0.45, 0.65]} radius={0.03} position={[0, 0.23, 0]} castShadow>
+        <meshStandardMaterial color="#c08552" roughness={0.8} />
+      </RoundedBox>
+      {[-0.2, 0.2].map((x) => (
+        <mesh key={x} position={[x, 0.23, 0.33]}>
+          <boxGeometry args={[0.06, 0.45, 0.01]} />
+          <meshStandardMaterial color="#8b5a2b" />
+        </mesh>
+      ))}
+      <PlateStack count={Math.min(got, 12)} dishes={Array(Math.min(got, 12)).fill(dish)} position={[0, 0.46, 0]} />
+      <Html position={[0, 1.55, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+        <div className="pop flex items-center gap-1 rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffe066] px-2.5 py-0.5 text-lg font-extrabold whitespace-nowrap shadow-lg">
+          📦 {DISHES[dish].icon} {got}/{want}
+        </div>
+      </Html>
+      <ToonPerson who="koffi" moving={false} position={[0.75, 0, 0.55]} rotation={[0, -2.2, 0]} scale={1.1} />
     </group>
   )
 }
