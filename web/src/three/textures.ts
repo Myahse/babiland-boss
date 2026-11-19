@@ -102,7 +102,7 @@ export function cutFaceTexture(kind: 'tomate' | 'oignon') {
       }
     } else {
       for (let r = 64; r > 0; r -= 9) {
-        g.fillStyle = r === 64 ? '#9c3d6b' : (r / 9) % 2 < 1 ? '#f8e7f0' : '#e7b6cf'
+        g.fillStyle = r === 64 ? '#b8743a' : (r / 9) % 2 < 1 ? '#fbf6e6' : '#eee3c4'
         g.beginPath()
         g.arc(64, 64, r, 0, Math.PI * 2)
         g.fill()

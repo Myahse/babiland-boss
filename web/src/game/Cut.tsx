@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
+import { Model } from '../three/assets'
 import * as THREE from 'three'
 import { useGame } from '../store'
 import { Sliceable, VEG_R, type Veg } from '../three/Food'
-import { Mat } from '../three/Mat'
 import { BOARD } from '../three/Stand'
 import { resetMini, useMini } from './mini'
 
@@ -99,13 +98,8 @@ export function CutGame() {
         )),
       )}
       <group ref={knife} position={[BOARD[0], Y + 0.2, BOARD[2]]} rotation={[0, -0.55, 0]}>
-        <RoundedBox args={[0.006, 0.11, 0.26]} radius={0.0028} castShadow position={[0, 0.02, 0]}>
-          <meshStandardMaterial color="#e9ecef" roughness={0.18} metalness={0.9} />
-        </RoundedBox>
-        <mesh position={[0, 0.05, 0.2]} rotation={[Math.PI / 2, 0, 0]} scale={[0.75, 1, 1.1]}>
-          <capsuleGeometry args={[0.018, 0.11, 8, 16]} />
-          <Mat color="#6b4423" rough={0.5} />
-        </mesh>
+        {/* the real knife model stands along y: lay it along z, edge down */}
+        <Model name="fish_knife" rotation={[Math.PI / 2, 0, 0]} scale={1.3} position={[0, 0.0, 0.05]} />
       </group>
     </group>
   )

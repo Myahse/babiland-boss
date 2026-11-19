@@ -7,7 +7,7 @@ import { attiekeTexture, bumpTexture, cutFaceTexture } from './textures'
 
 export type Veg = 'tomate' | 'oignon'
 export const VEG_R = 0.095
-const SKIN: Record<Veg, string> = { tomate: '#f03e3e', oignon: '#9c3d6b' }
+const SKIN: Record<Veg, string> = { tomate: '#c9230f', oignon: '#b8743a' }
 
 /** One piece of a sphere between x=a and x=b (the sphere is lying along x). */
 function chunkGeometry(r: number, a: number, b: number) {

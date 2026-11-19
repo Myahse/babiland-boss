@@ -4,9 +4,9 @@ Un jeu de cuisine et de business à Babi. Tu pars de ton petit coin de garba à 
 (couper, frire, servir), tu vends, tu améliores ton matériel… et un jour tu deviens le boss de la commune.
 
 Même chemin que Babi Life : React 19 · TypeScript · Vite · Tailwind 4 · Three.js (react-three-fiber).
-Toute la 3D est faite en code (pas d'artiste ni de modèles à télécharger), dans un style lisse
-« film d'animation » : formes arrondies, persos sculptés (visage, yeux, mains), lumière douce du ciel,
-occlusion ambiante, murs en crépi avec grilles aux fenêtres. Pas de blocs.
+Style réaliste : vrais modèles 3D scannés, textures et ciel de [Poly Haven](https://polyhaven.com) (CC0, libres
+pour tout usage, voir `web/public/assets/CREDITS.md`) : latérite rouge, crépi peint, tôle rouillée, chaises
+monobloc, bouteille de gaz, jerrycans, poteaux électriques… Les persos sont encore faits en code (à remplacer).
 
 | Accueil | Commande | Couper |
 |---|---|---|
