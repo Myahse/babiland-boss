@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type { PlaceId } from './places'
 import { missionEvent } from './missions'
-import { addFame } from './store'
+import { addFame, popText, useArcade } from './store'
+import { api, ApiError, isOnline, liveSend, onLive, onTurf, owe, syncTurf, useOnline } from './online'
 import { FAME } from './growth'
 import { REAL_DISTRICTS, type RealDistrict } from './realDistricts'
 
@@ -93,7 +94,19 @@ export const GUARD_MAX = 3
 export const GUARD_SLOW = 0.2 // each level slows the attackers by 20 %
 
 /** A duel for a district. `defend`: a boss is attacking one of yours (attacker = index of his district). */
-export type Duel = { place: PlaceId; idx: number; left: number; mine: number; rival: number; startServed: number; rate: number; defend?: boolean; attacker?: number }
+export type Duel = {
+  place: PlaceId
+  idx: number
+  left: number
+  mine: number
+  rival: number
+  startServed: number
+  rate: number
+  defend?: boolean
+  attacker?: number
+  /** online: the server's duel; `target` what to serve; `live` the rival is a player serving now; `by` his name */
+  online?: { id: string; target: number; live: boolean; by?: string; ending?: boolean }
+}
 export type Incoming = { place: PlaceId; idx: number; attacker: number; warn: number }
 
 type Turf = {
@@ -149,9 +162,18 @@ export const bonusOf = (p: PlaceId, kind: Bonus['kind']) => {
   const o = ownersOf(p)
   return DISTRICTS[p].reduce((n, d, i) => n + (o[i] === 'me' && d.bonus?.kind === kind ? d.bonus.value : 0), 0)
 }
+/** The real player holding a district (online), or null: the computer's boss. */
+export const rivalOf = (p: PlaceId, i: number) => useOnline.getState().rivals[p]?.find((r) => r.idx === i && !r.mine) ?? null
+/** Who the boss of a district is: a real player's name (online), or the computer's boss. */
+export const bossName = (p: PlaceId, i: number) => rivalOf(p, i)?.name ?? DISTRICTS[p][i].boss
+
 /** Do you still work for the boss of your home district (district 0)? */
 export const underBoss = (p: PlaceId) => ownersOf(p)[0] !== 'me'
 export const cutFor = (p: PlaceId) => (underBoss(p) ? CUT : 0)
+/** A sale while you work for a boss: online, when he is a real player, his share goes to him (sent in batches). */
+export function payCut(p: PlaceId, gross: number) {
+  if (underBoss(p) && rivalOf(p, 0)) owe(p, gross * CUT)
+}
 
 export const keyOf = (p: PlaceId, i: number) => `${p}:${i}`
 export const shieldLeft = (p: PlaceId, i: number) => useTurf.getState().shields[keyOf(p, i)] ?? 0
@@ -180,7 +202,21 @@ function pickAttack(place: PlaceId, s: Turf): Incoming | null {
 }
 
 /** Start a duel for district `idx` (0 = betray your own boss). The caller has checked respect and paid. */
-export function startDuel(place: PlaceId, idx: number, served: number) {
+export function startDuel(place: PlaceId, idx: number, served: number, price = 0) {
+  if (isOnline()) {
+    // online: the server checks the rules and opens the duel (the district's owner may come and defend it)
+    api<{ duel: string; target: number; defender?: string; online?: boolean }>('POST', `/turf/${place}/${idx}/attack`)
+      .then((r) => {
+        const rate = r.defender ? 0 : DUEL_TARGET / (DUEL_TIME * 0.85)
+        useTurf.setState({ duel: { place, idx, left: DUEL_TIME, mine: 0, rival: 0, startServed: useArcade.getState().served, rate, online: { id: r.duel, target: r.target, live: false, by: r.defender } }, result: null })
+        if (r.defender) popText(r.online ? `⚔️ ${r.defender} est en ligne : il va défendre !` : `⚔️ ${r.defender} n'est pas là : sers ${r.target} clients !`)
+      })
+      .catch((e: ApiError) => {
+        popText(`⚠️ ${e.message}`)
+        if (price) useArcade.setState((a) => ({ money: a.money + price }))
+      })
+    return
+  }
   // the boss's people serve at a pace that would reach the target a bit before the time runs out
   const key = DISTRICTS[place][idx].bonus ? 0.12 : 0
   const rate = DUEL_TARGET / (DUEL_TIME * (0.85 - key - Math.min(0.15, idx * 0.025)))
@@ -224,6 +260,11 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
     }
   }
   const d = s.duel
+  if (d?.online && d.place === place) {
+    tickOnline(d, served, dt, patch)
+    useTurf.setState(patch)
+    return money
+  }
   if (d && d.place === place) {
     const nd = { ...d, left: d.left - dt, mine: served - d.startServed, rival: d.rival + d.rate * dt }
     const D0 = DISTRICTS[place][d.idx]
@@ -235,6 +276,7 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
       } else if (nd.rival >= DUEL_TARGET) {
         const owners = [...ownersOf(place, s)]
         owners[d.idx] = 'boss'
+        if (isOnline()) api('POST', `/turf/${place}/${d.idx}/release`).catch(() => undefined)
         Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: false, name: D0.name, boss: attacker, defend: true } })
       } else patch.duel = nd
       useTurf.setState(patch)
@@ -255,5 +297,96 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
 }
 
 const PLACE_LIST = Object.keys(DISTRICTS) as PlaceId[]
+
+// ------------------------------------------------------------------ online duels (backend/internal/turf)
+let lastSent = -1
+/** An online duel: your count goes to the server live; the server says who wins. */
+function tickOnline(d: Duel, served: number, dt: number, patch: Partial<Turf>) {
+  const o = d.online!
+  const mine = served - d.startServed
+  if (mine !== lastSent) {
+    lastSent = mine
+    liveSend({ t: 'duel', duel: o.id, score: mine })
+  }
+  // the rival: a player serving live (his count comes from the server), or the computer's boss
+  const rival = o.live ? d.rival : d.rival + d.rate * dt
+  const nd: Duel = { ...d, left: d.left - dt, mine, rival }
+  const D0 = DISTRICTS[d.place][d.idx]
+  if (d.defend) {
+    // defending against a player: the server says the end (held / lost); past the time, held
+    if (nd.left < -6) Object.assign(patch, { duel: null, result: { won: true, name: D0.name, boss: o.by ?? '', defend: true } })
+    else patch.duel = nd
+    return
+  }
+  if (!o.ending && (mine >= o.target || nd.left <= 0 || (!o.by && rival >= DUEL_TARGET))) {
+    nd.online = { ...o, ending: true }
+    const place = d.place
+    api<{ won: boolean }>('POST', `/turf/duel/${o.id}/end`, { attack: mine })
+      .then((r) => {
+        const s = useTurf.getState()
+        const owners = [...ownersOf(place, s)]
+        if (r.won) {
+          owners[d.idx] = 'me'
+          missionEvent('district')
+          addFame(FAME.district)
+        }
+        const boss = o.by ?? D0.boss
+        useTurf.setState({ duel: null, owners: { ...s.owners, [place]: owners }, cooldown: r.won ? 0 : COOLDOWN, result: { won: r.won, name: D0.name, boss }, conquest: r.won && REAL_MAP.includes(place) ? { place, idx: d.idx } : null, panel: false, shields: r.won ? { ...s.shields, [keyOf(place, d.idx)]: SHIELD } : s.shields })
+        void syncTurf(place)
+      })
+      .catch((e: ApiError) => {
+        // not over yet for the server (a clock a little ahead): try again in a moment
+        const cur = useTurf.getState().duel
+        if (cur?.online?.id === o.id) useTurf.setState({ duel: { ...cur, online: { ...cur.online, ending: false } } })
+        if (e.status !== 409) useTurf.setState({ duel: null, result: { won: false, name: D0.name, boss: o.by ?? D0.boss } })
+      })
+  }
+  patch.duel = nd
+}
+
+// what the server says of a place: your districts, the ones real players hold (they are « boss » here, by name)
+onTurf((p, rivals) => {
+  const s = useTurf.getState()
+  const owners = DISTRICTS[p].map((_, i) => (rivals.some((r) => r.idx === i && r.mine) ? ('me' as const) : ('boss' as const)))
+  const shields = { ...s.shields }
+  rivals.forEach((r) => {
+    if (r.mine && r.shieldUntil) shields[keyOf(p, r.idx)] = Math.max(0, (Date.parse(r.shieldUntil) - Date.now()) / 1000)
+  })
+  const guards = { ...s.guards }
+  rivals.forEach((r) => {
+    if (r.mine) guards[keyOf(p, r.idx)] = Math.max(guards[keyOf(p, r.idx)] ?? 0, r.guards)
+  })
+  useTurf.setState({ owners: { ...s.owners, [p]: owners }, shields, guards })
+})
+
+onLive({
+  // a real player attacks one of your districts: defend it live
+  attack: (m) => {
+    const s = useTurf.getState()
+    if (s.duel) {
+      popText(`⚔️ ${m.by} attaque ${m.district} !`)
+      return
+    }
+    useTurf.setState({ panel: false, incoming: null, duel: { place: m.place, idx: m.idx, left: m.seconds, mine: 0, rival: 0, startServed: useArcade.getState().served, rate: 0, defend: true, online: { id: m.duel, target: m.target, live: true, by: m.by } } })
+    popText(`⚔️ ${m.by} attaque ${m.district} ! Sers vite pour défendre !`)
+  },
+  duel: (m) => {
+    const d = useTurf.getState().duel
+    if (!d?.online || d.online.id !== m.duel) return
+    // the other side's count: the defence when you attack, the attack when you defend
+    useTurf.setState({ duel: { ...d, rival: d.defend ? m.attack : m.defence, left: m.left, online: { ...d.online, live: true } } })
+  },
+  // you attacked a player who defended live and reached the target first
+  repelled: (m) => {
+    const d = useTurf.getState().duel
+    if (d?.online?.id === m.duel) useTurf.setState({ duel: null, cooldown: COOLDOWN, result: { won: false, name: m.district, boss: m.by } })
+  },
+  ended: (m) => {
+    const d = useTurf.getState().duel
+    const name = DISTRICTS[m.place][m.idx].name
+    if (d?.online && d.defend && d.idx === m.idx) useTurf.setState({ duel: null })
+    useTurf.setState({ result: { won: m.t === 'held', name, boss: m.by, defend: true }, shields: m.t === 'held' ? { ...useTurf.getState().shields, [keyOf(m.place, m.idx)]: SHIELD } : useTurf.getState().shields })
+  },
+})
 
 if (import.meta.env.DEV) Object.assign(window, { turf: useTurf })

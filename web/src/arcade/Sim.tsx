@@ -14,11 +14,12 @@ import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Prop
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
-import { bonusOf, cutFor, tickTurf } from './turf'
+import { bonusOf, cutFor, payCut, tickTurf } from './turf'
+import { saleBoost } from './online'
 import { DISHES, placeDishes, PLACES, type Dish, type Place } from './places'
 import { missionEvent } from './missions'
 import { FAME, fameLevel, fameSpawn, sellPrice, stagePrice, STAGES } from './growth'
-import { RECIPES, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_SERVED, VIP_PATIENCE } from './vip'
+import { RECIPES, vipCall, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_SERVED, VIP_PATIENCE } from './vip'
 
 /** Can this pad show up here: a little corner only has a 2nd stove and a bigger tray to unlock. */
 const padOpen = (u: Unlock, stage: number) => stage >= 1 || CORNER_PADS.includes(u)
@@ -131,6 +132,7 @@ export function Sim({ name }: { name: string }) {
   if (import.meta.env.DEV) Object.assign(window, { arcadeBulkT: bulkT })
   const bulkAcc = useRef(0)
   if (import.meta.env.DEV) Object.assign(window, { arcadeVipT: vipT })
+  vipCall.now = () => (vipT.current = 0)
   // leaving this maquis: a VIP waiting here is gone
   useEffect(() => () => useVip.setState({ ready: null, open: false, done: null }), [])
   const [, rerender] = useState(0)
@@ -414,7 +416,8 @@ export function Sim({ name }: { name: string }) {
       const c = custs.current.find((o) => o.id === vd.id)
       useVip.setState({ done: null, ready: null })
       if (c) {
-        const pay = vipPay(st.current, c.want, vd.score)
+        const pay = Math.round(vipPay(st.current, c.want, vd.score) * saleBoost())
+        payCut(st.current, pay / (1 - cutFor(st.current)))
         cash += pay
         served++
         missionEvent('serve')
@@ -477,7 +480,10 @@ export function Sim({ name }: { name: string }) {
         bump()
         if (c.got >= c.want) {
           // while you work for the boss of the district, he takes his cut
-          cash += Math.round(c.want * sellPrice(st.current, c.dish, st.stage) * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+          // x2 boost and Pass Boss (shop), key zones; the boss of your district takes his share
+          const gross = c.want * sellPrice(st.current, c.dish, st.stage) * (1 + bonusOf(st.current, 'sales')) * saleBoost()
+          cash += Math.round(gross * (1 - cutFor(st.current)))
+          payCut(st.current, gross)
           addFame(FAME.customer)
           served++
           missionEvent('serve')
@@ -617,7 +623,9 @@ export function Sim({ name }: { name: string }) {
       }
       const left = bulk.left - dt
       if (got >= bulk.want) {
-        const pay = Math.round(bulk.want * sellPrice(st.current, bulk.dish, st.stage) * BULK_PAY * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
+        const gross = bulk.want * sellPrice(st.current, bulk.dish, st.stage) * BULK_PAY * (1 + bonusOf(st.current, 'sales')) * saleBoost()
+        const pay = Math.round(gross * (1 - cutFor(st.current)))
+        payCut(st.current, gross)
         cash += pay
         for (let k = 0; k < 10; k++) fly('cash', up(CRATE, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.45)
         popText(`📦 ${bulk.name} : +${pay} FCFA`)

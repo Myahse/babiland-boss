@@ -4,7 +4,7 @@ import { PLACES } from './places'
 import { useArcade } from './store'
 import { RealMap } from './RealMap'
 import { Commune3D } from './Commune3D'
-import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf, DEFEND_TARGET, SHIELD, GUARD_MAX, GUARD_PRICE, GUARD_SLOW, hireGuards, keyOf } from './turf'
+import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf, DEFEND_TARGET, SHIELD, GUARD_MAX, GUARD_PRICE, GUARD_SLOW, hireGuards, keyOf, bossName, rivalOf } from './turf'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 
@@ -70,7 +70,7 @@ function BigMap({ place, owners, selected, onPick }: { place: PlaceId; owners: (
             </text>
             {!d.forest && (
               <text x={cx} y={cy + 22} textAnchor="middle" fontSize="11.5" fontWeight="700" fill="#2b1a12">
-                {mine ? '👑 À toi' : `😎 ${d.boss}`}
+                {mine ? '👑 À toi' : rivalOf(place, i) ? `👤 ${bossName(place, i)} (joueur)` : `😎 ${d.boss}`}
               </text>
             )}
             {open && (
@@ -121,7 +121,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
   const act = () => {
     if (money < price || !canGo) return
     useArcade.setState({ money: money - price })
-    startDuel(place, sel, served)
+    startDuel(place, sel, served, price)
     onClose()
   }
   const keys = ds.filter((x) => x.bonus)
@@ -158,7 +158,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
       <div className="bg-[var(--color-cream)] p-3 shadow-[0_-4px_12px_rgba(0,0,0,.15)]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {!d ? (
           <p className="text-sm font-bold">
-            {free ? 'Touche un quartier voisin des tiens pour l’attaquer. Les zones clés ⭐ donnent un bonus.' : `Tu travailles pour ${ds[0].boss} : il garde ${CUT * 100} % de tes gains. Touche ton quartier pour le trahir.`}
+            {free ? 'Touche un quartier voisin des tiens pour l’attaquer. Les zones clés ⭐ donnent un bonus.' : `Tu travailles pour ${bossName(place, 0)} : il garde ${CUT * 100} % de tes gains. Touche ton quartier pour le trahir.`}
           </p>
         ) : (
           <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
                 {sel === 0 && '📍 '}
                 {d.name}
               </div>
-              <div className="text-sm font-bold">{mine ? '👑 À toi' : `😎 ${d.boss}`}</div>
+              <div className="text-sm font-bold">{mine ? '👑 À toi' : rivalOf(place, sel) ? `👤 ${bossName(place, sel)} · un vrai joueur${rivalOf(place, sel)!.online ? ' · 🟢 en ligne' : ''}` : `😎 ${d.boss}`}</div>
               {d.bonus && (
                 <div className="text-xs font-bold text-[#e8590c]">
                   ⭐ {d.bonus.icon} {d.bonus.label}
@@ -230,7 +230,7 @@ function DuelHud() {
   }
   if (duel) {
     const d = DISTRICTS[duel.place][duel.idx]
-    const enemy = duel.defend ? DISTRICTS[duel.place][duel.attacker ?? 0].boss : d.boss
+    const enemy = duel.online?.by ?? (duel.defend ? DISTRICTS[duel.place][duel.attacker ?? 0].boss : bossName(duel.place, duel.idx))
     const bar = (v: number, max: number, color: string, who: string) => (
       <div className="flex items-center gap-2 text-xs font-extrabold">
         <span className="w-20 truncate">{who}</span>
@@ -249,8 +249,10 @@ function DuelHud() {
             <span>{duel.defend ? `🛡️ Défends ${d.name}` : `⚔️ Duel pour ${d.name}`}</span>
             <span className={duel.left < 10 ? 'text-[#e03131]' : ''}>⏱️ {Math.ceil(duel.left)} s</span>
           </div>
-          {bar(duel.mine, duel.defend ? DEFEND_TARGET : DUEL_TARGET, 'var(--color-green)', 'Toi')}
-          {bar(duel.rival, DUEL_TARGET, '#e03131', enemy)}
+          {/* online: the target the server set (more with his gros bras); against a player serving live, serve more than him */}
+          {bar(duel.mine, duel.online ? (duel.defend ? Math.max(duel.online.target, Math.ceil(duel.rival) + 1) : duel.online.target) : duel.defend ? DEFEND_TARGET : DUEL_TARGET, 'var(--color-green)', 'Toi')}
+          {bar(duel.rival, duel.online?.target ?? DUEL_TARGET, '#e03131', enemy)}
+          {duel.online?.live && <div className="text-center text-[11px] font-extrabold text-[#e03131]">🔴 En direct contre {enemy} : sers plus que lui !</div>}
         </div>
       </div>
     )
@@ -283,7 +285,7 @@ function DuelHud() {
 export function TurfButton() {
   const place = useArcade((s) => s.current)
   const owners = useTurf((s) => s.owners[place])
-  const boss = owners?.[0] !== 'me' ? DISTRICTS[place][0].boss : null
+  const boss = owners?.[0] !== 'me' ? bossName(place, 0) : null
   return (
     <>
       <button

@@ -16,6 +16,7 @@ import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
 import { BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
+import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -185,6 +186,7 @@ function Hud() {
           </div>
           <div className="z-10 -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full border-4 border-white bg-[#f3e3c3] text-xl shadow-md">🍛</div>
         </div>
+        <DiamondButton />
         {/* money */}
         <div key={money} className="pop flex shrink-0 items-center gap-1.5 rounded-xl bg-white py-1 pr-3 pl-1 shadow-[0_4px_0_rgba(0,0,0,.2)]">
           <span className="grid h-9 w-12 place-items-center rounded-md bg-[#69db3c] text-lg">💵</span>
@@ -203,8 +205,10 @@ function Hud() {
         </button>
         <TurfButton />
         <MissionsButton />
+        <OnlineButton />
       </div>
       <BulkBanner />
+      <LiveFeed />
       <NewsLayer />
       <VipLayer />
       <OfflinePanel />
@@ -259,6 +263,7 @@ export default function ArcadeApp() {
         <>
           <Joystick />
           <Hud />
+          <OnlineRuntime />
         </>
       )}
     </div>

@@ -1,0 +1,709 @@
+{
+ "abobo": [
+  {
+   "name": "Abobo Gare",
+   "n": [
+    1,
+    2,
+    4,
+    7,
+    9
+   ]
+  },
+  {
+   "name": "Anador",
+   "n": [
+    0,
+    2,
+    3,
+    5
+   ]
+  },
+  {
+   "name": "Sagbé",
+   "n": [
+    0,
+    1,
+    9,
+    11
+   ]
+  },
+  {
+   "name": "Samaké",
+   "n": [
+    1,
+    4,
+    5,
+    6
+   ]
+  },
+  {
+   "name": "Kennedy",
+   "n": [
+    0,
+    1,
+    3,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "Abobo Té",
+   "n": [
+    1,
+    3,
+    6
+   ]
+  },
+  {
+   "name": "Belleville",
+   "n": [
+    3,
+    4,
+    5,
+    7,
+    8
+   ]
+  },
+  {
+   "name": "Habitat",
+   "n": [
+    0,
+    4,
+    6,
+    8,
+    9
+   ]
+  },
+  {
+   "name": "Akeïkoi",
+   "n": [
+    6,
+    7,
+    9
+   ]
+  },
+  {
+   "name": "Avocatier",
+   "n": [
+    0,
+    2,
+    7,
+    8,
+    11
+   ]
+  },
+  {
+   "name": "N’Dotré",
+   "n": [
+    11
+   ]
+  },
+  {
+   "name": "PK 18",
+   "n": [
+    2,
+    9,
+    10
+   ]
+  }
+ ],
+ "bouake": [
+  {
+   "name": "Commerce",
+   "n": [
+    5,
+    7,
+    9,
+    11
+   ]
+  },
+  {
+   "name": "Koko",
+   "n": [
+    2,
+    3,
+    5,
+    6,
+    11
+   ]
+  },
+  {
+   "name": "Nimbo",
+   "n": [
+    1,
+    4,
+    5,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "Dar-es-Salam",
+   "n": [
+    1,
+    6,
+    9,
+    10,
+    11
+   ]
+  },
+  {
+   "name": "Air France",
+   "n": [
+    2,
+    6,
+    8
+   ]
+  },
+  {
+   "name": "Ngattakro",
+   "n": [
+    0,
+    1,
+    2,
+    7,
+    11
+   ]
+  },
+  {
+   "name": "TSF",
+   "n": [
+    1,
+    2,
+    3,
+    4,
+    8,
+    10
+   ]
+  },
+  {
+   "name": "Broukro",
+   "n": [
+    0,
+    2,
+    5
+   ]
+  },
+  {
+   "name": "Kennedy",
+   "n": [
+    4,
+    6,
+    10
+   ]
+  },
+  {
+   "name": "Gonfreville",
+   "n": [
+    0,
+    3,
+    11
+   ]
+  },
+  {
+   "name": "Belleville",
+   "n": [
+    3,
+    6,
+    8
+   ]
+  },
+  {
+   "name": "Zone Industrielle",
+   "n": [
+    0,
+    1,
+    3,
+    5,
+    9
+   ]
+  }
+ ],
+ "cocody": [
+  {
+   "name": "Deux Plateaux",
+   "n": [
+    1,
+    8,
+    9
+   ]
+  },
+  {
+   "name": "Vallon",
+   "n": [
+    0,
+    2,
+    3,
+    5,
+    8
+   ]
+  },
+  {
+   "name": "Blockhaus",
+   "n": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "Ambassades",
+   "n": [
+    1,
+    2,
+    4
+   ]
+  },
+  {
+   "name": "Riviera Golf",
+   "n": [
+    3,
+    5,
+    10
+   ]
+  },
+  {
+   "name": "Riviera 2",
+   "n": [
+    1,
+    4,
+    6,
+    8,
+    10
+   ]
+  },
+  {
+   "name": "Riviera 3",
+   "n": [
+    5,
+    7,
+    8,
+    10,
+    11
+   ]
+  },
+  {
+   "name": "Palmeraie",
+   "n": [
+    6,
+    8,
+    9,
+    11
+   ]
+  },
+  {
+   "name": "Attoban",
+   "n": [
+    0,
+    1,
+    5,
+    6,
+    7,
+    9
+   ]
+  },
+  {
+   "name": "Angré",
+   "n": [
+    0,
+    7,
+    8
+   ]
+  },
+  {
+   "name": "M’Pouto",
+   "n": [
+    4,
+    5,
+    6,
+    11
+   ]
+  },
+  {
+   "name": "Akouédo",
+   "n": [
+    6,
+    7,
+    10
+   ]
+  }
+ ],
+ "gagnoa": [
+  {
+   "name": "Garahio",
+   "n": [
+    2,
+    3,
+    6
+   ]
+  },
+  {
+   "name": "Commerce",
+   "n": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "Libreville",
+   "n": [
+    0,
+    1,
+    5
+   ]
+  },
+  {
+   "name": "Soleil",
+   "n": [
+    0,
+    1,
+    6
+   ]
+  },
+  {
+   "name": "Château",
+   "n": [
+    1,
+    5
+   ]
+  },
+  {
+   "name": "Barouhio",
+   "n": [
+    1,
+    2,
+    4
+   ]
+  },
+  {
+   "name": "Lycée",
+   "n": [
+    0,
+    3
+   ]
+  }
+ ],
+ "korhogo": [
+  {
+   "name": "Soba",
+   "n": [
+    2,
+    3,
+    5
+   ]
+  },
+  {
+   "name": "Haoussabougou",
+   "n": [
+    4,
+    7
+   ]
+  },
+  {
+   "name": "Quartier 14",
+   "n": [
+    0,
+    3,
+    4,
+    6
+   ]
+  },
+  {
+   "name": "Air France",
+   "n": [
+    0,
+    2,
+    4
+   ]
+  },
+  {
+   "name": "Koko",
+   "n": [
+    1,
+    2,
+    3,
+    6
+   ]
+  },
+  {
+   "name": "Prémafolo",
+   "n": [
+    0,
+    6
+   ]
+  },
+  {
+   "name": "Ali Kader",
+   "n": [
+    2,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "Résidentiel",
+   "n": [
+    1
+   ]
+  }
+ ],
+ "man": [
+  {
+   "name": "Kennedy",
+   "n": [
+    1,
+    2,
+    5
+   ]
+  },
+  {
+   "name": "Libreville",
+   "n": [
+    0,
+    3,
+    5,
+    7
+   ]
+  },
+  {
+   "name": "Air France",
+   "n": [
+    0,
+    5,
+    8
+   ]
+  },
+  {
+   "name": "Domoraud",
+   "n": [
+    1,
+    4,
+    5,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "Commerce",
+   "n": [
+    3,
+    5,
+    6
+   ]
+  },
+  {
+   "name": "Dioulabougou",
+   "n": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    8
+   ]
+  },
+  {
+   "name": "CAFOP",
+   "n": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "Gbêpleu",
+   "n": [
+    1,
+    3
+   ]
+  },
+  {
+   "name": "Gbapleu",
+   "n": [
+    2,
+    5
+   ]
+  }
+ ],
+ "treichville": [
+  {
+   "name": "Arras",
+   "n": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "Biafra",
+   "n": [
+    2,
+    4
+   ]
+  },
+  {
+   "name": "Belleville",
+   "n": [
+    0,
+    1,
+    4,
+    6
+   ]
+  },
+  {
+   "name": "Gare de Bassam",
+   "n": [
+    0,
+    5,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "Notre-Dame",
+   "n": [
+    0,
+    1,
+    2,
+    5
+   ]
+  },
+  {
+   "name": "Zone 2",
+   "n": [
+    0,
+    3,
+    4,
+    7
+   ]
+  },
+  {
+   "name": "Zone 3",
+   "n": [
+    2,
+    3,
+    7
+   ]
+  },
+  {
+   "name": "Cité du Port",
+   "n": [
+    3,
+    5,
+    6
+   ]
+  }
+ ],
+ "yopougon": [
+  {
+   "name": "Selmer",
+   "n": [
+    1,
+    2,
+    3,
+    5,
+    11
+   ]
+  },
+  {
+   "name": "Wassakara",
+   "n": [
+    0,
+    2,
+    10
+   ]
+  },
+  {
+   "name": "Siporex",
+   "n": [
+    0,
+    1,
+    3,
+    4,
+    7,
+    10
+   ]
+  },
+  {
+   "name": "Score",
+   "n": [
+    0,
+    2,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "Banco 2",
+   "n": [
+    2,
+    3,
+    5,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "Sogefiha",
+   "n": [
+    0,
+    3,
+    4,
+    6,
+    11
+   ]
+  },
+  {
+   "name": "Quartier Maroc",
+   "n": [
+    4,
+    5,
+    7
+   ]
+  },
+  {
+   "name": "Port-Bouët II",
+   "n": [
+    2,
+    4,
+    6,
+    9,
+    10
+   ]
+  },
+  {
+   "name": "Micao",
+   "n": [
+    9,
+    10
+   ]
+  },
+  {
+   "name": "Gesco",
+   "n": [
+    7,
+    8,
+    10
+   ]
+  },
+  {
+   "name": "Zone Industrielle",
+   "n": [
+    1,
+    2,
+    7,
+    8,
+    9
+   ]
+  },
+  {
+   "name": "Koweït",
+   "n": [
+    0,
+    5
+   ]
+  }
+ ]
+}

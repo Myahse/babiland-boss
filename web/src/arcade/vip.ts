@@ -64,3 +64,6 @@ type Vip = {
 }
 export const useVip = create<Vip>(() => ({ ready: null, open: false, done: null }))
 if (import.meta.env.DEV) Object.assign(window, { vip: useVip })
+
+/** « Un client VIP maintenant » (shop): the shop simulation sets what it does */
+export const vipCall = { now: () => {} }

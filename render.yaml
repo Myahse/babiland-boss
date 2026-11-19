@@ -1,0 +1,31 @@
+# Render Blueprint for the Babiland Boss API (backend/), like Babi Life's. The web game is deployed on Vercel
+# with VITE_API_URL set to this service's address.
+services:
+  - type: web
+    name: babiland-boss-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    plan: free # the live duels need one instance: keep a single one
+    envVars:
+      - key: DATABASE_URL # Neon connection string (a new database, or a new schema on the same Neon project)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS # the game's address, e.g. https://babiland-boss.vercel.app
+        sync: false
+      - key: SITE_URL # where players come back after paying (the game's address)
+        sync: false
+      - key: API_URL # this service's own address, for GeniusPay's webhook
+        sync: false
+      - key: GENIUSPAY_API_KEY # Mobile Money (Wave, Orange, MTN, Moov): pk_sandbox_… to test, pk_live_… to sell; unset: shop shut
+        sync: false
+      - key: GENIUSPAY_API_SECRET
+        sync: false
+      - key: GENIUSPAY_WEBHOOK_SECRET # whsec_…, the webhooks' signature
+        sync: false
+      - key: STRIPE_SECRET_KEY # cards (sk_test_… / sk_live_…); unset: no card
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

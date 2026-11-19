@@ -81,3 +81,7 @@ Vidéo de 40 s d'une partie : [`docs/demo-arcade.mp4`](docs/demo-arcade.mp4).
 2. Maquis, restaurant, employés (vendeurs, livreurs à moto), commandes des maquis et bureaux.
 3. Conquête : prendre des zones de la commune aux autres boss (d'abord contre l'ordi, puis en ligne).
 4. En ligne : comptes, backend Go + Neon comme Babi Life.
+
+## En ligne
+
+Avec le serveur (`backend/`, Go + Postgres, comme Babi Life) et `VITE_API_URL` côté jeu, le jeu devient en ligne : comptes, partie sauvegardée en ligne, **quartiers tenus par de vrais joueurs** (les nouveaux travaillent pour le boss de leur quartier et lui envoient 20 %, jusqu'à le trahir), **duels en direct** entre boss, qui est en ligne, cris, classement, et la **boutique** (diamants et Pass Boss payés par Mobile Money ou carte). Voir `backend/README.md`.
