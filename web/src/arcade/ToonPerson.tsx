@@ -38,9 +38,15 @@ function inPlace(src: THREE.AnimationClip) {
   return clip
 }
 
-export function ToonPerson({ who, moving, carrying = false, sitting = false, ...props }: { who: PersonId; moving: boolean; carrying?: boolean; sitting?: boolean } & ThreeElements['group']) {
+/**
+ * `track`: the object the simulation moves (its `pos`). The person measures how fast it really goes and
+ * picks the animation from that: standing, walking or running, played at the matching pace so the feet
+ * don't slide. Without `track`, `moving` just switches walk / idle.
+ */
+export function ToonPerson({ who, moving, carrying = false, sitting = false, track, ...props }: { who: PersonId; moving: boolean; carrying?: boolean; sitting?: boolean; track?: { pos: THREE.Vector3 } } & ThreeElements['group']) {
   const { scene } = useGLTF(`${base}toon/${who}.glb`)
   const walkFile = useGLTF(`${base}toon/${who}-walk.glb`)
+  const runFile = useGLTF(`${base}toon/${who}-run.glb`)
   const idleFile = useGLTF(`${base}people/aya-idle.glb`)
   const model = useMemo(() => {
     const m = SkeletonUtils.clone(scene)
@@ -56,19 +62,28 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, ...
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
   const acts = useMemo(() => {
     const walk = mixer.clipAction(inPlace(walkFile.animations[0]))
+    const run = mixer.clipAction(inPlace(runFile.animations[0]))
     const idleClip = inPlace(idleFile.animations[0])
     idleClip.tracks = idleClip.tracks.filter((t) => !t.name.endsWith('.position'))
     const idle = mixer.clipAction(idleClip)
-    return { walk, idle }
-  }, [mixer, walkFile, idleFile])
+    // start at a random moment, so a line of people doesn't move in sync like robots
+    ;[walk, run, idle].forEach((a) => (a.time = Math.random() * a.getClip().duration))
+    return { walk, run, idle }
+  }, [mixer, walkFile, runFile, idleFile])
   const cur = useRef<THREE.AnimationAction | null>(null)
-  useEffect(() => {
-    const next = moving ? acts.walk : acts.idle
+  const play = (next: THREE.AnimationAction) => {
     if (next === cur.current) return
-    next.reset().fadeIn(0.2).play()
-    cur.current?.fadeOut(0.2)
+    next.reset().setEffectiveWeight(1).fadeIn(0.18).play()
+    cur.current?.fadeOut(0.18)
     cur.current = next
-  }, [moving, acts])
+  }
+  useEffect(() => {
+    if (!track) play(moving ? acts.walk : acts.idle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moving, acts, track])
+  // measured speed of the tracked object (smoothed)
+  const last = useRef<THREE.Vector3 | null>(null)
+  const speed = useRef(0)
 
   // carrying: both arms held forward under the plates, added on top of the walk / idle
   const arms = useMemo(
@@ -82,7 +97,25 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, ...
   const k = useRef(0)
   const q = useMemo(() => new THREE.Quaternion(), [])
   const e = useMemo(() => new THREE.Euler(), [])
-  useFrame((_, dt) => {
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.1)
+    if (track && dt > 0) {
+      const p = track.pos
+      const d = last.current ? Math.hypot(p.x - last.current.x, p.z - last.current.z) : 0
+      last.current = (last.current ?? new THREE.Vector3()).copy(p)
+      speed.current += (d / dt - speed.current) * Math.min(1, dt * 10)
+      const v = speed.current
+      const size = (props.scale as number) ?? 1
+      // natural speeds of the clips for this body size: walk ~1.25 m/s, run ~3.4 m/s
+      if (sitting || v < 0.15) play(acts.idle)
+      else if (v < 2.1) {
+        play(acts.walk)
+        acts.walk.timeScale = THREE.MathUtils.clamp(v / (1.25 * size), 0.5, 1.6)
+      } else {
+        play(acts.run)
+        acts.run.timeScale = THREE.MathUtils.clamp(v / (3.4 * size), 0.6, 1.4)
+      }
+    }
     mixer.update(dt)
     const add = (b: THREE.Bone | null, x: number, y: number, z: number, w = 1) => b && b.quaternion.multiply(q.setFromEuler(e.set(x * w, y * w, z * w)))
     // sitting on a chair: thighs forward, knees bent, the body lowered to the seat

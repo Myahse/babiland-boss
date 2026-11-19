@@ -5,10 +5,11 @@ import * as THREE from 'three'
 import { Avatar } from './Avatar'
 import { burst, fly, FX } from './fx'
 import { sfx } from './sfx'
+import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, START, STATION_LEVELS, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO, DELIVERY_PRICE, START, STATION_LEVELS, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 
@@ -24,7 +25,19 @@ const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
 const COUNTER_MAX = 12
 const TICK = 0.13 // one plate moves every TICK seconds
 
-const player = { pos: START.clone(), rot: 0, moving: false }
+const player = { pos: START.clone(), rot: 0, moving: false, vel: new THREE.Vector3() }
+const cashier = { pos: CASHIER.clone(), rot: 0, moving: false }
+const moto: MotoObj = { pos: MOTO.clone(), rot: Math.PI, visible: true }
+const MOTO_BOX = () => moto.pos.clone().add(new THREE.Vector3(0, 1.0, 0.55))
+/** the moto rides off along the side street and comes back: t 0..1 */
+function motoPath(t: number) {
+  const road = new THREE.Vector3(7.2, 0, MOTO.z)
+  if (t < 0.15) return { p: MOTO.clone().lerp(road, t / 0.15), r: Math.PI / 2, vis: true }
+  if (t < 0.4) return { p: road.clone().add(new THREE.Vector3(0, 0, -((t - 0.15) / 0.25) * 18)), r: Math.PI, vis: true }
+  if (t < 0.6) return { p: road.clone().add(new THREE.Vector3(0, 0, -18)), r: Math.PI, vis: false }
+  if (t < 0.85) return { p: road.clone().add(new THREE.Vector3(0.6, 0, -18 + ((t - 0.6) / 0.25) * 18)), r: 0, vis: true }
+  return { p: road.clone().lerp(MOTO, (t - 0.85) / 0.15), r: -Math.PI / 2, vis: true }
+}
 /** camera distance (1 = normal); a « zoom out » button could change it */
 export const view = { zoom: 1 }
 // handy for the automatic play tests (move Tantie Aya directly)
@@ -62,6 +75,8 @@ export function Sim({ name }: { name: string }) {
   const [, rerender] = useState(0)
   const bump = () => rerender((n) => n + 1)
   const worker = useRef({ pos: V(-1, -1.8), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: 0 })
+  const motoT = useRef(0)
+  const motoWait = useRef(4)
   const solids = useMemo(
     () => [...SOLIDS, ...(s.unlocks.pan2 ? [{ c: STATIONS[1], hx: 0.55, hz: 0.45 }] : []), ...(s.unlocks.table ? TABLE_SOLIDS : [])],
     [s.unlocks.pan2, s.unlocks.table],
@@ -99,11 +114,16 @@ export function Sim({ name }: { name: string }) {
 
     // 2. moving Tantie Aya (with the joystick / keys), blocked by the counters and the plot's edge
     const inp = moveInput()
-    player.moving = Math.hypot(inp.x, inp.z) > 0.05
+    // speed up and slow down smoothly instead of starting / stopping dead
+    const v = player.vel
+    v.x += (inp.x * SPEED - v.x) * Math.min(1, dt * 10)
+    v.z += (inp.z * SPEED - v.z) * Math.min(1, dt * 10)
+    if (Math.hypot(inp.x, inp.z) < 0.05 && v.length() < 0.08) v.set(0, 0, 0)
+    player.moving = v.length() > 0.05
     if (player.moving) {
       const p = player.pos
-      p.x = THREE.MathUtils.clamp(p.x + inp.x * SPEED * dt, BOUNDS.minX, BOUNDS.maxX)
-      p.z = THREE.MathUtils.clamp(p.z + inp.z * SPEED * dt, BOUNDS.minZ, BOUNDS.maxZ)
+      p.x = THREE.MathUtils.clamp(p.x + v.x * dt, BOUNDS.minX, BOUNDS.maxX)
+      p.z = THREE.MathUtils.clamp(p.z + v.z * dt, BOUNDS.minZ, BOUNDS.maxZ)
       for (const b of solids) {
         const dx = p.x - b.c.x
         const dz = p.z - b.c.z
@@ -114,7 +134,7 @@ export function Sim({ name }: { name: string }) {
           else p.z += Math.sign(dz) * oz
         }
       }
-      player.rot = turn(player.rot, Math.atan2(inp.x, inp.z), Math.min(1, dt * 12))
+      if (v.length() > 0.3) player.rot = turn(player.rot, Math.atan2(v.x, v.z), Math.min(1, dt * 12))
     }
 
     // 3. picking up / dropping / collecting, one plate at a time
@@ -146,7 +166,7 @@ export function Sim({ name }: { name: string }) {
       // the server works the same way
       if (st.unlocks.serveur) {
         for (let i = 0; i < stations; i++)
-          if (w.state === 'toStation' && wCarried < 6 && plates[i] > 0 && w.pos.distanceTo(stationFront(i)) < 0.6) {
+          if (w.state === 'toStation' && wCarried < (st.unlocks.rapide ? 10 : 5) && plates[i] > 0 && w.pos.distanceTo(stationFront(i)) < 0.6) {
             plates[i]--
             wCarried++
             changed = true
@@ -185,7 +205,8 @@ export function Sim({ name }: { name: string }) {
     const unlocks = { ...st.unlocks }
     const paid = { ...st.paid }
     for (const u of Object.keys(PADS) as Unlock[]) {
-      if (unlocks[u] || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
+      const need = PADS[u].needs
+      if (unlocks[u] || (need && !unlocks[need]) || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
       const give = Math.min(money, Math.ceil((PADS[u].price / 1.4) * dt), priceLeft(u))
       money -= give
       paid[u] = (paid[u] ?? 0) + give
@@ -218,10 +239,10 @@ export function Sim({ name }: { name: string }) {
 
     // 5. the server: go to the fullest station, fill up to 3 plates, bring them to the counter
     if (st.unlocks.serveur) {
-      if (w.state === 'toStation' && (wCarried >= 6 || (wCarried > 0 && plates.slice(0, stations).every((n) => n === 0)))) w.state = 'toCounter'
+      if (w.state === 'toStation' && (wCarried >= (st.unlocks.rapide ? 10 : 5) || (wCarried > 0 && plates.slice(0, stations).every((n) => n === 0)))) w.state = 'toCounter'
       if (w.state === 'toCounter' && wCarried === 0) w.state = 'toStation'
       const best = plates.slice(0, stations).reduce((b, n, i) => (n > plates[b] ? i : b), 0)
-      const r = step(w.pos, w.state === 'toStation' ? stationFront(best) : COUNTER_BACK, SPEED * 0.75, dt)
+      const r = step(w.pos, w.state === 'toStation' ? stationFront(best) : COUNTER_BACK, SPEED * (st.unlocks.rapide ? 1.0 : 0.7), dt)
       w.moving = r.moving
       if (r.moving) w.rot = turn(w.rot, r.dir, Math.min(1, dt * 10))
       w.carried = wCarried
@@ -238,14 +259,16 @@ export function Sim({ name }: { name: string }) {
     }
     let served = st.served
     line.forEach((c, k) => {
-      const r = step(c.pos, slot(k), 1.5, dt)
+      const r = step(c.pos, slot(k), 1.4, dt)
       if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
       else c.rot = turn(c.rot, Math.PI, Math.min(1, dt * 6))
       if (r.moving !== c.moving) {
         c.moving = r.moving
         bump()
       }
-      if (k === 0 && !r.moving && counter > 0 && c.got < c.want && acc.current < dt) {
+      // someone has to be at the till: Tantie Aya herself, or the cashier once hired
+      const tillManned = unlocks.caisse || player.pos.distanceTo(COUNTER) < 1.8
+      if (k === 0 && !r.moving && tillManned && counter > 0 && c.got < c.want && acc.current < dt) {
         counter--
         c.got++
         changed = true
@@ -293,7 +316,7 @@ export function Sim({ name }: { name: string }) {
         return
       }
       if (c.state !== 'out') return
-      const r = step(c.pos, EXIT, 1.6, dt)
+      const r = step(c.pos, EXIT, 1.4, dt)
       if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
       else c.id = -1
     })
@@ -302,7 +325,59 @@ export function Sim({ name }: { name: string }) {
       bump()
     }
 
-    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid })
+    // 7. moto delivery: a phone order waits at the moto; load it, it rides off, the money comes back
+    let delivery = st.delivery
+    if (unlocks.moto) {
+      if (delivery.state === 'none') {
+        motoWait.current -= dt
+        if (motoWait.current <= 0) {
+          delivery = { want: 3 + Math.floor(Math.random() * 4), got: 0, state: 'wait' }
+          popText('📱 Nouvelle commande à livrer !')
+          sfx.pay()
+          changed = true
+        }
+      } else if (delivery.state === 'wait') {
+        let got = delivery.got
+        if (acc.current < dt) {
+          if (carried > 0 && got < delivery.want && player.pos.distanceTo(MOTO) < 1.4) {
+            carried--
+            got++
+            fly('plate', hands(player, () => carried)(), MOTO_BOX())
+            sfx.drop()
+          } else if (unlocks.livreur && counter > 0 && got < delivery.want) {
+            // the livreur takes the plates from the counter himself
+            counter--
+            got++
+            fly('plate', COUNTER_TOP, MOTO_BOX(), 0, 0.45)
+          }
+        }
+        if (got !== delivery.got) {
+          changed = true
+          delivery = { ...delivery, got }
+          if (got >= delivery.want) {
+            delivery = { ...delivery, state: 'away' }
+            motoT.current = 0
+            cash += delivery.want * DELIVERY_PRICE
+            for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
+            popText(`🛵 Livraison : +${delivery.want * DELIVERY_PRICE} FCFA`)
+            sfx.unlock()
+          }
+        }
+      } else if (delivery.state === 'away') {
+        motoT.current += dt / 14
+        if (motoT.current >= 1) {
+          delivery = { want: 0, got: 0, state: 'none' }
+          motoWait.current = 3 + Math.random() * 4
+          changed = true
+        }
+      }
+    }
+    const mp = delivery.state === 'away' ? motoPath(Math.min(1, motoT.current)) : { p: MOTO, r: Math.PI, vis: true }
+    moto.pos.copy(mp.p)
+    moto.rot = mp.r
+    moto.visible = mp.vis
+
+    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery })
   })
 
   return (
@@ -321,9 +396,11 @@ export function Sim({ name }: { name: string }) {
         TABLES.map((t, i) => (
           <SquareTable key={i} position={t} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
-      {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] ? <Pad key={u} label={PADS[u].label} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
+      {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] && (!PADS[u].needs || s.unlocks[PADS[u].needs!]) ? <Pad key={u} label={PADS[u].label} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
       <Mover who="aya" obj={player} carried={s.carried} full={s.carried >= (s.unlocks.plateau ? 16 : 8)} />
       {s.unlocks.serveur && <Mover who="yao" obj={worker.current} carried={s.workerCarried} />}
+      {s.unlocks.caisse && <Mover who="fatou" obj={cashier} />}
+      {s.unlocks.moto && <Moto obj={moto} want={s.delivery.want} got={s.delivery.got} waiting={s.delivery.state === 'wait'} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
           {k === 0 && c.state === 'line' && !c.moving && <Wants want={c.want} got={c.got} />}
@@ -347,7 +424,7 @@ function Mover({ who, obj, carried = 0, sitting = false, full = false, children 
   })
   return (
     <group ref={ref}>
-      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} sitting={sitting} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
+      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} sitting={sitting} track={obj} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
       {carried > 0 && <PlateStack count={carried} wobble position={[0, 1.0, 0.45]} />}
       {full && (
         <Html position={[0, 1.15 + carried * 0.075, 0.45]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>

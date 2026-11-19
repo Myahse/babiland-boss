@@ -7,6 +7,7 @@ type Arcade = {
   cash: number // money waiting on the floor by the counter
   tableCash: number[] // tips left on the terrace tables
   level: number[] // upgrade level of each garba station (1..3)
+  delivery: { want: number; got: number; state: 'none' | 'wait' | 'away' } // the moto's current order
   upPaid: number[] // money already put into the next upgrade of each station
   station: number[] // plates ready on each garba station
   counter: number // plates on the counter
@@ -33,6 +34,7 @@ export const useArcade = create<Arcade>(() => ({
   cash: 0,
   tableCash: [0, 0, 0],
   level: [1, 1],
+  delivery: { want: 0, got: 0, state: 'none' },
   upPaid: [0, 0],
   station: [0, 0],
   counter: 0,

@@ -53,6 +53,67 @@ function Joystick() {
   )
 }
 
+// Where the game goes next (see docs/VISION.md): other communes and cities, side businesses, the boss clash.
+const PLACES = [
+  { name: 'Yopougon', dish: 'Garba', level: 1 },
+  { name: 'Cocody', dish: 'Alloco', level: 3 },
+  { name: 'Abobo', dish: 'Choukouya', level: 5 },
+  { name: 'Treichville', dish: 'Poisson braisé', level: 7 },
+  { name: 'Bouaké', dish: 'Kedjenou', level: 10 },
+  { name: 'Korhogo', dish: 'Tô', level: 12 },
+  { name: 'Gagnoa', dish: 'Sauce kplala', level: 14 },
+  { name: 'Man', dish: 'Sauce feuille', level: 16 },
+]
+const SIDE = [
+  { name: 'Vendeuse de thé', level: 2, icon: '🍵' },
+  { name: 'Stand de choukouya', level: 4, icon: '🍖' },
+  { name: 'Alloco du soir', level: 6, icon: '🍌' },
+]
+
+function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
+  return (
+    <div className="pointer-events-auto absolute inset-0 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
+      <div className="card pop max-h-[85%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-extrabold">🗺️ Deviens le boss de Babi</h2>
+          <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
+            ✕
+          </button>
+        </div>
+        <p className="mt-1 text-sm font-semibold">Monte de niveau pour ouvrir de nouveaux maquis, de nouveaux business, puis d’autres villes.</p>
+        <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Communes et villes</div>
+        <div className="mt-1 grid grid-cols-2 gap-1.5">
+          {PLACES.map((p) => {
+            const open = level >= p.level
+            return (
+              <div key={p.name} className={`rounded-xl border-2 px-2.5 py-1.5 leading-tight ${p.level === 1 ? 'border-[var(--color-ink)] bg-[#ffe8cc]' : 'border-dashed border-[#c9b79c]'}`}>
+                <div className="text-sm font-extrabold">
+                  {p.name} {p.level === 1 ? '⭐' : open ? '🔓' : '🔒'}
+                </div>
+                <div className="text-xs font-semibold">{p.level === 1 ? `${p.dish} · ton maquis` : `${p.dish} · niveau ${p.level}`}</div>
+              </div>
+            )
+          })}
+        </div>
+        <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Petits business</div>
+        <div className="mt-1 space-y-1">
+          {SIDE.map((b) => (
+            <div key={b.name} className="flex items-center justify-between rounded-xl border-2 border-dashed border-[#c9b79c] px-2.5 py-1.5 text-sm font-bold">
+              <span>
+                {b.icon} {b.name}
+              </span>
+              <span className="text-xs">{level >= b.level ? 'bientôt' : `niveau ${b.level}`}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-xl bg-[#2b1a12] p-3 text-sm font-bold text-white">
+          ⚔️ Clash des boss — bientôt en ligne : prends un quartier au boss d’à côté et défends le tien.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Hud() {
   const money = useArcade((s) => s.money)
   const carried = useArcade((s) => s.carried)
@@ -60,6 +121,7 @@ function Hud() {
   const pop = useArcade((s) => s.pop)
   const goal = 20
   const [sound, setSound] = useState(!isMuted())
+  const [map, setMap] = useState(false)
   const level = 1 + Math.floor(served / goal)
   const [hint, setHint] = useState(true)
   const t = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -99,9 +161,17 @@ function Hud() {
           <span className="text-2xl font-extrabold text-[#343a40]">{money >= 10000 ? `${(money / 1000).toFixed(1)}K` : money}</span>
         </div>
       </div>
-      <div className="absolute top-20 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-        Yopougon · Niveau {level}
+      <div className="absolute top-20 left-3 flex flex-col items-start gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow">Yopougon · Niveau {level}</div>
+        <button
+          className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#1c7ed6] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setMap(true)}
+        >
+          🗺️ Carte
+        </button>
       </div>
+      {map && <MapPanel level={level} onClose={() => setMap(false)} />}
       {carried > 0 && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-sm font-extrabold shadow">
           🍛 {carried}
