@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Baloo 2', system-ui, sans-serif;
+  --color-ink: #2b1a12;
+  --color-cream: #fff6e6;
+  --color-orange: #f76707;
+  --color-green: #2f9e44;
+}
+
+html, body, #root { height: 100%; margin: 0; overflow: hidden; background: #ffd9a0; }
+body { font-family: var(--font-sans); color: var(--color-ink); -webkit-tap-highlight-color: transparent; user-select: none; }
+
+.btn {
+  @apply rounded-2xl px-5 py-3 text-lg font-extrabold text-white active:translate-y-0.5 disabled:opacity-40;
+  background: linear-gradient(#ff922b, #f76707);
+  box-shadow: 0 4px 0 #c2410c, 0 8px 18px rgba(0,0,0,.18);
+}
+.btn-green { background: linear-gradient(#51cf66, #2f9e44); box-shadow: 0 4px 0 #1f6f31, 0 8px 18px rgba(0,0,0,.18); }
+.card { @apply rounded-3xl bg-[var(--color-cream)] p-5; box-shadow: 0 6px 0 rgba(43,26,18,.15), 0 16px 40px rgba(0,0,0,.2); border: 3px solid var(--color-ink); }
+.pop { animation: pop .35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes pop { from { transform: scale(.4); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+.float-up { animation: floatUp 1s ease-out forwards; }
+@keyframes floatUp { 0% { transform: translate(-50%, 0) scale(.6); opacity: 0 } 20% { transform: translate(-50%, -10px) scale(1.15); opacity: 1 } 100% { transform: translate(-50%, -60px) scale(1); opacity: 0 } }
