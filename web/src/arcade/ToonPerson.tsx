@@ -7,9 +7,8 @@ import type { PersonId } from '../three/RealPerson'
 
 // Cartoon "animated film" people (Meshy, stylised prompt), in public/assets/toon/<who>.glb with their own
 // walk and run. Every Meshy skeleton uses the same bone names, so the recorded idle animation made for the
-// realistic Tantie Aya can play on all of them — but only once *retargeted*: each skeleton has its own rest
-// pose, so the rotations are converted from the source rest pose to this person's rest pose (otherwise the
-// bones twist: bent backs, splayed legs).
+// Standing still uses no borrowed clip (a clip recorded on another skeleton twists the bones): it is each
+// person's own rest pose, arms brought down along the body.
 // Carrying and sitting are done by *aiming* the limbs (arms forward under the plates, thighs forward and
 // shins down on a chair), which works whatever the axes of each skeleton.
 
@@ -22,15 +21,6 @@ function bone(root: THREE.Object3D, name: string) {
     if (!b && (o as THREE.Bone).isBone && o.name.toLowerCase() === name) b = o as THREE.Bone
   })
   return b as THREE.Bone | null
-}
-
-/** Rest rotation of every bone of a skeleton, by name. */
-function restPose(root: THREE.Object3D) {
-  const m = new Map<string, THREE.Quaternion>()
-  root.traverse((o) => {
-    if ((o as THREE.Bone).isBone || o.type === 'Object3D' || o.type === 'Group') m.set(o.name, o.quaternion.clone())
-  })
-  return m
 }
 
 /** Remove the hips' travel so a clip plays on the spot (the game moves people itself). */
@@ -46,32 +36,6 @@ function inPlace(src: THREE.AnimationClip) {
         v[k + 2] = v[2]
       }
       return new THREE.VectorKeyframeTrack(t.name, Array.from(t.times), Array.from(v))
-    })
-  return clip
-}
-
-/** Convert a clip recorded on another skeleton: target = targetRest · sourceRest⁻¹ · source (rotations only). */
-function retarget(src: THREE.AnimationClip, from: Map<string, THREE.Quaternion>, to: Map<string, THREE.Quaternion>) {
-  const clip = src.clone()
-  const a = new THREE.Quaternion()
-  const off = new THREE.Quaternion()
-  clip.tracks = clip.tracks
-    .filter((t) => t.name.endsWith('.quaternion'))
-    .map((t) => {
-      const name = t.name.slice(0, -'.quaternion'.length)
-      const s = from.get(name)
-      const d = to.get(name)
-      if (!s || !d) return t
-      off.copy(d).multiply(s.clone().invert())
-      const v = t.values.slice()
-      for (let k = 0; k < v.length; k += 4) {
-        a.set(v[k], v[k + 1], v[k + 2], v[k + 3]).premultiply(off)
-        v[k] = a.x
-        v[k + 1] = a.y
-        v[k + 2] = a.z
-        v[k + 3] = a.w
-      }
-      return new THREE.QuaternionKeyframeTrack(t.name, Array.from(t.times), Array.from(v))
     })
   return clip
 }
@@ -111,7 +75,6 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
   const { scene } = useGLTF(`${base}toon/${who}.glb`)
   const walkFile = useGLTF(`${base}toon/${who}-walk.glb`)
   const runFile = useGLTF(`${base}toon/${who}-run.glb`)
-  const idleFile = useGLTF(`${base}people/aya-idle.glb`)
   const model = useMemo(() => {
     const m = SkeletonUtils.clone(scene)
     m.traverse((o) => {
@@ -127,19 +90,25 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
   const acts = useMemo(() => {
     const walk = mixer.clipAction(inPlace(walkFile.animations[0]))
     const run = mixer.clipAction(inPlace(runFile.animations[0]))
-    // the idle was recorded on another skeleton: convert it to this one's rest pose
-    const idle = mixer.clipAction(retarget(idleFile.animations[0], restPose(idleFile.scene), restPose(scene)))
     // start at a random moment, so a line of people doesn't move in sync like robots
-    ;[walk, run, idle].forEach((a) => (a.time = Math.random() * a.getClip().duration))
-    return { walk, run, idle }
-  }, [mixer, walkFile, runFile, idleFile, scene])
+    ;[walk, run].forEach((a) => (a.time = Math.random() * a.getClip().duration))
+    // standing still has no clip: it is the person's own rest pose with the arms brought down (see below)
+    return { walk, run, idle: null }
+  }, [mixer, walkFile, runFile])
   const cur = useRef<THREE.AnimationAction | null>(null)
-  const play = (next: THREE.AnimationAction) => {
+  const play = (next: THREE.AnimationAction | null) => {
     if (next === cur.current) return
-    next.reset().setEffectiveWeight(1).fadeIn(0.18).play()
-    cur.current?.fadeOut(0.18)
+    next?.reset().setEffectiveWeight(1).fadeIn(0.2).play()
+    cur.current?.fadeOut(0.2)
     cur.current = next
   }
+  // every bone's rest rotation, to go back to it when standing still
+  const rest = useMemo(() => {
+    const r: [THREE.Bone, THREE.Quaternion][] = []
+    model.traverse((o) => (o as THREE.Bone).isBone && r.push([o as THREE.Bone, o.quaternion.clone()]))
+    return r
+  }, [model])
+  const idleW = useRef(1)
   useEffect(() => {
     if (!track) play(moving ? acts.walk : acts.idle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +154,10 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
       }
     }
     mixer.update(dt)
+    // standing still: blend back to the rest pose (the walk / run fade out at the same time)
+    idleW.current += ((cur.current ? 0 : 1) - idleW.current) * Math.min(1, dt * 6)
+    const iw = idleW.current
+    if (iw > 0.01) for (const [b, q] of rest) b.quaternion.slerp(q, iw)
 
     // which way the person faces, in the world
     root.current?.getWorldQuaternion(qA)
@@ -195,7 +168,17 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
     // sitting: thighs forward, shins down, body lowered onto the chair
     sitW.current += ((sitting ? 1 : 0) - sitW.current) * Math.min(1, dt * 6)
     const sw = sitW.current
-    if (hips.current) hips.current.position.y = -0.36 * sw
+    // a slow breath when standing
+    if (hips.current) hips.current.position.y = -0.36 * sw + Math.sin(performance.now() / 700) * 0.006 * iw
+    // arms down along the body instead of the spread-out pose the characters were built in
+    if (iw > 0.01 && sw < 0.5)
+      for (const s of [-1, 1]) {
+        const arm = s < 0 ? B.la : B.ra
+        const fore = s < 0 ? B.lf : B.rf
+        const hand = s < 0 ? B.lh : B.rh
+        aim(arm, fore, d.set(0, -1, 0).addScaledVector(side, s * 0.12).addScaledVector(fwd, 0.04).normalize(), iw)
+        aim(fore, hand, d.set(0, -1, 0).addScaledVector(fwd, 0.18).addScaledVector(side, s * 0.04).normalize(), iw)
+      }
     if (sw > 0.01) {
       for (const s of [-1, 1]) {
         const up = s < 0 ? B.lu : B.ru
