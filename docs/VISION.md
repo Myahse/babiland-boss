@@ -32,7 +32,7 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 | Vendre le plat à des clients PNJ | ✅ jeu « arcade idle » : file de clients, comptoir, argent |
 | Gagner de l'argent, améliorer le matériel (cuire plus vite, bonus) | ✅ 2e poêle, postes « Plus vite » niv 2 / MAX, grand plateau |
 | Améliorer son endroit | ✅ terrasse avec tables ; le maquis à étage |
-| Embaucher : vendre pour toi, servir, livrer | ✅ serveur (+ serveur rapide), caissière, livreur à moto |
+| Embaucher : vendre pour toi, servir, livrer | ✅ serveur (+ serveur rapide), caissière, livreur à moto ; **gains hors ligne** : un maquis avec serveur et caissière continue de vendre quand tu n'es pas là (jusqu'à 2 h comptées), « Pendant ton absence… » au retour, avec les loyers des quartiers |
 | Livraison / commandes à distance | ✅ commandes par téléphone livrées à moto |
 | Des niveaux | ✅ 20 clients servis (tous maquis confondus) par niveau ; les niveaux ouvrent les nouveaux lieux |
 | Le plat principal + les plats particuliers de chaque zone | ✅ chaque lieu a son plat principal et 2 plats particuliers (Yopougon : garba, porc au four, thé…), chacun avec son poste à débloquer ; chaque client commande un plat |

@@ -13,6 +13,7 @@ import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './
 import { isMuted, setMuted } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
 import { VipLayer } from './VipCook'
+import { OfflinePanel } from './Offline'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -196,6 +197,7 @@ function Hud() {
         <TurfButton />
       </div>
       <VipLayer />
+      <OfflinePanel />
       <TurfLayer />
       {map && <MapPanel level={level} onClose={() => setMap(false)} />}
       {carried > 0 && (

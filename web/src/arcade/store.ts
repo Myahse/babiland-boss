@@ -77,6 +77,11 @@ useArcade.subscribe((s) => {
   }
 })
 
+/** The saved state of one of your maquis (the one you are in, or one you left). */
+export function placeState(id: PlaceId, s: Arcade = useArcade.getState()): PlaceState {
+  return id === s.current ? pick(s) : norm(s.places[id])
+}
+
 /** Customers served in all your maquis together (it sets your level). */
 export function totalServed(s: Arcade = useArcade.getState()) {
   return s.owned.reduce((n, id) => n + (id === s.current ? s.served : (s.places[id]?.served ?? 0)), 0)
