@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Outlines } from '@react-three/drei'
+import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame } from '../store'
 import { Sliceable, VEG_R, type Veg } from '../three/Food'
-import { Toon } from '../three/Person'
+import { Mat } from '../three/Mat'
 import { BOARD } from '../three/Stand'
-import { INK } from '../three/toon'
 import { resetMini, useMini } from './mini'
 
 const VEGS: Veg[] = ['tomate', 'oignon']
@@ -47,7 +46,12 @@ export function CutGame() {
     const s = best.d < 0.01 ? 1 : best.d < 0.022 ? 0.7 : best.d < 0.04 ? 0.35 : 0.1
     scores.current.push(s)
     say(s === 1 ? 'Parfait !' : s >= 0.7 ? 'Bien !' : s > 0.3 ? 'Bof…' : 'Raté !', s === 1 ? 'good' : s >= 0.7 ? 'ok' : 'bad')
-    setCuts((c) => [...c, THREE.MathUtils.clamp(at, -VEG_R + 0.012, VEG_R - 0.012)])
+    setCuts((c) => {
+      // two chops at the same spot would make an empty slice: move the new one next to the old
+      let x = THREE.MathUtils.clamp(at, -VEG_R + 0.012, VEG_R - 0.012)
+      while (c.some((o) => Math.abs(o - x) < 0.012)) x = x > 0 ? x - 0.013 : x + 0.013
+      return [...c, x]
+    })
     if (used.current.every(Boolean)) {
       done.current = true
       setTimeout(() => {
@@ -95,15 +99,12 @@ export function CutGame() {
         )),
       )}
       <group ref={knife} position={[BOARD[0], Y + 0.2, BOARD[2]]} rotation={[0, -0.55, 0]}>
-        <mesh castShadow position={[0, 0.02, 0]}>
-          <boxGeometry args={[0.006, 0.11, 0.26]} />
-          <Toon color="#dee2e6" />
-          <Outlines thickness={0.004} color={INK} />
-        </mesh>
-        <mesh position={[0, 0.045, 0.2]}>
-          <boxGeometry args={[0.022, 0.035, 0.14]} />
-          <Toon color="#5c3b1e" />
-          <Outlines thickness={0.004} color={INK} />
+        <RoundedBox args={[0.006, 0.11, 0.26]} radius={0.0028} castShadow position={[0, 0.02, 0]}>
+          <meshStandardMaterial color="#e9ecef" roughness={0.18} metalness={0.9} />
+        </RoundedBox>
+        <mesh position={[0, 0.05, 0.2]} rotation={[Math.PI / 2, 0, 0]} scale={[0.75, 1, 1.1]}>
+          <capsuleGeometry args={[0.018, 0.11, 8, 16]} />
+          <Mat color="#6b4423" rough={0.5} />
         </mesh>
       </group>
     </group>

@@ -1,9 +1,9 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
-import { Outlines, RoundedBox } from '@react-three/drei'
+import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
-import { Toon } from './Person'
-import { attiekeTexture, cutFaceTexture, INK } from './toon'
+import { Mat } from './Mat'
+import { attiekeTexture, bumpTexture, cutFaceTexture } from './textures'
 
 export type Veg = 'tomate' | 'oignon'
 export const VEG_R = 0.095
@@ -42,10 +42,9 @@ export function Sliceable({ kind, cuts, ...group }: { kind: Veg; cuts: number[] 
     <group {...group}>
       <group scale={kind === 'oignon' ? [1, 0.92, 0.92] : [1, 0.9, 1]}>
         {pieces.map((p, i) => (
-          <group key={`${p.a}:${p.b}`} ref={(el) => void (refs.current[i] = el)}>
+          <group key={`${i}:${p.a}:${p.b}`} ref={(el) => void (refs.current[i] = el)}>
             <mesh geometry={p.geo} rotation={[0, 0, -Math.PI / 2]} castShadow>
-              <Toon color={SKIN[kind]} />
-              <Outlines thickness={0.004} color={INK} />
+              <meshPhysicalMaterial color={SKIN[kind]} roughness={kind === 'tomate' ? 0.22 : 0.45} clearcoat={kind === 'tomate' ? 1 : 0.3} />
             </mesh>
             {i > 0 && <CutFace x={p.a + 0.0012} r={Math.sqrt(r * r - p.a * p.a)} dir={-1} map={face} />}
             {i < pieces.length - 1 && <CutFace x={p.b - 0.0012} r={Math.sqrt(r * r - p.b * p.b)} dir={1} map={face} />}
@@ -56,18 +55,18 @@ export function Sliceable({ kind, cuts, ...group }: { kind: Veg; cuts: number[] 
             {Array.from({ length: 5 }, (_, i) => (
               <mesh key={i} rotation={[0, (i / 5) * Math.PI * 2, 0]} position={[0, 0.004, 0]}>
                 <boxGeometry args={[0.012, 0.006, 0.05]} />
-                <Toon color="#2f9e44" />
+                <Mat color="#2f9e44" />
               </mesh>
             ))}
             <mesh position={[0, 0.015, 0]}>
               <cylinderGeometry args={[0.006, 0.008, 0.025, 6]} />
-              <Toon color="#2b8a3e" />
+              <Mat color="#2b8a3e" />
             </mesh>
           </group>
         ) : (
           <mesh position={[r + 0.008, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
             <coneGeometry args={[0.018, 0.04, 8]} />
-            <Toon color="#c4a484" />
+            <Mat color="#c4a484" />
           </mesh>
         )}
       </group>
@@ -79,7 +78,7 @@ function CutFace({ x, r, dir, map }: { x: number; r: number; dir: 1 | -1; map: T
   return (
     <mesh position={[x, 0, 0]} rotation={[0, (dir * Math.PI) / 2, 0]}>
       <circleGeometry args={[r, 28]} />
-      <Toon color="#ffffff" map={map} />
+      <Mat color="#ffffff" map={map} />
     </mesh>
   )
 }
@@ -110,8 +109,7 @@ export function FishPiece({ color, ...mesh }: { color: THREE.Color | string } & 
   return (
     <group {...mesh}>
       <RoundedBox args={[0.1, 0.045, 0.07]} radius={0.018} castShadow>
-        <Toon color={color} />
-        <Outlines thickness={0.004} color={INK} />
+        <Mat color={color} rough={0.45} bumpMap={bumpTexture()} bumpScale={2} />
       </RoundedBox>
     </group>
   )
@@ -123,8 +121,7 @@ export function Attieke({ size = 1, ...group }: { size?: number } & ThreeElement
     <group {...group}>
       <mesh castShadow scale={[size, size * 0.55, size]}>
         <sphereGeometry args={[0.1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <Toon color="#ffffff" map={attiekeTexture()} />
-        <Outlines thickness={0.004} color={INK} />
+        <Mat color="#ffffff" map={attiekeTexture()} rough={0.9} bumpMap={bumpTexture()} bumpScale={3} />
       </mesh>
     </group>
   )
@@ -134,12 +131,12 @@ export function Piment({ green = false, ...group }: { green?: boolean } & ThreeE
   return (
     <group {...group}>
       <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-        <capsuleGeometry args={[0.011, 0.035, 3, 8]} />
-        <Toon color={green ? '#37b24d' : '#e03131'} />
+        <capsuleGeometry args={[0.011, 0.035, 6, 12]} />
+        <meshPhysicalMaterial color={green ? '#37b24d' : '#e03131'} roughness={0.2} clearcoat={1} />
       </mesh>
       <mesh position={[0.03, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.004, 0.005, 0.015, 5]} />
-        <Toon color="#2b8a3e" />
+        <Mat color="#2b8a3e" />
       </mesh>
     </group>
   )
@@ -151,11 +148,11 @@ export function Slice({ kind, ...group }: { kind: Veg } & ThreeElements['group']
     <group {...group}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.03, 0.03, 0.01, 16]} />
-        <Toon color={SKIN[kind]} />
+        <Mat color={SKIN[kind]} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0055, 0]}>
         <circleGeometry args={[0.028, 16]} />
-        <Toon color="#ffffff" map={cutFaceTexture(kind)} />
+        <Mat color="#ffffff" map={cutFaceTexture(kind)} />
       </mesh>
     </group>
   )

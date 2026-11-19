@@ -47,7 +47,7 @@ function Walker({ order, from, to, speed = 1.6, onArrive, children }: { order: O
 
 function Bubble({ text, name }: { text: string; name: string }) {
   return (
-    <Html position={[0, 1.75, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+    <Html position={[0, 2.0, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
       <div className="pop w-[190px] -translate-y-1/2 rounded-2xl border-[3px] border-[var(--color-ink)] bg-white px-3 py-2 text-[15px] leading-tight font-bold shadow-lg">
         <div className="text-[11px] font-extrabold tracking-wide text-[var(--color-orange)] uppercase">{name}</div>
         {text}

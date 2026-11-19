@@ -4,12 +4,13 @@ Un jeu de cuisine et de business à Babi. Tu pars de ton petit coin de garba à 
 (couper, frire, servir), tu vends, tu améliores ton matériel… et un jour tu deviens le boss de la commune.
 
 Même chemin que Babi Life : React 19 · TypeScript · Vite · Tailwind 4 · Three.js (react-three-fiber).
-Toute la 3D est faite en code (pas d'artiste ni de modèles à télécharger) dans un style cartoon :
-ombrage « toon » en 4 paliers, contours noirs, couleurs vives.
+Toute la 3D est faite en code (pas d'artiste ni de modèles à télécharger), dans un style lisse
+« film d'animation » : formes arrondies, persos sculptés (visage, yeux, mains), lumière douce du ciel,
+occlusion ambiante, murs en crépi avec grilles aux fenêtres. Pas de blocs.
 
-| Accueil | Commande | Couper (téléphone) |
+| Accueil | Commande | Couper |
 |---|---|---|
-| ![](docs/screens/accueil.png) | ![](docs/screens/commande.png) | ![](docs/screens/couper-mobile.png) |
+| ![](docs/screens/accueil.png) | ![](docs/screens/commande.png) | ![](docs/screens/couper.png) |
 
 ## Lancer
 

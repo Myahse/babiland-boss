@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Outlines, RoundedBox } from '@react-three/drei'
+import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame } from '../store'
 import { fishColor } from '../three/Food'
-import { gradientMap, INK } from '../three/toon'
+import { bumpTexture } from '../three/textures'
 import { PAN } from '../three/Stand'
 import { resetMini, useMini } from './mini'
 
@@ -21,7 +21,7 @@ const PIECES: [number, number, number][] = [
  */
 export function FryGame() {
   const fish = useRef<THREE.Group>(null)
-  const mats = useMemo(() => PIECES.map(() => new THREE.MeshToonMaterial({ color: fishColor(0), gradientMap: gradientMap() })), [])
+  const mats = useMemo(() => PIECES.map(() => new THREE.MeshStandardMaterial({ color: fishColor(0), roughness: 0.45, bumpMap: bumpTexture(), bumpScale: 2 })), [])
   const bubbles = useRef<THREE.InstancedMesh>(null)
   const side = useRef(0)
   const cook = useRef([0, 0])
@@ -104,7 +104,6 @@ export function FryGame() {
       <group ref={fish} position={[PAN[0], OIL_Y, PAN[2]]}>
         {PIECES.map((p, i) => (
           <RoundedBox key={i} args={[0.1, 0.04, 0.07]} radius={0.016} position={p} rotation={[0, i * 0.7, 0]} castShadow material={mats[i]}>
-            <Outlines thickness={0.004} color={INK} />
           </RoundedBox>
         ))}
       </group>
