@@ -144,13 +144,12 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
       const v = speed.current
       const size = (props.scale as number) ?? 1
       // natural speeds of the clips for this body size: walk ~1.25 m/s, run ~3.4 m/s
+      // no sprint (the run clip is a knees-high sprint that looks wrong): a brisk walk, its pace matched to
+      // the real speed so the feet don't slide — walk clip ~1.25 m/s at scale 1
       if (sitting || v < 0.15) play(acts.idle)
-      else if (v < 2.1) {
+      else {
         play(acts.walk)
-        acts.walk.timeScale = THREE.MathUtils.clamp(v / (1.25 * size), 0.5, 1.6)
-      } else {
-        play(acts.run)
-        acts.run.timeScale = THREE.MathUtils.clamp(v / (3.4 * size), 0.6, 1.4)
+        acts.walk.timeScale = THREE.MathUtils.clamp(v / (1.25 * size), 0.6, 2.0)
       }
     }
     mixer.update(dt)
