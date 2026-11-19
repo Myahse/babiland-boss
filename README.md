@@ -20,6 +20,19 @@ ou se fâchent selon le plat. Vue de dessus, comme les jeux de boutique.
 cd web && npm install && npm run dev
 ```
 
+## Le jeu (style « arcade idle » des jeux de pub)
+
+| Porter les plats | Servir la file | Débloquer |
+|---|---|---|
+| ![](docs/screens/arcade-porter.png) | ![](docs/screens/arcade-servir.png) | ![](docs/screens/arcade-debloquer.png) |
+
+- On dirige **Tantie Aya au joystick** (glisser le doigt, ou flèches / ZQSD / WASD).
+- Le **poste à garba** cuit des plats tout seul ; on les ramasse en pile et on les pose sur le **comptoir**.
+- Les **clients font la queue**, prennent leurs plats (🍛 1/2), paient : l'argent s'empile par terre, on marche dessus pour le ramasser.
+- On marche sur les **carrés bleus** pour dépenser l'argent : 2e poêle (400 F), serveur qui porte les plats (1 200 F), table du maquis qui attire plus de clients (2 000 F).
+- Persos simples en capsule, couleurs vives, caméra de dessus qui suit Tantie Aya. La partie est gardée sur le téléphone.
+- Code : `web/src/arcade/`. La première version (mini-jeux de cuisine) reste là : `?mode=cuisine`.
+
 ## Ce qui marche (prototype)
 
 - **Accueil** : ton nom (il s'affiche sur l'enseigne « GARBA CHEZ … »), ta commune (Yopougon ouverte, les autres « bientôt »).
