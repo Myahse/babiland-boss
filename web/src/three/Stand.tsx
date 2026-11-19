@@ -1,7 +1,7 @@
 import { RoundedBox } from '@react-three/drei'
 import { useGame } from '../store'
 import { Attieke, FishPiece, fishColor, Piment, PopIn, Slice } from './Food'
-import { Person } from './Person'
+import { RealPerson } from './RealPerson'
 import { Mat } from './Mat'
 import { signTexture } from './textures'
 import { Model } from './assets'
@@ -36,6 +36,8 @@ function Bowl({ position, r = 0.13, color = '#1c4f9c', children }: { position: [
 /** Parasol with alternating panels. The « bâche » upgrade gives it the orange-white-green. */
 function Parasol() {
   const bache = useGame((s) => s.upgrades.bache)
+  // seen from above the canopy would hide the stand, so it turns see-through (except on the title screen)
+  const see = useGame((s) => s.phase !== 'title')
   const cols = bache ? ['#f76707', '#ffffff', '#2f9e44'] : ['#1c7ed6', '#ffd43b']
   const n = 12
   return (
@@ -44,9 +46,9 @@ function Parasol() {
         <cylinderGeometry args={[0.03, 0.03, 2.6, 8]} />
         <Mat color="#dee2e6" />
       </mesh>
-      <group position={[-0.9, 2.5, 0.6]} rotation={[0.08, 0, 0.1]}>
+      <group position={[-0.9, 2.5, 0.6]} rotation={[0.08, 0, 0.1]} visible={!see}>
         {Array.from({ length: n }, (_, i) => (
-          <mesh key={i} rotation={[0, (i / n) * Math.PI * 2, 0]} castShadow>
+          <mesh key={i} rotation={[0, (i / n) * Math.PI * 2, 0]} castShadow={!see}>
             <coneGeometry args={[1.55, 0.42, 6, 1, true, 0, (Math.PI * 2) / n + 0.01]} />
             <meshPhysicalMaterial color={cols[i % cols.length]} roughness={0.85} sheen={1} sheenColor="#ffffff" side={2} />
           </mesh>
@@ -180,7 +182,7 @@ export function Stand() {
       <PlateContents />
 
       <Parasol />
-      <Person look={{ skin: '#5c3520', top: '#2f9e44', bottom: '#343a40', head: 'scarf', headColor: '#f76707', apron: true }} position={[0, 0, -0.78]} chopping={phase === 'cut'} mood="happy" />
+      <RealPerson who="aya" position={[0, 0, -0.8]} chopping={phase === 'cut'} action={phase === 'order' ? 'talk' : phase === 'result' ? 'serve' : 'idle'} />
     </group>
   )
 }

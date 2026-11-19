@@ -240,7 +240,7 @@ function ResultCard() {
     </div>
   )
   return (
-    <div className="absolute inset-x-0 bottom-0 flex justify-center p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+    <div className="absolute inset-x-0 bottom-0 flex justify-center p-4 sm:justify-start sm:pl-6" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
       <div className="card pop w-full max-w-sm">
         <div className="text-center text-4xl">{[1, 2, 3].map((i) => (i <= r.stars ? '⭐' : '☆')).join(' ')}</div>
         <div className="mt-2 space-y-1">

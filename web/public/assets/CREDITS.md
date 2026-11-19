@@ -11,3 +11,10 @@ Ils ont été convertis en GLB (meshopt) et WebP, et allégés pour les téléph
 - Textures : red_laterite_soil_stones, asphalt_02, painted_plaster_wall, yellow_plaster, blue_plaster_weathered,
   red_plaster_weathered, peeling_painted_wall, rusty_corrugated_iron, wood_table_worn, concrete_floor_worn_001
 - Ciel : kloofendal_48d_partly_cloudy_puresky
+
+## Personnages
+
+Les 5 personnages (Tantie Aya, Koffi, Awa, Yao, Fatou) ont été générés avec [Meshy](https://www.meshy.ai)
+(texte → 3D texturé → squelette) avec le compte du propriétaire du jeu. Leurs animations (marcher, attendre,
+parler, content, bof, fâché, servir) viennent de la bibliothèque de capture de mouvement de Meshy.
+Fichiers : `people/<perso>.glb` (perso) et `people/<perso>-<action>.glb` (animation seule).

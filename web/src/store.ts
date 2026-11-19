@@ -21,6 +21,9 @@ type State = {
   xp: number
   served: number
   order: Order | null
+  /** the customers waiting in line behind the one being served */
+  line: Order[]
+  nextId: number
   scores: { cut: number; fry: number; serve: number }
   plate: string[]
   result: Result | null
@@ -51,12 +54,12 @@ export function levelOf(xp: number) {
 
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
 
-function makeOrder(served: number): Order {
-  const customer = CUSTOMERS[served % CUSTOMERS.length]
+function makeOrder(id: number): Order {
+  const customer = CUSTOMERS[id % CUSTOMERS.length]
   const piment = Math.random() < 0.6
   const price = Math.random() < 0.35 ? 1000 : 500
   const line = pick(piment ? customer.orderPiment : customer.orderSans).replace('{p}', String(price))
-  return { id: served, customer, price, piment, line }
+  return { id, customer, price, piment, line }
 }
 
 let flashId = 0
@@ -69,6 +72,8 @@ export const useGame = create<State>((set, get) => ({
   xp: 0,
   served: 0,
   order: null,
+  line: [],
+  nextId: 0,
   scores: { cut: 0, fry: 0, serve: 0 },
   plate: [],
   result: null,
@@ -76,7 +81,8 @@ export const useGame = create<State>((set, get) => ({
   shopOpen: false,
   flash: null,
 
-  start: (name) => set({ name: name.trim() || 'Boss', phase: 'arriving', order: makeOrder(0) }),
+  // three customers come at once: the first orders, the other two queue behind
+  start: (name) => set({ name: name.trim() || 'Boss', phase: 'arriving', order: makeOrder(0), line: [makeOrder(1), makeOrder(2)], nextId: 3 }),
   customerArrived: () => set({ phase: 'order' }),
   acceptOrder: () => set({ phase: 'cut', plate: [] }),
   finishCut: (cut) => set((s) => ({ phase: 'fry', scores: { ...s.scores, cut } })),
@@ -100,9 +106,14 @@ export const useGame = create<State>((set, get) => ({
       served: s.served + 1,
     })
   },
-  nextCustomer: () => set((s) => ({ phase: 'arriving', order: makeOrder(s.served), result: null, plate: [] })),
+  // the next in line steps up, and someone new joins the back of the line
+  nextCustomer: () =>
+    set((s) => ({ phase: 'arriving', order: s.line[0], line: [...s.line.slice(1), makeOrder(s.nextId)], nextId: s.nextId + 1, result: null, plate: [] })),
   buy: (id) =>
     set((s) => (s.upgrades[id] || s.money < UPGRADES[id].price ? s : { money: s.money - UPGRADES[id].price, upgrades: { ...s.upgrades, [id]: true } })),
   setShop: (shopOpen) => set({ shopOpen }),
   say: (text, tone) => set({ flash: { id: ++flashId, text, tone } }),
 }))
+
+// handy in the browser console while developing (and for the screenshot tests)
+if (import.meta.env.DEV) Object.assign(window, { game: useGame, CUSTOMERS })

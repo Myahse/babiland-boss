@@ -90,14 +90,15 @@ export function CutGame() {
       <Sliceable key={veg} kind={VEGS[veg]} cuts={cuts} position={[BOARD[0], Y, BOARD[2]]} />
       {/* dashed guide lines over the vegetable */}
       {GUIDES.map((g, i) =>
-        Array.from({ length: 5 }, (_, k) => (
-          <mesh key={`${i}-${k}`} position={[BOARD[0] + g, BOARD[1] + 0.035 + k * 0.05, BOARD[2] + VEG_R + 0.01]}>
-            <planeGeometry args={[0.006, 0.028]} />
+        // seen from above: dashed lines lying across the vegetable, where the knife should go
+        Array.from({ length: 7 }, (_, k) => (
+          <mesh key={`${i}-${k}`} position={[BOARD[0] + g, Y + VEG_R * 0.9 + 0.006, BOARD[2] - 0.12 + k * 0.04]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.005, 0.022]} />
             <meshBasicMaterial color={cuts.length > 0 && used.current[i] ? '#adb5bd' : '#ffffff'} />
           </mesh>
         )),
       )}
-      <group ref={knife} position={[BOARD[0], Y + 0.2, BOARD[2]]} rotation={[0, -0.55, 0]}>
+      <group ref={knife} position={[BOARD[0], Y + 0.2, BOARD[2]]} rotation={[0, 0, 0]}>
         {/* the real knife model stands along y: lay it along z, edge down */}
         <Model name="fish_knife" rotation={[Math.PI / 2, 0, 0]} scale={1.3} position={[0, 0.0, 0.05]} />
       </group>

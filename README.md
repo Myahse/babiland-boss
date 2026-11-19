@@ -6,11 +6,13 @@ Un jeu de cuisine et de business à Babi. Tu pars de ton petit coin de garba à 
 Même chemin que Babi Life : React 19 · TypeScript · Vite · Tailwind 4 · Three.js (react-three-fiber).
 Style réaliste : vrais modèles 3D scannés, textures et ciel de [Poly Haven](https://polyhaven.com) (CC0, libres
 pour tout usage, voir `web/public/assets/CREDITS.md`) : latérite rouge, crépi peint, tôle rouillée, chaises
-monobloc, bouteille de gaz, jerrycans, poteaux électriques… Les persos sont encore faits en code (à remplacer).
+monobloc, bouteille de gaz, jerrycans, poteaux électriques… Les persos sont réalistes, faits avec Meshy (texturés, avec squelette), et bougent avec de vraies
+animations en capture de mouvement : ils marchent, font la queue, parlent pour commander, se réjouissent
+ou se fâchent selon le plat. Vue de dessus, comme les jeux de boutique.
 
-| Accueil | Commande | Couper |
+| La file de clients | Couper | Les persos |
 |---|---|---|
-| ![](docs/screens/accueil.png) | ![](docs/screens/commande.png) | ![](docs/screens/couper.png) |
+| ![](docs/screens/commande.png) | ![](docs/screens/couper.png) | ![](docs/screens/persos.jpg) |
 
 ## Lancer
 
