@@ -337,16 +337,18 @@ export function Sim({ name }: { name: string }) {
     let served = st.served
     line.forEach((c, k) => {
       const r = step(c.pos, slot(k), 1.4, dt)
-      if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+      // « arrived at their place in the line »: close to it (the small nudges between neighbours don't count as walking)
+      const atSpot = c.pos.distanceTo(slot(k)) < 0.3
+      if (r.fast && !atSpot) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
       else c.rot = turn(c.rot, Math.PI, Math.min(1, dt * 6))
-      if (r.moving !== c.moving) {
-        c.moving = r.moving
+      if (atSpot === c.moving) {
+        c.moving = !atSpot
         bump()
       }
       // someone has to be at the till: Tantie Aya herself, or the cashier once hired
       const tillManned = unlocks.caisse || player.pos.distanceTo(COUNTER) < 1.8
       // the first in line loses patience if their dish never comes: they leave, the next one steps up
-      if (k === 0 && !r.moving && c.state === 'line') {
+      if (k === 0 && atSpot && c.state === 'line') {
         c.wait += dt
         if (c.wait > 25 && c.got === 0) {
           c.state = 'out'
@@ -357,7 +359,7 @@ export function Sim({ name }: { name: string }) {
           return
         }
       }
-      if (k === 0 && !r.moving && tillManned && counter[c.dish] > 0 && c.got < c.want && acc.current < dt) {
+      if (k === 0 && atSpot && tillManned && counter[c.dish] > 0 && c.got < c.want && acc.current < dt) {
         counter[c.dish]--
         c.got++
         changed = true
