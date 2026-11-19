@@ -10,7 +10,7 @@ import type { PersonId } from '../three/RealPerson'
 // Tantie Aya plays on all of them too: no need to buy animations again for each new person.
 
 const base = import.meta.env.BASE_URL + 'assets/'
-export const TOON_READY: PersonId[] = ['aya']
+export const TOON_READY: PersonId[] = ['aya', 'koffi', 'awa', 'yao', 'fatou']
 
 function bone(root: THREE.Object3D, name: string) {
   let b: THREE.Bone | null = null
