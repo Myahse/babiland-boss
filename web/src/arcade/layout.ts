@@ -12,10 +12,15 @@ export const CASH = V(3.85, -0.6) // where customers' money piles up
 export const SLOT0 = V(2.35, 1.15) // first place in the line, in front of the counter
 export const SLOT_STEP = V(0.5, 0.62) // the line goes off diagonally, like in the shop games
 export const ENTER = V(8, 10)
-export const EXIT = V(-9, 5.0)
+export const EXIT = V(-12, 5.6) // along the pavement, out of sight
+/** customers leave through the front: down the side lane (inside the low wall), then along the pavement */
+export const LANE_X = -5.95
+export const OUT_PATH = [V(LANE_X, 5.6), EXIT]
 export const START = V(-0.4, -0.6)
 // terrace tables in front of the maquis (unlocked with the « Terrasse » pad): 2 seats each
-export const TABLES = [V(-4.3, 1.5), V(-2.5, 2.5), V(-4.3, 3.3)]
+// terrace tables in one row, with room around them: customers come from the aisle behind (z - 0.8),
+// step down into their chair, and leave the same way
+export const TABLES = [V(-4.7, 2.75), V(-2.7, 2.75), V(-0.7, 2.75)]
 export const SEATS = TABLES.flatMap((t) => [t.clone().add(V(-0.62, 0)), t.clone().add(V(0.62, 0))])
 
 export const BOUNDS = { minX: -5.6, maxX: 5.2, minZ: -2.0, maxZ: 4.2 }
@@ -35,11 +40,11 @@ export const PADS: Record<Unlock, { pos: THREE.Vector3; price: number; label: st
   // the particular dishes: their label is the dish of the place (see Sim)
   plat1: { pos: V(-1.3, -0.6), price: 1500, label: 'Plat 1' },
   plat2: { pos: V(0.2, -0.6), price: 2500, label: 'Plat 2', needs: 'plat1' },
-  plateau: { pos: V(-0.8, 1.75), price: 800, label: 'Grand plateau' },
-  serveur: { pos: V(0.7, 2.5), price: 1200, label: 'Serveur' },
-  table: { pos: V(-0.8, 3.45), price: 2000, label: 'Terrasse' },
+  plateau: { pos: V(-0.8, 1.15), price: 800, label: 'Grand plateau' },
+  serveur: { pos: V(1.05, 2.7), price: 1200, label: 'Serveur' },
+  table: { pos: V(-2.7, 2.75), price: 2000, label: 'Terrasse' },
   caisse: { pos: V(3.45, -1.7), price: 1500, label: 'Caissière' },
-  rapide: { pos: V(0.7, 2.5), price: 2500, label: 'Serveur rapide', needs: 'serveur' },
+  rapide: { pos: V(1.05, 2.7), price: 2500, label: 'Serveur rapide', needs: 'serveur' },
   moto: { pos: V(4.5, 0.9), price: 1000, label: 'Livraison moto' },
   livreur: { pos: V(4.5, 0.9), price: 3000, label: 'Livreur', needs: 'moto' },
 }
@@ -59,3 +64,6 @@ export const UPGRADE_PADS = STATIONS.map((st) => V(st.x, 0.6)) // one under each
 export const CASHIER = V(1.75, -0.95) // behind the counter, at the cash register
 export const MOTO = V(5.05, -1.35) // the delivery moto waits here, by the side street
 export const DELIVERY_PRICE = 700 // per plate delivered (more than at the counter)
+
+/** where a customer stands in the aisle before stepping into seat `i` */
+export const seatApproach = (i: number) => V(SEATS[i].x, TABLES[Math.floor(i / 2)].z - 0.85)

@@ -23,3 +23,5 @@ export function moveInput() {
   const l = Math.hypot(x, z)
   return l > 1 ? { x: x / l, z: z / l } : { x, z }
 }
+
+if (import.meta.env.DEV) Object.assign(window, { arcadeStick: stick })

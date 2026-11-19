@@ -9,7 +9,7 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
@@ -49,7 +49,7 @@ export const view = { zoom: 1 }
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
-type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number }
+type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[] }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
@@ -76,6 +76,7 @@ export function Sim({ name }: { name: string }) {
   const progress = useRef([0, 0, 0, 0])
   const acc = useRef(0)
   const custs = useRef<Cust[]>([])
+  if (import.meta.env.DEV) Object.assign(window, { arcadeCusts: custs })
   const nextId = useRef(0)
   const spawn = useRef(1)
   const [, rerender] = useState(0)
@@ -286,7 +287,7 @@ export function Sim({ name }: { name: string }) {
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
       const dish = menu.length === 1 || r < 0.55 ? 0 : menu[1 + Math.floor(Math.random() * (menu.length - 1))]
-      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0 })
+      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0, path: [] })
       nextId.current++
       bump()
     }
@@ -316,42 +317,56 @@ export function Sim({ name }: { name: string }) {
           // with the terrace open, they go and sit to eat; otherwise they take it away
           const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
           const free = unlocks.table ? SEATS.findIndex((_, i) => !taken.has(i)) : -1
+          // walk along the aisle behind the tables, then step into the chair (never through a table)
+          const aisle = (z: number) => [V(c.pos.x - 0.6, z)]
           if (free >= 0) {
             c.state = 'eat'
             c.seat = free
             c.eat = 7
-          } else c.state = 'out'
+            const a = seatApproach(free)
+            c.path = [...aisle(a.z), a, SEATS[free].clone()]
+          } else {
+            c.state = 'out'
+            c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+          }
         }
       }
     })
     custs.current.forEach((c) => {
-      if (c.state === 'eat') {
-        const seat = SEATS[c.seat]
-        const r = step(c.pos, seat, 1.5, dt)
+      if (c.state === 'line') return
+      // follow the path one point at a time
+      if (c.path.length) {
+        const r = step(c.pos, c.path[0], 1.4, dt)
         if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
-        else {
-          // face the table, then eat for a while
-          const tb = TABLES[Math.floor(c.seat / 2)]
-          c.rot = turn(c.rot, Math.atan2(tb.x - seat.x, tb.z - seat.z), Math.min(1, dt * 8))
-          c.eat -= dt
-          if (c.eat <= 0) {
-            c.state = 'out'
-            // they leave a tip on the table
-            tableCash[Math.floor(c.seat / 2)] += 100 * c.want
-            changed = true
-            bump()
-          }
-        }
-        if (r.moving !== c.moving) {
-          c.moving = r.moving
+        else c.path.shift()
+        if (!c.moving) {
+          c.moving = true
           bump()
         }
         return
       }
-      if (c.state !== 'out') return
-      const r = step(c.pos, EXIT, 1.4, dt)
-      if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
-      else c.id = -1
+      if (c.state === 'out') {
+        c.id = -1
+        return
+      }
+      // arrived in the chair: face the table, eat for a while, then leave the way they came
+      if (c.moving) {
+        c.moving = false
+        bump()
+      }
+      const seat = SEATS[c.seat]
+      const tb = TABLES[Math.floor(c.seat / 2)]
+      c.rot = turn(c.rot, Math.atan2(tb.x - seat.x, tb.z - seat.z), Math.min(1, dt * 8))
+      c.eat -= dt
+      if (c.eat <= 0) {
+        c.state = 'out'
+        // they leave a tip on the table
+        tableCash[Math.floor(c.seat / 2)] += 100 * c.want
+        const a = seatApproach(c.seat)
+        c.path = [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
+        changed = true
+        bump()
+      }
     })
     if (custs.current.some((c) => c.id < 0)) {
       custs.current = custs.current.filter((c) => c.id >= 0)

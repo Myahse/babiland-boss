@@ -318,7 +318,7 @@ export function Streets() {
       <Taxi path={front} speed={0.045} />
       <Taxi path={front} speed={0.045} offset={0.5} />
       <Taxi path={side} speed={0.04} offset={0.3} />
-      {[-5.6, -1.8, 2.2, 4.8].map((x) => (
+      {[-4.6, -1.8, 2.2, 4.8].map((x) => (
         <Planter key={x} position={[x, 0, 4.7]} />
       ))}
     </>
