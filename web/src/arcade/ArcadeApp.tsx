@@ -152,7 +152,8 @@ function Hud() {
   const [sound, setSound] = useState(!isMuted())
   const [map, setMap] = useState(false)
   const level = levelOf(served)
-  const [hint, setHint] = useState(true)
+  // the « how to play » card: only for beginners (a returning player knows)
+  const [hint, setHint] = useState(() => totalServed(useArcade.getState()) < 5)
   const t = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => {
     t.current = setTimeout(() => setHint(false), 9000)
