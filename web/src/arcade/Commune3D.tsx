@@ -12,7 +12,23 @@ import { sfx } from './sfx'
 // boss with its sign and flag, the key zones as landmarks, the lagoon and the forest. Tap a district to pick it.
 
 const base = import.meta.env.BASE_URL + 'assets/maps/'
-const S = 45 // metres per unit
+/** metres per unit: every place fills about the same space on screen (Yopougon, 9 km across: 45 m) */
+const scaleOf = (geo: Geo) => {
+  const [x0, y0, x1, y1] = geo.bounds
+  const w = (x1 - x0) * 111320 * Math.cos((((y0 + y1) / 2) * Math.PI) / 180)
+  return Math.max(14, Math.max(w, (y1 - y0) * 110540) / 200)
+}
+/** What is around each place: the lagoon (Abidjan), forest, mountains (Man), savanna (the north). */
+const SCENERY: Record<PlaceId, { water?: boolean; forest?: 'east' | 'west'; mountains?: boolean; ground: string }> = {
+  yopougon: { water: true, forest: 'east', ground: '#e9d8a6' },
+  cocody: { water: true, forest: 'east', ground: '#e9d8a6' },
+  abobo: { forest: 'west', ground: '#e9d8a6' },
+  treichville: { water: true, ground: '#e9d8a6' },
+  bouake: { ground: '#e6cf98' },
+  korhogo: { ground: '#ecc98f' },
+  gagnoa: { forest: 'west', ground: '#d8d9a0' },
+  man: { forest: 'east', mountains: true, ground: '#d3d9a0' },
+}
 type Geo = { bounds: [number, number, number, number]; features: { properties: { i: number; label: [number, number] }; geometry: { coordinates: number[][][] } }[] }
 
 function useGeo(place: PlaceId) {
@@ -28,6 +44,7 @@ function projector(geo: Geo) {
   const [x0, y0, x1, y1] = geo.bounds
   const lng0 = (x0 + x1) / 2
   const lat0 = (y0 + y1) / 2
+  const S = scaleOf(geo)
   const kx = (111320 * Math.cos((lat0 * Math.PI) / 180)) / S
   const kz = 110540 / S
   return (lng: number, lat: number) => new THREE.Vector2((lng - lng0) * kx, -(lat - lat0) * kz)
@@ -563,6 +580,35 @@ function Forest({ center }: { center: THREE.Vector2 }) {
   )
 }
 
+/** The mountains around Man (the Dent de Man to the north-west). */
+function Mountains({ c, size }: { c: THREE.Vector2; size: THREE.Vector2 }) {
+  const peaks = useMemo(() => {
+    const r = rng(7)
+    const out: { x: number; z: number; h: number; w: number }[] = [{ x: c.x - size.x * 0.55, z: c.y - size.y * 0.95, h: 42, w: 22 }]
+    for (let k = 0; k < 9; k++) {
+      const a = Math.PI * (0.85 + (k / 8) * 0.9) // from the west round to the north
+      out.push({ x: c.x + Math.cos(a) * size.x * (0.9 + r() * 0.25), z: c.y - Math.abs(Math.sin(a)) * size.y * (0.9 + r() * 0.25), h: 16 + r() * 18, w: 14 + r() * 10 })
+    }
+    return out
+  }, [c, size])
+  return (
+    <group>
+      {peaks.map((p, k) => (
+        <group key={k} position={[p.x, 0, p.z]}>
+          <mesh position={[0, p.h / 2, 0]} castShadow>
+            <coneGeometry args={[p.w, p.h, 7]} />
+            <meshStandardMaterial color={k ? '#5c8f3a' : '#6d8a5a'} flatShading />
+          </mesh>
+          <mesh position={[0, p.h * 0.86, 0]}>
+            <coneGeometry args={[p.w * 0.29, p.h * 0.29, 7]} />
+            <meshStandardMaterial color="#8d8270" flatShading />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
 export function Commune3D({ place, owners, selected, onPick, conquer = -1, onConquestDone }: { place: PlaceId; owners: ('me' | 'boss')[]; selected: number; onPick: (i: number) => void; conquer?: number; onConquestDone?: () => void }) {
   const cq = useMemo<ConquestClock | null>(() => (conquer >= 0 ? { t: 0, idx: conquer } : null), [conquer])
   const geo = useGeo(place)
@@ -576,22 +622,26 @@ export function Commune3D({ place, owners, selected, onPick, conquer = -1, onCon
   const c = box.getCenter(new THREE.Vector2())
   const size = box.getSize(new THREE.Vector2())
   const home = (cq ? ds[cq.idx]?.label : ds[0]?.label) ?? c
+  const sc = SCENERY[place]
   return (
     <Canvas shadows dpr={[1, 2]} camera={{ fov: 40, position: [home.x + 70, 175, home.y + 150], near: 1, far: 2000 }}>
       <color attach="background" args={['#bfe6ff']} />
       <fog attach="fog" args={['#bfe6ff', 250, 600]} />
       <hemisphereLight args={['#e3f4ff', '#d9b38c', 1.3]} />
       <directionalLight castShadow position={[c.x + 80, 160, c.y + 60]} intensity={2} shadow-mapSize={[2048, 2048]} shadow-camera-left={-150} shadow-camera-right={150} shadow-camera-top={150} shadow-camera-bottom={-150} shadow-camera-far={500} />
-      {/* ground, lagoon to the south, forest to the east */}
+      {/* ground; around: the lagoon to the south (Abidjan), forest, the mountains of Man */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, -0.05, c.y]} receiveShadow>
         <planeGeometry args={[size.x * 3, size.y * 3]} />
-        <meshStandardMaterial color="#e9d8a6" />
+        <meshStandardMaterial color={sc.ground} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, 0.02, box.max.y + 40]}>
-        <planeGeometry args={[size.x * 3, 80]} />
-        <meshStandardMaterial color="#4dabf7" roughness={0.15} metalness={0.2} />
-      </mesh>
-      <Forest center={new THREE.Vector2(box.max.x + 28, c.y - size.y * 0.15)} />
+      {sc.water && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, 0.02, box.max.y + 40]}>
+          <planeGeometry args={[size.x * 3, 80]} />
+          <meshStandardMaterial color="#4dabf7" roughness={0.15} metalness={0.2} />
+        </mesh>
+      )}
+      {sc.forest && <Forest center={new THREE.Vector2(sc.forest === 'east' ? box.max.x + 28 : box.min.x - 28, c.y - size.y * 0.15)} />}
+      {sc.mountains && <Mountains c={c} size={size} />}
       {ds.map((d) => (
         <DistrictBlock key={d.i} d={d} place={place} owner={owners[d.i]} owners={owners} selected={selected === d.i} onPick={() => onPick(d.i)} cq={cq && cq.idx === d.i ? cq : undefined} />
       ))}

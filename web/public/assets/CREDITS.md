@@ -33,4 +33,7 @@ les animations enregistrées (attendre, parler…) servent pour tous, sans en ra
 
 Les contours des quartiers de Yopougon (`maps/yopougon.json`) sont calculés à partir des lieux d'OpenStreetMap
 (© les contributeurs d'OpenStreetMap, licence ODbL), repris des données de Babi Life, par `tools/districts.py`.
+Ceux des autres lieux (`maps/cocody.json`, `abobo`, `treichville`, `bouake`, `korhogo`, `gagnoa`, `man`) partent des vrais
+quartiers et limites de commune trouvés sur OpenStreetMap avec Nominatim (même licence ODbL), par `tools/quarters.py`
+puis `tools/cities.py`.
 Le fond de carte : Mapbox si `VITE_MAPBOX_TOKEN` est fourni, sinon OpenFreeMap (© OpenMapTiles, données OpenStreetMap).

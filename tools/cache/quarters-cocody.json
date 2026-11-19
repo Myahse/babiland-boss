@@ -1,0 +1,98 @@
+{
+"Deux Plateaux": [
+5.36967,
+-3.99195,
+"Deux Plateaux",
+"administrative"
+],
+"Vallon": [
+5.35853,
+-3.99401,
+"Vallon",
+"neighbourhood"
+],
+"Blockhaus": [
+5.33567,
+-4.00413,
+"Petite gare Blockhaus / Saint Jean",
+"bus_stop"
+],
+"Danga": [
+5.3388,
+-4.00606,
+"Danga",
+"neighbourhood"
+],
+"Saint-Jean": [
+5.33606,
+-4.00358,
+"Saint Jean",
+"bus_stop"
+],
+"Riviera 2": [
+5.34646,
+-3.97476,
+"Riviéra 2",
+"administrative"
+],
+"Riviera 3": [
+5.35103,
+-3.95977,
+"Riviera 3",
+"residential"
+],
+"Riviera Palmeraie": [
+5.36937,
+-3.95652,
+"Riviéra Palmeraie",
+"residential"
+],
+"Angré": [
+5.40405,
+-3.98881,
+"Angré",
+"administrative"
+],
+"M'Pouto": [
+5.32697,
+-3.95611,
+"M’pouto",
+"administrative"
+],
+"Akouédo": [
+5.35226,
+-3.9407,
+"Akouédo",
+"administrative"
+],
+"Anono": [
+5.34214,
+-3.97359,
+"Anono",
+"neighbourhood"
+],
+"Attoban": [
+5.36319,
+-3.9784,
+"Attoban",
+"neighbourhood"
+],
+"Riviera Golf": [
+5.33297,
+-3.98045,
+"Riviera Golf",
+"bus_stop"
+],
+"Bonoumin": [
+5.36471,
+-3.97258,
+"Bonoumin",
+"administrative"
+],
+"Ambassades": [
+5.33032,
+-3.99189,
+"Rue des Ambassades",
+"residential"
+]
+}

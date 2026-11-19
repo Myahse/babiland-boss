@@ -1,0 +1,104 @@
+{
+"Abobo Gare": [
+5.42149,
+-4.01766,
+"Abobo Gare",
+"bus_stop"
+],
+"Anador": [
+5.41078,
+-4.01425,
+"Anador",
+"neighbourhood"
+],
+"PK 18": [
+5.45044,
+-4.0652,
+"PK 18",
+"locality"
+],
+"Avocatier": [
+5.44391,
+-4.0298,
+"Avocatier",
+"locality"
+],
+"Sagbé": [
+5.41865,
+-4.03082,
+"Sagbé",
+"suburb"
+],
+"N'Dotré": [
+5.44556,
+-4.07201,
+"N’dotré",
+"neighbourhood"
+],
+"Abobo Té": [
+5.40569,
+-3.99682,
+"Abobo Té",
+"neighbourhood"
+],
+"Belleville": [
+5.43196,
+-3.99458,
+"Belleville",
+"neighbourhood"
+],
+"Akeikoi": [
+5.44839,
+-4.00615,
+"Akeikoi",
+"locality"
+],
+"Samaké": [
+5.41511,
+-4.00676,
+"Samaké",
+"bus_stop"
+],
+"Kennedy": [
+5.41948,
+-4.00835,
+"Kennedy",
+"neighbourhood"
+],
+"Habitat": [
+5.4328,
+-4.00951,
+"L’habitat",
+"neighbourhood"
+],
+"Baoulé": [
+5.43429,
+-3.99602,
+"Abobo Baoulé",
+"neighbourhood"
+],
+"Plaque": [
+5.44354,
+-4.06387,
+"Plaque Rouge",
+"bus_stop"
+],
+"Agbékoi": [
+5.43716,
+-4.0046,
+"Agbekoi",
+"neighbourhood"
+],
+"Dokui": [
+5.40512,
+-4.0064,
+"Pharmacie Dokui",
+"bus_stop"
+],
+"Clouetcha": [
+5.42332,
+-4.00102,
+"Marché Kennedy Clouetcha",
+"marketplace"
+]
+}

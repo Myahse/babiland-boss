@@ -1,0 +1,32 @@
+{
+"Air France": [
+7.41861,
+-7.5456,
+"Air France",
+"neighbourhood"
+],
+"Kennedy": [
+7.42216,
+-7.55102,
+"Quartier Kennedy",
+"suburb"
+],
+"CAFOP": [
+7.39695,
+-7.56392,
+"Quartier CAFOP",
+"neighbourhood"
+],
+"Doyaguiné": [
+7.39677,
+-7.56679,
+"Doyaguiné 2",
+"neighbourhood"
+],
+"Gbêpleu": [
+7.41557,
+-7.57096,
+"Gbepleu",
+"neighbourhood"
+]
+}

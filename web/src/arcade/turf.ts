@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { PlaceId } from './places'
+import { REAL_DISTRICTS, type RealDistrict } from './realDistricts'
 
 // The districts (quartiers) of each place and who owns them (docs/VISION.md, « clash » idea).
 // You start in district 0 of a place, working for its boss: he takes a cut of what you earn.
@@ -19,13 +20,21 @@ const B = {
   gare: { icon: '🚌', label: '+20 % de clients (la gare des gbaka)', kind: 'customers', value: 0.2 },
 } satisfies Record<string, Bonus>
 
-/** 4 districts on a 2 x 2 map (the other places, for now). */
-const D = (names: string[], bosses: string[]): District[] => names.map((name, i) => ({ name, boss: bosses[i], cell: [[0, 1], [1, 1], [0, 0], [1, 0]][i] as [number, number] }))
+/** The bonus of a key zone of another place, named after the real place it stands for. */
+const bonus = ([kind, where]: NonNullable<RealDistrict['bonus']>): Bonus => {
+  if (kind === 'industry') return { ...B.industry, label: `+30 % de clients (les ouvriers de ${where.replace(/^l[ea’'] ?/, '')} viennent manger)` }
+  if (kind === 'market') return { ...B.market, label: `Postes 25 % plus rapides (${where})` }
+  if (kind === 'night') return { ...B.night, label: `+20 % sur chaque vente (${where})` }
+  if (kind === 'gare') return { ...B.gare, label: `+20 % de clients (${where})` }
+  return { icon: '🛍️', label: `+15 % sur chaque vente (${where})`, kind: 'sales', value: 0.15 }
+}
+/** The real districts of a place (tools/cities.py, from OpenStreetMap). */
+const real = (p: string): District[] => REAL_DISTRICTS[p].map((d) => ({ name: d.name, boss: d.boss, cell: [0, 0], n: d.n, ...(d.bonus ? { bonus: bonus(d.bonus) } : {}) }))
 
 /** Map grid of each place: columns x rows. */
 export const GRID: Partial<Record<PlaceId, [number, number]>> = {}
 /** Places drawn on the real map (their district areas are in public/assets/maps/<place>.json). */
-export const REAL_MAP: PlaceId[] = ['yopougon']
+export const REAL_MAP: PlaceId[] = ['yopougon', 'cocody', 'abobo', 'treichville', 'bouake', 'korhogo', 'gagnoa', 'man']
 export const gridOf = (p: PlaceId) => GRID[p] ?? ([2, 2] as [number, number])
 
 export const DISTRICTS: Record<PlaceId, District[]> = {
@@ -45,13 +54,14 @@ export const DISTRICTS: Record<PlaceId, District[]> = {
     { name: 'Zone Industrielle', boss: 'Le Patron Konaté', cell: [0, 0], n: [1, 2, 7, 8, 9], bonus: B.industry },
     { name: 'Koweït', boss: 'Petit Zadi', cell: [0, 0], n: [0, 5] },
   ],
-  cocody: D(['Riviera', 'Angré', 'Deux-Plateaux', 'Blockhaus'], ['Boss Kader', 'Tantie Rose', 'Le Grand Yves', 'Mama Akissi']),
-  abobo: D(['Avocatier', 'PK18', 'Anador', 'Samaké'], ['Boss Drissa', 'Mama Salimata', 'Le Vieux Bamba', 'Petit Koné']),
-  treichville: D(['Arras', 'Biafra', 'Belleville', 'Habitat'], ['Boss Tapé', 'Tantie Lou', 'Le Doyen Gnahoré', 'Mama Adjoua']),
-  bouake: D(['Commerce', 'Air France', 'Koko', 'Dar-es-Salam'], ['Boss Kouassi', 'Mama Amenan', 'Le Vieux Konan', 'Tantie Affoué']),
-  korhogo: D(['Soba', 'Petit-Paris', 'Koko', 'Haoussabougou'], ['Boss Soro', 'Mama Fatim', 'Le Vieux Coulibaly', 'Tantie Mariam']),
-  gagnoa: D(['Dioulabougou', 'Garahio', 'Babré', 'Commerce'], ['Boss Gbagbo', 'Mama Zadi', 'Le Vieux Dakoury', 'Tantie Gnépo']),
-  man: D(['Libreville', 'Domoraud', 'Air France', 'Grand Gbapleu'], ['Boss Tia', 'Mama Gueu', 'Le Vieux Dan', 'Tantie Sahi']),
+  // the other places: their real quarters too (tools/cities.py)
+  cocody: real('cocody'),
+  abobo: real('abobo'),
+  treichville: real('treichville'),
+  bouake: real('bouake'),
+  korhogo: real('korhogo'),
+  gagnoa: real('gagnoa'),
+  man: real('man'),
 }
 
 /** Districts touching district `i` on the map (you can only attack next to what you hold). */
@@ -101,11 +111,18 @@ type Turf = {
   conquest: { place: PlaceId; idx: number } | null
 }
 
-const KEY = 'babiland-turf-v2' // v2: the real districts of Yopougon
+const KEY = 'babiland-turf-v3' // v3: the real districts of every place
 function load(): Partial<Turf> {
   try {
-    const j = JSON.parse(localStorage.getItem(KEY) || '{}')
-    return { owners: j.owners ?? {}, guards: j.guards ?? {} }
+    const now = localStorage.getItem(KEY)
+    if (now) {
+      const j = JSON.parse(now)
+      return { owners: j.owners ?? {}, guards: j.guards ?? {} }
+    }
+    // older save: Yopougon already had its real districts, the other places change completely
+    const j = JSON.parse(localStorage.getItem('babiland-turf-v2') || '{}')
+    const guards = Object.fromEntries(Object.entries(j.guards ?? {}).filter(([k]) => k.startsWith('yopougon:'))) as Record<string, number>
+    return { owners: j.owners?.yopougon ? { yopougon: j.owners.yopougon } : {}, guards }
   } catch {
     return {}
   }
