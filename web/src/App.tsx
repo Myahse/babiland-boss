@@ -13,6 +13,7 @@ import { FryGame } from './game/Fry'
 import { Hud } from './ui/Hud'
 import { LOOK } from './three/Character'
 import { DrawnLook } from './three/DrawnLook'
+import { ArcadeLook } from './three/ArcadeLook'
 
 function Scene() {
   const phase = useGame((s) => s.phase)
@@ -25,12 +26,13 @@ function Scene() {
       {phase === 'fry' && <FryGame />}
       <CameraRig />
       {LOOK === 'drawn' && <DrawnLook />}
+      {LOOK === 'arcade' && <ArcadeLook />}
       {/* ambient occlusion puts soft contact shadows in every corner: the main thing that makes it look solid */}
       <EffectComposer multisampling={0}>
-        <N8AO aoRadius={0.5} intensity={1.6} distanceFalloff={0.5} quality="medium" />
+        <N8AO aoRadius={0.5} intensity={LOOK === 'arcade' ? 0.8 : 1.6} distanceFalloff={0.5} quality="medium" />
         <Bloom luminanceThreshold={0.92} intensity={0.35} mipmapBlur />
         <ToneMapping mode={ToneMappingMode.NEUTRAL} />
-        <Vignette offset={0.3} darkness={0.35} />
+        <Vignette offset={0.3} darkness={LOOK === 'arcade' ? 0.12 : 0.35} />
         <SMAA />
       </EffectComposer>
     </>

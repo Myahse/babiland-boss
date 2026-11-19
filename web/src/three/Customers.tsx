@@ -77,6 +77,17 @@ function Bubble({ text, name }: { text: string; name: string }) {
   )
 }
 
+/** « +700 FCFA » flying up from the customer when they pay. */
+function CashPop({ amount }: { amount: number }) {
+  return (
+    <Html position={[0, 1.2, 0.3]} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="float-up relative left-1/2 text-3xl font-extrabold whitespace-nowrap text-[#ffe066]" style={{ textShadow: '2px 2px 0 #2b8a3e, -2px -2px 0 #2b1a12, 2px -2px 0 #2b1a12, -2px 2px 0 #2b1a12, 2px 2px 0 #2b1a12', animationDuration: '1.6s' }}>
+        💰 +{amount} FCFA
+      </div>
+    </Html>
+  )
+}
+
 export function Customers() {
   const order = useGame((s) => s.order)
   const line = useGame((s) => s.line)
@@ -107,6 +118,7 @@ export function Customers() {
         <Walker key={o.id} order={o} to={to} front={front} leaving={out} onArrive={front ? () => useGame.getState().phase === 'arriving' && arrived() : undefined}>
           {front && phase === 'order' && <Bubble name={o.customer.name} text={o.line} />}
           {front && phase === 'result' && result && <Bubble name={o.customer.name} text={result.line} />}
+          {front && phase === 'result' && result && <CashPop amount={result.pay + result.tip} />}
         </Walker>
       ))}
     </>

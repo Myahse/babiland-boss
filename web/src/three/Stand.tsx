@@ -92,6 +92,28 @@ function PlateContents() {
   )
 }
 
+/** The day's takings piling up on the counter: one stack of bills per customer served. */
+function CashStack() {
+  const served = useGame((s) => s.served)
+  const n = Math.min(served, 12)
+  return (
+    <group position={[1.0, TOP, 0.32]}>
+      {Array.from({ length: n }, (_, i) => (
+        <PopIn key={i} position={[(i % 3) * 0.09 - 0.09, Math.floor(i / 3) * 0.022, 0]} rotation={[0, (i % 2) * 0.2 - 0.1, 0]}>
+          <mesh castShadow position={[0, 0.011, 0]}>
+            <boxGeometry args={[0.08, 0.02, 0.15]} />
+            <meshStandardMaterial color="#5fb36b" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.0215, 0]}>
+            <boxGeometry args={[0.082, 0.003, 0.03]} />
+            <meshStandardMaterial color="#f8f0c8" roughness={0.8} />
+          </mesh>
+        </PopIn>
+      ))}
+    </group>
+  )
+}
+
 export function Stand() {
   const name = useGame((s) => s.name)
   const phase = useGame((s) => s.phase)
@@ -180,6 +202,7 @@ export function Stand() {
         </mesh>
       </group>
       <PlateContents />
+      <CashStack />
 
       <Parasol />
       <Character who="aya" position={[0, 0, -0.8]} chopping={phase === 'cut'} action={phase === 'order' ? 'talk' : phase === 'result' ? 'serve' : 'idle'} />

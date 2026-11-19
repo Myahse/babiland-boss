@@ -2,6 +2,7 @@ import { Environment, RoundedBox } from '@react-three/drei'
 import { Mat } from './Mat'
 import { Model, SKY, usePBR, type TextureName } from './assets'
 import { signTexture } from './textures'
+import { LOOK } from './Character'
 
 // A real-looking Yopougon street: photo-scanned laterite, plaster, rusty tin roofs, a real sky,
 // monobloc chairs, gas bottles, jerrycans and electricity poles (Poly Haven, CC0).
@@ -193,8 +194,10 @@ export function World() {
   return (
     <>
       {/* a real sunny sky lights the whole scene */}
-      <Environment files={SKY} background environmentIntensity={0.85} backgroundBlurriness={0.02} />
-      <fog attach="fog" args={['#cfe0ee', 22, 60]} />
+      {/* a real sunny sky; the arcade look uses a plain bright sky colour instead */}
+      <Environment files={SKY} background={LOOK !== 'arcade'} environmentIntensity={LOOK === 'arcade' ? 0.5 : 0.85} backgroundBlurriness={0.02} />
+      {LOOK === 'arcade' && <color attach="background" args={['#8fd3ff']} />}
+      <fog attach="fog" args={[LOOK === 'arcade' ? '#bfe6ff' : '#cfe0ee', 22, 60]} />
       <directionalLight
         castShadow
         position={[7, 10, 6]}
