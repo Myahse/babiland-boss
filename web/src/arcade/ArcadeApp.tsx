@@ -11,6 +11,7 @@ import { stick } from './input'
 import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
+import { TurfButton, TurfLayer } from './TurfUI'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -96,7 +97,7 @@ function PlaceRow({ id, level, onDone }: { id: PlaceId; level: number; onDone: (
 
 function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
   return (
-    <div className="pointer-events-auto absolute inset-0 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
+    <div className="pointer-events-auto absolute inset-0 z-40 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
       <div className="card pop max-h-[85%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-extrabold">🗺️ Deviens le boss de Babi</h2>
@@ -191,7 +192,9 @@ function Hud() {
         >
           🗺️ Carte
         </button>
+        <TurfButton />
       </div>
+      <TurfLayer />
       {map && <MapPanel level={level} onClose={() => setMap(false)} />}
       {carried > 0 && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-sm font-extrabold shadow">

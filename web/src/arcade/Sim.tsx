@@ -12,6 +12,7 @@ import { moveInput } from './input'
 import { BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
+import { cutFor, tickTurf } from './turf'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
@@ -366,7 +367,8 @@ export function Sim({ name }: { name: string }) {
         fly('plate', COUNTER_TOP(c.dish), up(c.pos, 1.2), 0, 0.25)
         bump()
         if (c.got >= c.want) {
-          cash += c.want * dishPrice(place, c.dish)
+          // while you work for the boss of the district, he takes his cut
+          cash += Math.round(c.want * dishPrice(place, c.dish) * (1 - cutFor(st.current)))
           served++
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()
@@ -470,7 +472,7 @@ export function Sim({ name }: { name: string }) {
           if (got >= delivery.want) {
             delivery = { ...delivery, state: 'away' }
             motoT.current = 0
-            cash += delivery.want * Math.round(PLACES[st.current].plate * 1.4)
+            cash += Math.round(delivery.want * PLACES[st.current].plate * 1.4 * (1 - cutFor(st.current)))
             for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
             popText(`🛵 Livraison : +${delivery.want * Math.round(PLACES[st.current].plate * 1.4)} FCFA`)
             sfx.unlock()
@@ -490,6 +492,14 @@ export function Sim({ name }: { name: string }) {
     moto.rot = mp.r
     moto.visible = mp.vis
 
+    // districts: duel progress, and rent from the districts you own
+    const rent = tickTurf(st.current, served, dt)
+    if (rent > 0) {
+      money += rent
+      popText(`🏙️ Loyer des quartiers : +${rent} FCFA`)
+      sfx.cash()
+      changed = true
+    }
     if (changed || carried.length !== st.carried.length) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery })
   })
 

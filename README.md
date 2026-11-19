@@ -37,6 +37,9 @@ Vidéo de 40 s d'une partie : [`docs/demo-arcade.mp4`](docs/demo-arcade.mp4).
 - **Plat principal + plats particuliers** : chaque lieu a son plat principal et 2 plats particuliers à débloquer (Yopougon : porc au four, thé ; Cocody : poulet braisé, bissap…), chacun avec son poste ; chaque client commande un plat précis (🐟 Garba 0/3), il faut lui apporter le bon.
 - **Embaucher** : serveur (puis serveur rapide), caissière (sans elle, il faut être au comptoir pour servir), livreur.
 - **Livraison à moto** : des commandes arrivent par téléphone ; on charge la moto (ou le livreur le fait), elle part livrer et rapporte 700 F par plat.
+- **Quartiers** (bouton 🏙️) : chaque lieu a 4 quartiers tenus par des boss (Yopougon : Selmer, Niangon, Toits-Rouges, Siporex). Au début tu travailles pour le boss de ton quartier (il prend 20 %). Avec 15 clients de respect et 1 000 F, tu peux le **trahir** : duel de 60 s, sers 8 clients avant ses gens. Gagne et le quartier est à toi, puis attaque les autres : ils te paient un loyer.
+
+  ![Quartiers](docs/screens/quartiers.jpg)
 - **Carte** : achète un maquis dans les autres communes et villes (Cocody alloco, Abobo choukouya, Treichville poisson braisé, Bouaké kedjenou, Korhogo tô, Gagnoa kplala, Man sauce feuille) dès que ton niveau le permet, puis « Y aller » de l'un à l'autre. Chaque maquis garde ses postes, son équipe et sa terrasse ; l'argent te suit.
 - Les persos courent ou marchent selon leur vraie vitesse, animations au bon rythme, démarrages et arrêts en douceur.
 - **Améliorer chaque poste** (« Plus vite », niv 2 à 600 F, MAX à 1 500 F) : il cuit plus vite et garde plus de plats.
