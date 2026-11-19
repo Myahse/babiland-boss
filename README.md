@@ -30,6 +30,8 @@ cd web && npm install && npm run dev
 - Le **poste à garba** cuit des plats tout seul ; on les ramasse en pile et on les pose sur le **comptoir**.
 - Les **clients font la queue**, prennent leurs plats (🍛 1/2), paient : l'argent s'empile par terre, on marche dessus pour le ramasser.
 - On marche sur les **carrés bleus** pour dépenser l’argent : 2e poêle (400 F), serveur qui porte les plats (1 200 F), terrasse (2 000 F) où les clients servis s’assoient pour manger.
+- **Améliorer chaque poste** (« Plus vite », niv 2 à 600 F, MAX à 1 500 F) : il cuit plus vite et garde plus de plats.
+- Le « jus » des jeux de boutique : les plats et les billets volent en arc vers les mains, le comptoir et les clients ; les piles rebondissent ; confettis et fanfare quand on débloque ; petits sons (faits en code, rien à télécharger) et vibration sur téléphone ; bouton 🔊 pour couper le son.
 - Le maquis à deux étages : enseigne lumineuse sur le toit, terrasse en haut avec des clients attablés, auvent rayé, coin de rue avec taxis et passage piéton.
 
 ![Le maquis](docs/screens/maquis-vue.png)

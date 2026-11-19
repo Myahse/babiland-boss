@@ -9,6 +9,7 @@ import { Sim } from './Sim'
 import { Building, Streets } from './Shop'
 import { stick } from './input'
 import { useArcade } from './store'
+import { isMuted, setMuted } from './sfx'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -58,6 +59,7 @@ function Hud() {
   const served = useArcade((s) => s.served)
   const pop = useArcade((s) => s.pop)
   const goal = 20
+  const [sound, setSound] = useState(!isMuted())
   const level = 1 + Math.floor(served / goal)
   const [hint, setHint] = useState(true)
   const t = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -69,7 +71,17 @@ function Hud() {
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
         {/* settings */}
-        <div className="pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-[0_4px_0_rgba(0,0,0,.2)]">⚙️</div>
+        <button
+          className="pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => {
+            setMuted(!isMuted())
+            setSound(!isMuted())
+          }}
+          aria-label={sound ? 'Couper le son' : 'Remettre le son'}
+        >
+          {sound ? '🔊' : '🔇'}
+        </button>
         {/* level gauge: customers served toward the next level */}
         <div className="relative flex min-w-0 flex-1 items-center">
           <div className="z-10 grid h-12 w-12 shrink-0 place-items-center rounded-full border-4 border-white bg-[#e8432e] text-xl font-extrabold text-[#ffd43b] shadow-md">G</div>

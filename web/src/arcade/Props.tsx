@@ -42,8 +42,19 @@ export function Plate(props: ThreeElements['group']) {
 /** A pile of plates; `wobble` makes a carried stack sway like in the games. */
 export function PlateStack({ count, wobble = false, ...props }: { count: number; wobble?: boolean } & ThreeElements['group']) {
   const ref = useRef<THREE.Group>(null)
-  useFrame(({ clock }) => {
-    if (!wobble || !ref.current) return
+  const pulse = useRef(0)
+  const prev = useRef(count)
+  if (prev.current !== count) {
+    prev.current = count
+    pulse.current = 1
+  }
+  useFrame(({ clock }, dt) => {
+    if (!ref.current) return
+    // a little squash-and-bounce each time a plate lands or leaves
+    pulse.current = Math.max(0, pulse.current - dt * 5)
+    const k = Math.sin(pulse.current * Math.PI) * 0.12
+    ref.current.scale.set(1 + k, 1 - k * 0.6, 1 + k)
+    if (!wobble) return
     ref.current.children.forEach((c, i) => {
       c.position.x = Math.sin(clock.elapsedTime * 7 + i * 0.3) * 0.006 * i
     })
@@ -58,12 +69,13 @@ export function PlateStack({ count, wobble = false, ...props }: { count: number;
 }
 
 /** Garba station: a steel cooker (pan + attiéké basin) and, in front, a red tray where the plates pile up in columns. */
-export function Station({ plates, progress, ...props }: { plates: number; progress: number } & ThreeElements['group']) {
+export function Station({ plates, progress, level = 1, ...props }: { plates: number; progress: number; level?: number } & ThreeElements['group']) {
   const fish = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     if (fish.current) fish.current.position.y = 0.06 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.02
   })
-  const cols = [0, 1, 2].map((c) => Math.max(0, Math.min(6, plates - c * 6)))
+  const per = [6, 8, 10][level - 1]
+  const cols = [0, 1, 2].map((c) => Math.max(0, Math.min(per, plates - c * per)))
   return (
     <group {...props}>
       <RoundedBox args={[1.2, 0.85, 0.9]} radius={0.05} position={[0, 0.425, 0]} castShadow receiveShadow>
@@ -126,6 +138,11 @@ export function Station({ plates, progress, ...props }: { plates: number; progre
         {cols.map((n, c) => (n > 0 ? <PlateStack key={c} count={n} position={[(c - 1) * 0.36, 0.07, 0]} /> : null))}
       </group>
       <ProgressRing progress={progress} position={[0, 1.85, 0]} />
+      {/* level badge: green arrows like the upgrade signs of the shop games */}
+      <mesh position={[0.55, 1.85, 0]}>
+        <planeGeometry args={[0.62, 0.26]} />
+        <meshBasicMaterial map={signTexture(level >= 3 ? 'MAX' : `NIV ${level}`, level >= 3 ? '#e8432e' : '#2f9e44', '#fff', 256, 96)} toneMapped={false} />
+      </mesh>
     </group>
   )
 }

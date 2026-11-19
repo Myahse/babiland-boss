@@ -3,10 +3,12 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { Avatar } from './Avatar'
+import { burst, fly, FX } from './fx'
+import { sfx } from './sfx'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, START, STATIONS, TABLE_SOLIDS, TABLES, V, type Unlock } from './layout'
+import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, START, STATION_LEVELS, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 
@@ -19,8 +21,6 @@ import { maxQueue, popText, priceLeft, useArcade } from './store'
 
 const SPEED = 3.4
 const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
-const COOK_TIME = 2.6
-const STATION_MAX = 18
 const COUNTER_MAX = 12
 const TICK = 0.13 // one plate moves every TICK seconds
 
@@ -36,6 +36,12 @@ const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
 const stationFront = (i: number) => STATIONS[i].clone().add(V(0.8, 1.0))
 const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
+const up = (v: THREE.Vector3, y: number) => v.clone().add(new THREE.Vector3(0, y, 0))
+const TRAY = (i: number) => STATIONS[i].clone().add(new THREE.Vector3(0, 0.5, 1.0))
+const COUNTER_TOP = COUNTER.clone().add(new THREE.Vector3(0.15, 1.15, 0))
+/** top of the stack in someone's hands (moves with them) */
+const hands = (o: { pos: THREE.Vector3; rot: number }, n: () => number) => () =>
+  o.pos.clone().add(new THREE.Vector3(Math.sin(o.rot) * 0.45, 1.05 + n() * 0.075, Math.cos(o.rot) * 0.45))
 
 function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number) {
   const d = to.clone().sub(pos)
@@ -78,11 +84,12 @@ export function Sim({ name }: { name: string }) {
     const plates = [...st.station]
     let changed = false
     for (let i = 0; i < stations; i++) {
-      if (plates[i] >= STATION_MAX) {
+      const L = STATION_LEVELS[st.level[i] - 1]
+      if (plates[i] >= L.max) {
         progress.current[i] = 1
         continue
       }
-      progress.current[i] += dt / COOK_TIME
+      progress.current[i] += dt / L.cook
       if (progress.current[i] >= 1) {
         progress.current[i] = 0
         plates[i]++
@@ -125,12 +132,16 @@ export function Sim({ name }: { name: string }) {
           plates[i]--
           carried++
           changed = true
+          fly('plate', TRAY(i), hands(player, () => useArcade.getState().carried))
+          sfx.pick()
         }
       }
       if (carried > 0 && counter < COUNTER_MAX && player.pos.distanceTo(COUNTER) < 1.35) {
         carried--
         counter++
         changed = true
+        fly('plate', hands(player, () => carried)(), COUNTER_TOP)
+        sfx.drop()
       }
       // the server works the same way
       if (st.unlocks.serveur) {
@@ -139,11 +150,13 @@ export function Sim({ name }: { name: string }) {
             plates[i]--
             wCarried++
             changed = true
+            fly('plate', TRAY(i), hands(w, () => w.carried))
           }
         if (w.state === 'toCounter' && wCarried > 0 && counter < COUNTER_MAX && w.pos.distanceTo(COUNTER_BACK) < 0.5) {
           wCarried--
           counter++
           changed = true
+          fly('plate', hands(w, () => wCarried)(), COUNTER_TOP)
         }
       }
     }
@@ -151,6 +164,8 @@ export function Sim({ name }: { name: string }) {
     const tableCash = [...st.tableCash]
     tableCash.forEach((v, i) => {
       if (v > 0 && player.pos.distanceTo(TABLES[i]) < 1.25) {
+        for (let k = 0; k < Math.min(6, Math.ceil(v / 200)); k++) fly('cash', up(TABLES[i], 0.9), hands(player, () => 0), k * 0.05, 0.35)
+        sfx.cash()
         money += v
         popText(`+${v} FCFA`)
         tableCash[i] = 0
@@ -158,6 +173,8 @@ export function Sim({ name }: { name: string }) {
       }
     })
     if (cash > 0 && player.pos.distanceTo(CASH) < 0.9) {
+      for (let k = 0; k < Math.min(14, Math.ceil(cash / 200)); k++) fly('cash', up(CASH, 0.2 + (k % 5) * 0.15), hands(player, () => 0), k * 0.04, 0.35)
+      sfx.cash()
       money += cash
       popText(`+${cash} FCFA`)
       cash = 0
@@ -176,6 +193,26 @@ export function Sim({ name }: { name: string }) {
       if (paid[u]! >= PADS[u].price) {
         unlocks[u] = true
         popText(`Débloqué : ${PADS[u].label} !`)
+        burst(PADS[u].pos)
+        sfx.unlock()
+      }
+    }
+    // station upgrades « Plus vite »: same idea, one pad beside each station
+    const level = [...st.level]
+    const upPaid = [...st.upPaid]
+    for (let i = 0; i < stations; i++) {
+      if (level[i] >= 3 || money <= 0 || player.pos.distanceTo(UPGRADE_PADS[i]) > 0.6) continue
+      const price = UPGRADE_PRICES[level[i] - 1]
+      const give = Math.min(money, Math.ceil((price / 1.4) * dt), price - upPaid[i])
+      money -= give
+      upPaid[i] += give
+      changed = true
+      if (upPaid[i] >= price) {
+        level[i]++
+        upPaid[i] = 0
+        popText(level[i] === 3 ? 'Poste au MAX !' : 'Poste plus rapide !')
+        burst(STATIONS[i])
+        sfx.unlock()
       }
     }
 
@@ -212,10 +249,13 @@ export function Sim({ name }: { name: string }) {
         counter--
         c.got++
         changed = true
+        fly('plate', COUNTER_TOP, up(c.pos, 1.2), 0, 0.25)
         bump()
         if (c.got >= c.want) {
           cash += c.want * PLATE_PRICE
           served++
+          for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
+          sfx.pay()
           c.moving = true
           // with the terrace open, they go and sit to eat; otherwise they take it away
           const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
@@ -262,13 +302,19 @@ export function Sim({ name }: { name: string }) {
       bump()
     }
 
-    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash })
+    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid })
   })
 
   return (
     <>
-      <Station plates={s.station[0]} progress={progress.current[0]} position={STATIONS[0]} />
-      {s.unlocks.pan2 && <Station plates={s.station[1]} progress={progress.current[1]} position={STATIONS[1]} />}
+      <Station plates={s.station[0]} progress={progress.current[0]} level={s.level[0]} position={STATIONS[0]} />
+      {s.unlocks.pan2 && <Station plates={s.station[1]} progress={progress.current[1]} level={s.level[1]} position={STATIONS[1]} />}
+      {[0, 1].map((i) =>
+        (i === 0 || s.unlocks.pan2) && s.level[i] < 3 ? (
+          <Pad key={`up${i}`} label={`Plus vite · niv ${s.level[i] + 1}`} price={UPGRADE_PRICES[s.level[i] - 1]} left={UPGRADE_PRICES[s.level[i] - 1] - s.upPaid[i]} position={UPGRADE_PADS[i]} />
+        ) : null,
+      )}
+      <FX />
       <Counter plates={s.counter} name={name} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&

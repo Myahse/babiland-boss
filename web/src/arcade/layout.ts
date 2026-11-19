@@ -34,3 +34,12 @@ export const PADS: Record<Unlock, { pos: THREE.Vector3; price: number; label: st
 }
 
 export const PLATE_PRICE = 500
+
+/** Station upgrades « Plus vite »: level 1 -> 2 -> 3 (MAX). Faster cooking and room for more plates. */
+export const STATION_LEVELS = [
+  { cook: 2.6, max: 18 },
+  { cook: 1.8, max: 24 },
+  { cook: 1.2, max: 30 },
+]
+export const UPGRADE_PRICES = [600, 1500] // to reach level 2, then level 3
+export const UPGRADE_PADS = [V(-0.85, -1.45), V(-5.05, -1.45)]
