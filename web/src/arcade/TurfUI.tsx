@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { PlaceId } from './places'
 import { PLACES } from './places'
 import { useArcade } from './store'
-import { ATTACK_PRICE, BETRAY_PRICE, canAttack, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
+import { RealMap } from './RealMap'
+import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 
@@ -137,7 +138,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        <BigMap place={place} owners={owners} selected={sel} onPick={setSel} />
+        {REAL_MAP.includes(place) ? <RealMap place={place} owners={owners} selected={sel} onPick={setSel} /> : <BigMap place={place} owners={owners} selected={sel} onPick={setSel} />}
       </div>
       <div className="bg-[var(--color-cream)] p-3 shadow-[0_-4px_12px_rgba(0,0,0,.15)]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {!d ? (
@@ -168,6 +169,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
             )}
           </div>
         )}
+        {REAL_MAP.includes(place) && <div className="mt-1 text-[10px] opacity-60">Carte et quartiers : © OpenStreetMap (contributeurs){import.meta.env.VITE_MAPBOX_TOKEN ? ' · © Mapbox' : ''}</div>}
         <div className="mt-2 text-[11px] font-semibold opacity-80">
           ⚔️ Duel : sers {DUEL_TARGET} clients avant les gens du boss, en 60 s. Défaite : attends {COOLDOWN} s.
         </div>

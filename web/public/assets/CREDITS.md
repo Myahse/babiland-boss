@@ -28,3 +28,9 @@ licence **CC0**, avec leurs 24 animations, recolorés dans le jeu (peau, pagnes,
 
 Faits avec Meshy (style « film d'animation »), même squelette que les autres persos Meshy :
 les animations enregistrées (attendre, parler…) servent pour tous, sans en racheter.
+
+## Carte des quartiers
+
+Les contours des quartiers de Yopougon (`maps/yopougon.json`) sont calculés à partir des lieux d'OpenStreetMap
+(© les contributeurs d'OpenStreetMap, licence ODbL), repris des données de Babi Life, par `tools/districts.py`.
+Le fond de carte : Mapbox si `VITE_MAPBOX_TOKEN` est fourni, sinon OpenFreeMap (© OpenMapTiles, données OpenStreetMap).

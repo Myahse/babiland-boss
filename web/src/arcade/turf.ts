@@ -10,34 +10,40 @@ import type { PlaceId } from './places'
 /** A bonus given by a key zone while you own it. */
 export type Bonus = { icon: string; label: string; kind: 'sales' | 'customers' | 'cook'; value: number }
 /** `cell`: where the district sits on the map grid of its place (column, row). */
-export type District = { name: string; boss: string; cell: [number, number]; bonus?: Bonus; forest?: boolean }
+export type District = { name: string; boss: string; cell: [number, number]; bonus?: Bonus; forest?: boolean; n?: number[] }
 
 const B = {
   industry: { icon: '🏭', label: '+30 % de clients (les ouvriers viennent manger)', kind: 'customers', value: 0.3 },
-  market: { icon: '🧺', label: 'Postes 25 % plus rapides (ingrédients du marché)', kind: 'cook', value: 0.25 },
-  night: { icon: '🎶', label: '+20 % sur chaque vente (la nuit de Babi)', kind: 'sales', value: 0.2 },
+  market: { icon: '🧺', label: 'Postes 25 % plus rapides (le marché La Paix)', kind: 'cook', value: 0.25 },
+  night: { icon: '🌙', label: '+20 % sur chaque vente (le marché de nuit La Référence)', kind: 'sales', value: 0.2 },
+  gare: { icon: '🚌', label: '+20 % de clients (la gare des gbaka)', kind: 'customers', value: 0.2 },
 } satisfies Record<string, Bonus>
 
 /** 4 districts on a 2 x 2 map (the other places, for now). */
 const D = (names: string[], bosses: string[]): District[] => names.map((name, i) => ({ name, boss: bosses[i], cell: [[0, 1], [1, 1], [0, 0], [1, 0]][i] as [number, number] }))
 
 /** Map grid of each place: columns x rows. */
-export const GRID: Partial<Record<PlaceId, [number, number]>> = { yopougon: [3, 3] }
+export const GRID: Partial<Record<PlaceId, [number, number]>> = {}
+/** Places drawn on the real map (their district areas are in public/assets/maps/<place>.json). */
+export const REAL_MAP: PlaceId[] = ['yopougon']
 export const gridOf = (p: PlaceId) => GRID[p] ?? ([2, 2] as [number, number])
 
 export const DISTRICTS: Record<PlaceId, District[]> = {
-  // Yopougon: placed roughly where they are (west Port-Bouët 2, north the industrial zone, south the lagoon,
-  // the Banco forest in the north-east). District 0 is where your maquis is.
+  // Yopougon: 12 real districts; their areas come from where the real shops and maquis are (OpenStreetMap,
+  // public/assets/maps/yopougon.json), `n` = the districts that really share a border with them.
   yopougon: [
-    { name: 'Selmer', boss: 'Boss Ladji', cell: [1, 2] },
-    { name: 'Niangon', boss: 'Mama Bintou', cell: [0, 2] },
-    { name: 'Rue Princesse', boss: 'DJ Kpakpato', cell: [2, 2], bonus: B.night },
-    { name: 'Port-Bouët 2', boss: 'Tonton Gnaoré', cell: [0, 1] },
-    { name: 'Toits-Rouges', boss: 'Le Vieux Séry', cell: [1, 1] },
-    { name: 'Siporex', boss: 'Commandant Zézé', cell: [2, 1], bonus: B.market },
-    { name: 'Andokoi', boss: 'Mama Akoua', cell: [0, 0] },
-    { name: 'Zone industrielle', boss: 'Le Patron Konaté', cell: [1, 0], bonus: B.industry },
-    { name: 'Forêt du Banco', boss: '', cell: [2, 0], forest: true },
+    { name: 'Selmer', boss: 'Boss Ladji', cell: [0, 0], n: [1, 2, 3, 5, 11] },
+    { name: 'Wassakara', boss: 'Mama Bintou', cell: [0, 0], n: [0, 2, 10] },
+    { name: 'Siporex', boss: 'Commandant Zézé', cell: [0, 0], n: [0, 1, 3, 4, 7, 10], bonus: B.gare },
+    { name: 'Score', boss: 'Le Vieux Séry', cell: [0, 0], n: [0, 2, 4, 5] },
+    { name: 'Banco 2', boss: 'DJ Kpakpato', cell: [0, 0], n: [2, 3, 5, 6, 7], bonus: B.night },
+    { name: 'Sogefiha', boss: 'Tantie Clémence', cell: [0, 0], n: [0, 3, 4, 6, 11] },
+    { name: 'Quartier Maroc', boss: 'Tonton Gnaoré', cell: [0, 0], n: [4, 5, 7] },
+    { name: 'Port-Bouët II', boss: 'Le Grand Bagnon', cell: [0, 0], n: [2, 4, 6, 9, 10] },
+    { name: 'Micao', boss: 'Mama Akoua', cell: [0, 0], n: [9, 10], bonus: B.market },
+    { name: 'Gesco', boss: 'Boss Yacou', cell: [0, 0], n: [7, 8, 10] },
+    { name: 'Zone Industrielle', boss: 'Le Patron Konaté', cell: [0, 0], n: [1, 2, 7, 8, 9], bonus: B.industry },
+    { name: 'Koweït', boss: 'Petit Zadi', cell: [0, 0], n: [0, 5] },
   ],
   cocody: D(['Riviera', 'Angré', 'Deux-Plateaux', 'Blockhaus'], ['Boss Kader', 'Tantie Rose', 'Le Grand Yves', 'Mama Akissi']),
   abobo: D(['Avocatier', 'PK18', 'Anador', 'Samaké'], ['Boss Drissa', 'Mama Salimata', 'Le Vieux Bamba', 'Petit Koné']),
@@ -50,6 +56,7 @@ export const DISTRICTS: Record<PlaceId, District[]> = {
 
 /** Districts touching district `i` on the map (you can only attack next to what you hold). */
 export function neighbours(p: PlaceId, i: number) {
+  if (DISTRICTS[p][i].n) return DISTRICTS[p][i].n!
   const [c, r] = DISTRICTS[p][i].cell
   return DISTRICTS[p].map((d, j) => (j !== i && !d.forest && Math.abs(d.cell[0] - c) + Math.abs(d.cell[1] - r) === 1 ? j : -1)).filter((j) => j >= 0)
 }
@@ -75,7 +82,7 @@ type Turf = {
   panel: boolean
 }
 
-const KEY = 'babiland-turf-v1'
+const KEY = 'babiland-turf-v2' // v2: the real districts of Yopougon
 function load(): Partial<Turf> {
   try {
     return { owners: JSON.parse(localStorage.getItem(KEY) || '{}').owners ?? {} }
