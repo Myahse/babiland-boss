@@ -62,12 +62,50 @@ const COUNTER_TOP = (k = 0) => COUNTER.clone().add(new THREE.Vector3(-0.15 + k *
 const hands = (o: { pos: THREE.Vector3; rot: number }, n: () => number) => () =>
   o.pos.clone().add(new THREE.Vector3(Math.sin(o.rot) * 0.45, 1.05 + n() * 0.075, Math.cos(o.rot) * 0.45))
 
-function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number) {
-  const d = to.clone().sub(pos)
+// everyone the simulation walks (customers, server) keeps a velocity: they speed up, slow down as they
+// arrive, and round the corners of their path instead of moving like robots
+const vels = new WeakMap<THREE.Vector3, THREE.Vector3>()
+function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number, stopAtEnd = true) {
+  let v = vels.get(pos)
+  if (!v) vels.set(pos, (v = new THREE.Vector3()))
+  const d = new THREE.Vector3(to.x - pos.x, 0, to.z - pos.z)
   const l = d.length()
-  if (l < 0.03) return { moving: false, dir: 0 }
-  pos.addScaledVector(d.normalize(), Math.min(l, speed * dt))
-  return { moving: true, dir: Math.atan2(d.x, d.z) }
+  if (l < 0.04 && v.length() < 0.08) {
+    v.set(0, 0, 0)
+    return { moving: false, dir: 0, fast: false }
+  }
+  const want = l > 1e-4 ? d.multiplyScalar(Math.min(speed, stopAtEnd ? l * 2.5 : speed) / l) : d.set(0, 0, 0)
+  v.lerp(want, Math.min(1, dt * 6))
+  pos.addScaledVector(v, dt)
+  return { moving: true, dir: Math.atan2(v.x, v.z), fast: v.length() > 0.25 }
+}
+/** keep people apart: everyone pushes the others gently out of their way */
+function separate(people: THREE.Vector3[], fixed: THREE.Vector3[], dt: number) {
+  const R = 0.55
+  const k = Math.min(1, dt * 8)
+  for (let i = 0; i < people.length; i++) {
+    const a = people[i]
+    for (let j = i + 1; j < people.length; j++) {
+      const b = people[j]
+      const dx = a.x - b.x
+      const dz = a.z - b.z
+      const l = Math.hypot(dx, dz)
+      if (l > R || l < 1e-4) continue
+      const push = ((R - l) / 2) * k
+      a.x += (dx / l) * push
+      a.z += (dz / l) * push
+      b.x -= (dx / l) * push
+      b.z -= (dz / l) * push
+    }
+    for (const f of fixed) {
+      const dx = a.x - f.x
+      const dz = a.z - f.z
+      const l = Math.hypot(dx, dz)
+      if (l > R || l < 1e-4) continue
+      a.x += (dx / l) * (R - l) * k
+      a.z += (dz / l) * (R - l) * k
+    }
+  }
 }
 const turn = (from: number, to: number, k: number) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k
 
@@ -279,7 +317,7 @@ export function Sim({ name }: { name: string }) {
       const best = active.reduce((b, i) => (plates[i] > plates[b] ? i : b), active[0])
       const r = step(w.pos, w.state === 'toStation' ? stationFront(best) : COUNTER_BACK, SPEED * (st.unlocks.rapide ? 1.0 : 0.7), dt)
       w.moving = r.moving
-      if (r.moving) w.rot = turn(w.rot, r.dir, Math.min(1, dt * 10))
+      if (r.fast) w.rot = turn(w.rot, r.dir, Math.min(1, dt * 10))
       w.carried = wCarried
     }
 
@@ -299,7 +337,7 @@ export function Sim({ name }: { name: string }) {
     let served = st.served
     line.forEach((c, k) => {
       const r = step(c.pos, slot(k), 1.4, dt)
-      if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+      if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
       else c.rot = turn(c.rot, Math.PI, Math.min(1, dt * 6))
       if (r.moving !== c.moving) {
         c.moving = r.moving
@@ -353,9 +391,11 @@ export function Sim({ name }: { name: string }) {
       if (c.state === 'line') return
       // follow the path one point at a time
       if (c.path.length) {
-        const r = step(c.pos, c.path[0], 1.4, dt)
-        if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
-        else c.path.shift()
+        const last = c.path.length === 1
+        const r = step(c.pos, c.path[0], 1.4, dt, last)
+        if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+        // round the corners: head for the next point a little before reaching this one
+        if (!r.moving || (!last && c.pos.distanceTo(c.path[0]) < 0.4)) c.path.shift()
         if (!c.moving) {
           c.moving = true
           bump()
@@ -385,6 +425,10 @@ export function Sim({ name }: { name: string }) {
         bump()
       }
     })
+    // nobody walks through anybody (seated people and Tantie Aya don't get pushed)
+    const walking = custs.current.filter((c) => c.id >= 0 && !(c.state === 'eat' && !c.path.length)).map((c) => c.pos)
+    if (st.unlocks.serveur) walking.push(w.pos)
+    separate(walking, [player.pos], dt)
     if (custs.current.some((c) => c.id < 0)) {
       custs.current = custs.current.filter((c) => c.id >= 0)
       bump()

@@ -11,7 +11,7 @@ export const COUNTER = V(2.35, -0.1)
 export const CASH = V(3.85, -0.6) // where customers' money piles up
 export const SLOT0 = V(2.35, 1.15) // first place in the line, in front of the counter
 export const SLOT_STEP = V(0.5, 0.62) // the line goes off diagonally, like in the shop games
-export const ENTER = V(8, 10)
+export const ENTER = V(8.6, 8.9) // new customers come in along the line, from the street corner
 export const EXIT = V(-12, 5.6) // along the pavement, out of sight
 /** customers leave through the front: down the side lane (inside the low wall), then along the pavement */
 export const LANE_X = -5.95

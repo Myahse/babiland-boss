@@ -50,7 +50,6 @@ export function ArcadeWorld() {
         <Flat color="#e8432e" />
       </mesh>
       <Palm position={[-6.8, 0, -1.8]} />
-      <Palm position={[5.6, 0, 4.4]} s={0.9} />
       <Palm position={[-6.6, 0, 4.4]} s={1.1} />
       <Palm position={[5.6, 0, -1.6]} s={0.85} />
       {/* neighbours on both sides of the maquis */}
