@@ -29,7 +29,10 @@ cd web && npm install && npm run dev
 - On dirige **Tantie Aya au joystick** (glisser le doigt, ou flèches / ZQSD / WASD).
 - Le **poste à garba** cuit des plats tout seul ; on les ramasse en pile et on les pose sur le **comptoir**.
 - Les **clients font la queue**, prennent leurs plats (🍛 1/2), paient : l'argent s'empile par terre, on marche dessus pour le ramasser.
-- On marche sur les **carrés bleus** pour dépenser l'argent : 2e poêle (400 F), serveur qui porte les plats (1 200 F), table du maquis qui attire plus de clients (2 000 F).
+- On marche sur les **carrés bleus** pour dépenser l’argent : 2e poêle (400 F), serveur qui porte les plats (1 200 F), terrasse (2 000 F) où les clients servis s’assoient pour manger.
+- Le maquis à deux étages : enseigne lumineuse sur le toit, terrasse en haut avec des clients attablés, auvent rayé, coin de rue avec taxis et passage piéton.
+
+![Le maquis](docs/screens/maquis-vue.png)
 - Persos cartoon style « film d’animation » (Meshy) : Tantie Aya, Koffi, Awa, Yao, Fatou ; caméra de dessus qui suit Tantie Aya. La partie est gardée sur le téléphone.
 
 ![Les persos cartoon](docs/screens/persos-cartoon.jpg)

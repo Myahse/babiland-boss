@@ -6,8 +6,9 @@ import { Avatar } from './Avatar'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SOLIDS, START, STATIONS, TABLE, V, type Unlock } from './layout'
-import { CashPile, Counter, MaquisTable, Pad, PlateStack, Station } from './Props'
+import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, START, STATIONS, TABLE_SOLIDS, TABLES, V, type Unlock } from './layout'
+import { CashPile, Counter, Pad, PlateStack, Station } from './Props'
+import { TerraceTable } from './Shop'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 
 // The whole shop simulation, updated every frame:
@@ -25,10 +26,12 @@ const COUNTER_MAX = 14
 const TICK = 0.13 // one plate moves every TICK seconds
 
 const player = { pos: START.clone(), rot: 0, moving: false }
+/** camera distance (1 = normal); a « zoom out » button could change it */
+export const view = { zoom: 1.3 }
 // handy for the automatic play tests (move Tantie Aya directly)
-if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player })
+if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
-type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'out'; want: number; got: number; moving: boolean }
+type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; want: number; got: number; moving: boolean; seat: number; eat: number }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
@@ -54,7 +57,10 @@ export function Sim({ name }: { name: string }) {
   const [, rerender] = useState(0)
   const bump = () => rerender((n) => n + 1)
   const worker = useRef({ pos: V(-1, -1.8), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: 0 })
-  const solids = useMemo(() => (s.unlocks.pan2 ? [...SOLIDS, { c: STATIONS[1], hx: 0.55, hz: 0.45 }] : SOLIDS), [s.unlocks.pan2])
+  const solids = useMemo(
+    () => [...SOLIDS, ...(s.unlocks.pan2 ? [{ c: STATIONS[1], hx: 0.55, hz: 0.45 }] : []), ...(s.unlocks.table ? TABLE_SOLIDS : [])],
+    [s.unlocks.pan2, s.unlocks.table],
+  )
 
   const redraw = useRef(0)
   useFrame((_, rawDt) => {
@@ -180,7 +186,7 @@ export function Sim({ name }: { name: string }) {
     const line = custs.current.filter((c) => c.state === 'line')
     if (spawn.current <= 0 && line.length < (unlocks.table ? 5 : maxQueue())) {
       spawn.current = 2.5 + Math.random() * 2
-      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', want: 1 + Math.floor(Math.random() * (unlocks.table ? 3 : 2)), got: 0, moving: true })
+      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', want: 1 + Math.floor(Math.random() * (unlocks.table ? 3 : 2)), got: 0, moving: true, seat: -1, eat: 0 })
       nextId.current++
       bump()
     }
@@ -201,12 +207,39 @@ export function Sim({ name }: { name: string }) {
         if (c.got >= c.want) {
           cash += c.want * PLATE_PRICE
           served++
-          c.state = 'out'
           c.moving = true
+          // with the terrace open, they go and sit to eat; otherwise they take it away
+          const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
+          const free = unlocks.table ? SEATS.findIndex((_, i) => !taken.has(i)) : -1
+          if (free >= 0) {
+            c.state = 'eat'
+            c.seat = free
+            c.eat = 7
+          } else c.state = 'out'
         }
       }
     })
     custs.current.forEach((c) => {
+      if (c.state === 'eat') {
+        const seat = SEATS[c.seat]
+        const r = step(c.pos, seat, 1.5, dt)
+        if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+        else {
+          // face the table, then eat for a while
+          const tb = TABLES[Math.floor(c.seat / 2)]
+          c.rot = turn(c.rot, Math.atan2(tb.x - seat.x, tb.z - seat.z), Math.min(1, dt * 8))
+          c.eat -= dt
+          if (c.eat <= 0) {
+            c.state = 'out'
+            bump()
+          }
+        }
+        if (r.moving !== c.moving) {
+          c.moving = r.moving
+          bump()
+        }
+        return
+      }
       if (c.state !== 'out') return
       const r = step(c.pos, EXIT, 1.6, dt)
       if (r.moving) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
@@ -226,12 +259,15 @@ export function Sim({ name }: { name: string }) {
       {s.unlocks.pan2 && <Station plates={s.station[1]} progress={progress.current[1]} position={STATIONS[1]} />}
       <Counter plates={s.counter} name={name} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
-      {s.unlocks.table && <MaquisTable position={TABLE} />}
+      {s.unlocks.table &&
+        TABLES.map((t, i) => (
+          <TerraceTable key={i} position={t} parasol={['#e03131', '#1c7ed6', '#f59f00'][i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
+        ))}
       {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] ? <Pad key={u} label={PADS[u].label} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
       <Mover who="aya" obj={player} carried={s.carried} />
       {s.unlocks.serveur && <Mover who="yao" obj={worker.current} carried={s.workerCarried} />}
       {custs.current.map((c, k) => (
-        <Mover key={c.id} who={c.who} obj={c}>
+        <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
           {k === 0 && c.state === 'line' && !c.moving && <Wants want={c.want} got={c.got} />}
         </Mover>
       ))}
@@ -241,7 +277,7 @@ export function Sim({ name }: { name: string }) {
 }
 
 /** A person whose position/rotation is driven by the simulation (player, server or customer). */
-function Mover({ who, obj, carried = 0, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: number; children?: React.ReactNode }) {
+function Mover({ who, obj, carried = 0, sitting = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: number; sitting?: boolean; children?: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null)
   const [moving, setMoving] = useState(obj.moving)
   useFrame(() => {
@@ -253,7 +289,7 @@ function Mover({ who, obj, carried = 0, children }: { who: PersonId; obj: { pos:
   })
   return (
     <group ref={ref}>
-      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
+      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} sitting={sitting} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
       {carried > 0 && <PlateStack count={carried} wobble position={[0, 1.0, 0.45]} />}
       {children}
     </group>
@@ -279,10 +315,10 @@ function Follow() {
     camera.position.set(player.pos.x, 9, player.pos.z + 7)
   }, [camera])
   useFrame((_, dt) => {
-    const far = size.width < size.height ? 1.45 : 1
-    const want = new THREE.Vector3(player.pos.x * 0.7, 8.2 * far, player.pos.z * 0.6 + 6.4 * far)
+    const far = (size.width < size.height ? 1.45 : 1) * view.zoom
+    const want = new THREE.Vector3(player.pos.x * 0.6, 9.2 * far, player.pos.z * 0.5 + 7.6 * far)
     camera.position.lerp(want, 1 - Math.exp(-dt * 4))
-    look.lerp(new THREE.Vector3(player.pos.x * 0.7, 0.4, player.pos.z * 0.6 - 0.2), 1 - Math.exp(-dt * 4))
+    look.lerp(new THREE.Vector3(player.pos.x * 0.6, 0.6, player.pos.z * 0.5 - 0.6), 1 - Math.exp(-dt * 4))
     camera.lookAt(look)
   })
   return null

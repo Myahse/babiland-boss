@@ -34,58 +34,36 @@ export function ArcadeWorld() {
         <planeGeometry args={[60, 40]} />
         <Flat color="#e8894a" />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.3, 0.01, 0.5]} receiveShadow>
-        <planeGeometry args={[10.4, 6.4]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow>
+        <planeGeometry args={[11.4, 7.8]} />
         <Flat color="#fbe7c6" />
       </mesh>
       {Array.from({ length: 10 }, (_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-5.5 + i * 1.04 + 0.52, 0.012, 0.5]}>
-          <planeGeometry args={[0.02, 6.4]} />
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-5.7 + i * 1.04 + 0.52, 0.012, 1.3]}>
+          <planeGeometry args={[0.02, 7.8]} />
           <meshBasicMaterial color="#efd3a6" />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.011, -4.0]} receiveShadow>
-        <planeGeometry args={[60, 2.4]} />
-        <Flat color="#495057" />
-      </mesh>
-      {[-12, -8, -4, 0, 4, 8, 12].map((x) => (
-        <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.015, -4.0]}>
-          <planeGeometry args={[1.4, 0.1]} />
-          <meshBasicMaterial color="#f8f9fa" />
-        </mesh>
-      ))}
-      {/* the street leading to the shop, where customers walk */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 4.4]} receiveShadow>
-        <planeGeometry args={[60, 1.6]} />
-        <Flat color="#d9773c" />
-      </mesh>
-      {SHOPS.map((s) => (
-        <group key={s.sign} position={[s.x, 0, -6.6]}>
-          <RoundedBox args={[s.w, s.h, 2]} radius={0.08} position={[0, s.h / 2, 0]} castShadow receiveShadow>
+      <Palm position={[-6.8, 0, -1.8]} />
+      <Palm position={[5.6, 0, 4.4]} s={0.9} />
+      <Palm position={[-6.6, 0, 4.4]} s={1.1} />
+      <Palm position={[5.6, 0, -1.6]} s={0.85} />
+      {/* neighbours on both sides of the maquis */}
+      {SHOPS.map((s, i) => (
+        <group key={s.sign} position={[i < 2 ? -9.5 - i * 3.2 : 9.8 + (i - 2) * 3.2, 0, -3.6]}>
+          <RoundedBox args={[s.w, s.h, 2.2]} radius={0.08} position={[0, s.h / 2, 0]} castShadow receiveShadow>
             <Flat color={s.c} />
           </RoundedBox>
-          <mesh position={[0, s.h + 0.08, 0.1]} castShadow>
-            <boxGeometry args={[s.w + 0.3, 0.12, 2.3]} />
-            <Flat color="#adb5bd" />
-          </mesh>
-          <mesh position={[-s.w * 0.22, 0.95, 1.01]}>
-            <planeGeometry args={[0.8, 1.9]} />
-            <Flat color="#7a4b28" />
-          </mesh>
-          <mesh position={[s.w * 0.22, 1.3, 1.01]}>
-            <planeGeometry args={[0.8, 0.7]} />
-            <Flat color="#1e3a5f" />
-          </mesh>
-          <mesh position={[0, s.h - 0.45, 1.02]}>
+          <mesh position={[0, s.h - 0.45, 1.11]}>
             <planeGeometry args={[s.w * 0.85, s.w * 0.2]} />
             <meshStandardMaterial map={signTexture(s.sign, s.b)} roughness={0.5} />
           </mesh>
+          <mesh position={[0, 0.95, 1.11]}>
+            <planeGeometry args={[0.8, 1.9]} />
+            <Flat color="#7a4b28" />
+          </mesh>
         </group>
       ))}
-      <Palm position={[-5.8, 0, -2.8]} />
-      <Palm position={[5.2, 0, 3.4]} s={0.9} />
-      <Palm position={[-6.2, 0, 3.6]} s={1.1} />
-      <Palm position={[5.6, 0, -2.6]} s={0.85} />
     </>
   )
 }

@@ -6,6 +6,7 @@ import { useGame } from '../store'
 import { Title } from '../ui/Hud'
 import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
+import { Building, Streets } from './Shop'
 import { stick } from './input'
 import { useArcade } from './store'
 
@@ -102,6 +103,8 @@ export default function ArcadeApp() {
       <Canvas shadows dpr={[1, 2]} camera={{ fov: 38, near: 0.1, far: 120, position: [0, 9, 7] }}>
         <Suspense fallback={null}>
           <ArcadeWorld />
+          <Building name={name || 'Boss'} />
+          <Streets />
           {phase !== 'title' && <Sim name={name} />}
           <EffectComposer multisampling={0}>
             <ToneMapping mode={ToneMappingMode.NEUTRAL} />

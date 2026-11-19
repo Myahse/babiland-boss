@@ -38,7 +38,7 @@ function inPlace(src: THREE.AnimationClip) {
   return clip
 }
 
-export function ToonPerson({ who, moving, carrying = false, ...props }: { who: PersonId; moving: boolean; carrying?: boolean } & ThreeElements['group']) {
+export function ToonPerson({ who, moving, carrying = false, sitting = false, ...props }: { who: PersonId; moving: boolean; carrying?: boolean; sitting?: boolean } & ThreeElements['group']) {
   const { scene } = useGLTF(`${base}toon/${who}.glb`)
   const walkFile = useGLTF(`${base}toon/${who}-walk.glb`)
   const idleFile = useGLTF(`${base}people/aya-idle.glb`)
@@ -71,25 +71,44 @@ export function ToonPerson({ who, moving, carrying = false, ...props }: { who: P
   }, [moving, acts])
 
   // carrying: both arms held forward under the plates, added on top of the walk / idle
-  const arms = useMemo(() => ({ l: bone(model, 'leftarm'), r: bone(model, 'rightarm'), lf: bone(model, 'leftforearm'), rf: bone(model, 'rightforearm') }), [model])
+  const arms = useMemo(
+    () => ({
+      l: bone(model, 'leftarm'), r: bone(model, 'rightarm'), lf: bone(model, 'leftforearm'), rf: bone(model, 'rightforearm'),
+      lu: bone(model, 'leftupleg'), ru: bone(model, 'rightupleg'), ll: bone(model, 'leftleg'), rl: bone(model, 'rightleg'),
+    }),
+    [model],
+  )
+  const hips = useRef<THREE.Group>(null)
   const k = useRef(0)
   const q = useMemo(() => new THREE.Quaternion(), [])
   const e = useMemo(() => new THREE.Euler(), [])
   useFrame((_, dt) => {
     mixer.update(dt)
+    const add = (b: THREE.Bone | null, x: number, y: number, z: number, w = 1) => b && b.quaternion.multiply(q.setFromEuler(e.set(x * w, y * w, z * w)))
+    // sitting on a chair: thighs forward, knees bent, the body lowered to the seat
+    if (sitting) {
+      add(arms.lu, -1.5, 0, 0)
+      add(arms.ru, -1.5, 0, 0)
+      add(arms.ll, 1.5, 0, 0)
+      add(arms.rl, 1.5, 0, 0)
+      add(arms.lf, -0.5, 0, 0)
+      add(arms.rf, -0.5, 0, 0)
+    }
+    if (hips.current) hips.current.position.y = sitting ? -0.42 : 0
     k.current += ((carrying ? 1 : 0) - k.current) * Math.min(1, dt * 8)
     const w = k.current
     if (w < 0.01) return
-    const add = (b: THREE.Bone | null, x: number, y: number, z: number) => b && b.quaternion.multiply(q.setFromEuler(e.set(x * w, y * w, z * w)))
-    add(arms.l, -1.0, 0, -0.35)
-    add(arms.r, -1.0, 0, 0.35)
-    add(arms.lf, -0.6, 0, 0)
-    add(arms.rf, -0.6, 0, 0)
+    add(arms.l, -1.0, 0, -0.35, w)
+    add(arms.r, -1.0, 0, 0.35, w)
+    add(arms.lf, -0.6, 0, 0, w)
+    add(arms.rf, -0.6, 0, 0, w)
   })
 
   return (
     <group {...props}>
-      <primitive object={model} />
+      <group ref={hips}>
+        <primitive object={model} />
+      </group>
     </group>
   )
 }
