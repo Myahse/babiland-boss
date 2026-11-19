@@ -7,8 +7,7 @@ import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
 import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, START, STATIONS, TABLE_SOLIDS, TABLES, V, type Unlock } from './layout'
-import { CashPile, Counter, Pad, PlateStack, Station } from './Props'
-import { TerraceTable } from './Shop'
+import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 
 // The whole shop simulation, updated every frame:
@@ -19,15 +18,15 @@ import { maxQueue, popText, priceLeft, useArcade } from './store'
 //  - the server (once hired) carries plates from the stations to the counter on his own.
 
 const SPEED = 3.4
-const CARRY_MAX = 5
+const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
 const COOK_TIME = 2.6
-const STATION_MAX = 6
-const COUNTER_MAX = 14
+const STATION_MAX = 18
+const COUNTER_MAX = 12
 const TICK = 0.13 // one plate moves every TICK seconds
 
 const player = { pos: START.clone(), rot: 0, moving: false }
 /** camera distance (1 = normal); a « zoom out » button could change it */
-export const view = { zoom: 1.3 }
+export const view = { zoom: 1 }
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
@@ -35,7 +34,7 @@ type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state:
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
-const stationFront = (i: number) => STATIONS[i].clone().add(V(0, 0.8))
+const stationFront = (i: number) => STATIONS[i].clone().add(V(0.8, 1.0))
 const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
 
 function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number) {
@@ -122,7 +121,7 @@ export function Sim({ name }: { name: string }) {
     while (acc.current >= TICK) {
       acc.current -= TICK
       for (let i = 0; i < stations; i++) {
-        if (carried < CARRY_MAX && plates[i] > 0 && player.pos.distanceTo(STATIONS[i]) < 1.25) {
+        if (carried < carryMax() && plates[i] > 0 && (player.pos.distanceTo(STATIONS[i]) < 1.25 || player.pos.distanceTo(STATIONS[i].clone().add(V(0, 1.0))) < 0.95)) {
           plates[i]--
           carried++
           changed = true
@@ -136,7 +135,7 @@ export function Sim({ name }: { name: string }) {
       // the server works the same way
       if (st.unlocks.serveur) {
         for (let i = 0; i < stations; i++)
-          if (w.state === 'toStation' && wCarried < 3 && plates[i] > 0 && w.pos.distanceTo(stationFront(i)) < 0.5) {
+          if (w.state === 'toStation' && wCarried < 6 && plates[i] > 0 && w.pos.distanceTo(stationFront(i)) < 0.6) {
             plates[i]--
             wCarried++
             changed = true
@@ -148,6 +147,16 @@ export function Sim({ name }: { name: string }) {
         }
       }
     }
+    // tips left on the tables
+    const tableCash = [...st.tableCash]
+    tableCash.forEach((v, i) => {
+      if (v > 0 && player.pos.distanceTo(TABLES[i]) < 1.25) {
+        money += v
+        popText(`+${v} FCFA`)
+        tableCash[i] = 0
+        changed = true
+      }
+    })
     if (cash > 0 && player.pos.distanceTo(CASH) < 0.9) {
       money += cash
       popText(`+${cash} FCFA`)
@@ -172,7 +181,7 @@ export function Sim({ name }: { name: string }) {
 
     // 5. the server: go to the fullest station, fill up to 3 plates, bring them to the counter
     if (st.unlocks.serveur) {
-      if (w.state === 'toStation' && (wCarried >= 3 || (wCarried > 0 && plates.slice(0, stations).every((n) => n === 0)))) w.state = 'toCounter'
+      if (w.state === 'toStation' && (wCarried >= 6 || (wCarried > 0 && plates.slice(0, stations).every((n) => n === 0)))) w.state = 'toCounter'
       if (w.state === 'toCounter' && wCarried === 0) w.state = 'toStation'
       const best = plates.slice(0, stations).reduce((b, n, i) => (n > plates[b] ? i : b), 0)
       const r = step(w.pos, w.state === 'toStation' ? stationFront(best) : COUNTER_BACK, SPEED * 0.75, dt)
@@ -184,9 +193,9 @@ export function Sim({ name }: { name: string }) {
     // 6. customers: arrive, line up, take their plates, pay, leave
     spawn.current -= dt
     const line = custs.current.filter((c) => c.state === 'line')
-    if (spawn.current <= 0 && line.length < (unlocks.table ? 5 : maxQueue())) {
-      spawn.current = 2.5 + Math.random() * 2
-      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', want: 1 + Math.floor(Math.random() * (unlocks.table ? 3 : 2)), got: 0, moving: true, seat: -1, eat: 0 })
+    if (spawn.current <= 0 && line.length < maxQueue()) {
+      spawn.current = 1.6 + Math.random() * 1.6
+      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0 })
       nextId.current++
       bump()
     }
@@ -231,6 +240,9 @@ export function Sim({ name }: { name: string }) {
           c.eat -= dt
           if (c.eat <= 0) {
             c.state = 'out'
+            // they leave a tip on the table
+            tableCash[Math.floor(c.seat / 2)] += 100 * c.want
+            changed = true
             bump()
           }
         }
@@ -250,7 +262,7 @@ export function Sim({ name }: { name: string }) {
       bump()
     }
 
-    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried })
+    if (changed || carried !== st.carried) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash })
   })
 
   return (
@@ -261,10 +273,10 @@ export function Sim({ name }: { name: string }) {
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&
         TABLES.map((t, i) => (
-          <TerraceTable key={i} position={t} parasol={['#e03131', '#1c7ed6', '#f59f00'][i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
+          <SquareTable key={i} position={t} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
       {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] ? <Pad key={u} label={PADS[u].label} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
-      <Mover who="aya" obj={player} carried={s.carried} />
+      <Mover who="aya" obj={player} carried={s.carried} full={s.carried >= (s.unlocks.plateau ? 16 : 8)} />
       {s.unlocks.serveur && <Mover who="yao" obj={worker.current} carried={s.workerCarried} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
@@ -277,7 +289,7 @@ export function Sim({ name }: { name: string }) {
 }
 
 /** A person whose position/rotation is driven by the simulation (player, server or customer). */
-function Mover({ who, obj, carried = 0, sitting = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: number; sitting?: boolean; children?: React.ReactNode }) {
+function Mover({ who, obj, carried = 0, sitting = false, full = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: number; sitting?: boolean; full?: boolean; children?: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null)
   const [moving, setMoving] = useState(obj.moving)
   useFrame(() => {
@@ -291,6 +303,13 @@ function Mover({ who, obj, carried = 0, sitting = false, children }: { who: Pers
     <group ref={ref}>
       {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried > 0} sitting={sitting} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried > 0} />}
       {carried > 0 && <PlateStack count={carried} wobble position={[0, 1.0, 0.45]} />}
+      {full && (
+        <Html position={[0, 1.15 + carried * 0.075, 0.45]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+          <div className="text-3xl font-extrabold text-[#ff2d55]" style={{ textShadow: '2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff' }}>
+            MAX
+          </div>
+        </Html>
+      )}
       {children}
     </group>
   )
@@ -315,10 +334,11 @@ function Follow() {
     camera.position.set(player.pos.x, 9, player.pos.z + 7)
   }, [camera])
   useFrame((_, dt) => {
-    const far = (size.width < size.height ? 1.45 : 1) * view.zoom
-    const want = new THREE.Vector3(player.pos.x * 0.6, 9.2 * far, player.pos.z * 0.5 + 7.6 * far)
-    camera.position.lerp(want, 1 - Math.exp(-dt * 4))
-    look.lerp(new THREE.Vector3(player.pos.x * 0.6, 0.6, player.pos.z * 0.5 - 0.6), 1 - Math.exp(-dt * 4))
+    // seen from a corner, high up: the shop looks like a diamond, like in the shop games
+    const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom
+    const t = new THREE.Vector3(player.pos.x * 0.7, 0, player.pos.z * 0.7)
+    camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), 1 - Math.exp(-dt * 4))
+    look.lerp(t, 1 - Math.exp(-dt * 4))
     camera.lookAt(look)
   })
   return null

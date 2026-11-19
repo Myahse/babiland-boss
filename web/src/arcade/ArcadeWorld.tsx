@@ -1,6 +1,7 @@
 import { RoundedBox } from '@react-three/drei'
 import { signTexture } from '../three/textures'
-import { Flat, Palm } from './Props'
+import { useMemo } from 'react'
+import { Flat, Palm, woodTexture } from './Props'
 
 // The street around the shop, kept simple and bright so the gameplay reads at a glance.
 
@@ -12,6 +13,7 @@ const SHOPS = [
 ]
 
 export function ArcadeWorld() {
+  const wood = useMemo(() => woodTexture(), [])
   return (
     <>
       <color attach="background" args={['#8fd3ff']} />
@@ -36,14 +38,17 @@ export function ArcadeWorld() {
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow>
         <planeGeometry args={[11.4, 7.8]} />
-        <Flat color="#fbe7c6" />
+        <meshStandardMaterial map={wood} roughness={0.7} />
       </mesh>
-      {Array.from({ length: 10 }, (_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-5.7 + i * 1.04 + 0.52, 0.012, 1.3]}>
-          <planeGeometry args={[0.02, 7.8]} />
-          <meshBasicMaterial color="#efd3a6" />
-        </mesh>
-      ))}
+      {/* low side wall with a red trim (the open side faces the camera) */}
+      <mesh position={[-6.25, 0.8, 1.3]} castShadow receiveShadow>
+        <boxGeometry args={[0.3, 1.6, 7.8]} />
+        <Flat color="#ffe8b0" />
+      </mesh>
+      <mesh position={[-6.25, 1.63, 1.3]}>
+        <boxGeometry args={[0.36, 0.1, 7.86]} />
+        <Flat color="#e8432e" />
+      </mesh>
       <Palm position={[-6.8, 0, -1.8]} />
       <Palm position={[5.6, 0, 4.4]} s={0.9} />
       <Palm position={[-6.6, 0, 4.4]} s={1.1} />

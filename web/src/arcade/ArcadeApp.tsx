@@ -10,7 +10,6 @@ import { Building, Streets } from './Shop'
 import { stick } from './input'
 import { useArcade } from './store'
 
-const fcfa = (n: number) => `${n.toLocaleString('fr-FR')} FCFA`
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
 function Joystick() {
@@ -58,6 +57,8 @@ function Hud() {
   const carried = useArcade((s) => s.carried)
   const served = useArcade((s) => s.served)
   const pop = useArcade((s) => s.pop)
+  const goal = 20
+  const level = 1 + Math.floor(served / goal)
   const [hint, setHint] = useState(true)
   const t = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => {
@@ -66,17 +67,32 @@ function Hud() {
   }, [])
   return (
     <div className="pointer-events-none absolute inset-0">
-      <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
-        <div className="rounded-2xl border-[3px] border-[var(--color-ink)] bg-[var(--color-cream)] px-3 py-1.5 text-sm font-extrabold shadow-md">
-          Yopougon · {served} clients servis
+      <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
+        {/* settings */}
+        <div className="pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-[0_4px_0_rgba(0,0,0,.2)]">⚙️</div>
+        {/* level gauge: customers served toward the next level */}
+        <div className="relative flex min-w-0 flex-1 items-center">
+          <div className="z-10 grid h-12 w-12 shrink-0 place-items-center rounded-full border-4 border-white bg-[#e8432e] text-xl font-extrabold text-[#ffd43b] shadow-md">G</div>
+          <div className="-ml-3 h-8 flex-1 overflow-hidden rounded-r-full border-4 border-white bg-[#5c6670] shadow-md">
+            <div className="h-full bg-gradient-to-b from-[#ff6b4a] to-[#e8432e] transition-all" style={{ width: `${((served % goal) / goal) * 100}%` }} />
+          </div>
+          <div className="absolute inset-0 grid place-items-center pl-8 text-lg font-extrabold text-white" style={{ textShadow: '1px 1px 0 #7a1a10' }}>
+            {served % goal} / {goal}
+          </div>
+          <div className="z-10 -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full border-4 border-white bg-[#f3e3c3] text-xl shadow-md">🍛</div>
         </div>
-        <div key={money} className="pop rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-3 py-1.5 text-xl font-extrabold shadow-md">
-          💰 {fcfa(money)}
+        {/* money */}
+        <div key={money} className="pop flex shrink-0 items-center gap-1.5 rounded-xl bg-white py-1 pr-3 pl-1 shadow-[0_4px_0_rgba(0,0,0,.2)]">
+          <span className="grid h-9 w-12 place-items-center rounded-md bg-[#69db3c] text-lg">💵</span>
+          <span className="text-2xl font-extrabold text-[#343a40]">{money >= 10000 ? `${(money / 1000).toFixed(1)}K` : money}</span>
         </div>
+      </div>
+      <div className="absolute top-20 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        Yopougon · Niveau {level}
       </div>
       {carried > 0 && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-sm font-extrabold shadow">
-          🍛 {carried}/5 {carried >= 5 && '· MAX'}
+          🍛 {carried}
         </div>
       )}
       {pop && (
@@ -87,7 +103,7 @@ function Hud() {
       {hint && (
         <div className="absolute inset-x-0 bottom-0 flex justify-center p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <div className="card pop max-w-md !p-3 text-center text-base font-bold">
-            Glisse ton doigt pour bouger. Prends les plats de garba, pose-les sur le comptoir, ramasse l’argent, puis marche sur les ronds bleus pour débloquer.
+            Glisse ton doigt pour bouger. Prends les plats de garba sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer.
           </div>
         </div>
       )}
@@ -100,7 +116,7 @@ export default function ArcadeApp() {
   const name = useGame((s) => s.name)
   return (
     <div className="relative h-full w-full">
-      <Canvas shadows dpr={[1, 2]} camera={{ fov: 38, near: 0.1, far: 120, position: [0, 9, 7] }}>
+      <Canvas shadows dpr={[1, 2]} camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}>
         <Suspense fallback={null}>
           <ArcadeWorld />
           <Building name={name || 'Boss'} />
