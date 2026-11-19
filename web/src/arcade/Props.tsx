@@ -1,5 +1,5 @@
 import { useContext, useMemo, useRef } from 'react'
-import { DishCtx } from './places'
+import { DishCtx, DISHES, type Dish } from './places'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
@@ -13,20 +13,39 @@ export function Flat({ color, ...rest }: { color: THREE.ColorRepresentation } & 
 }
 
 /** One plate of the dish of the maquis you are in (garba, alloco, choukouya, braised fish, kedjenou, tô…). */
-export function Plate(props: ThreeElements['group']) {
-  const dish = useContext(DishCtx)
+export function Plate({ dish, ...props }: { dish?: Dish } & ThreeElements['group']) {
+  const main = useContext(DishCtx)
+  const d = DISHES[dish ?? main]
+  // drinks come in a cup on a small saucer instead of a plate of food
+  if (d.look === 'drink')
+    return (
+      <group {...props}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.12, 0.1, 0.03, 10]} />
+          <Flat color="#ffffff" />
+        </mesh>
+        <mesh castShadow position={[0, 0.07, 0]}>
+          <cylinderGeometry args={[0.06, 0.05, 0.11, 10]} />
+          <meshStandardMaterial color="#e7f5ff" roughness={0.1} transparent opacity={0.55} />
+        </mesh>
+        <mesh position={[0, 0.065, 0]}>
+          <cylinderGeometry args={[0.052, 0.046, 0.085, 10]} />
+          <Flat color={d.color!} />
+        </mesh>
+      </group>
+    )
   return (
     <group {...props}>
       <mesh castShadow>
         <cylinderGeometry args={[0.15, 0.12, 0.035, 10]} />
         <Flat color="#ffffff" />
       </mesh>
-      <DishOnPlate dish={dish} />
+      <DishOnPlate dish={d.look} color={d.color} sauceColor={d.sauce} />
     </group>
   )
 }
 
-function DishOnPlate({ dish }: { dish: string }) {
+function DishOnPlate({ dish, color = '#ffffff', sauceColor = '#c2410c' }: { dish: string; color?: string; sauceColor?: string }) {
   const mound = (color: string, x = 0, s = 1) => (
     <mesh position={[x, 0.035, 0]} scale={[s, 0.55 * s, s]}>
       <icosahedronGeometry args={[0.075, 0]} />
@@ -125,6 +144,43 @@ function DishOnPlate({ dish }: { dish: string }) {
           {chunk('#7a3e14', 0.06, 0.02, 0.04)}
         </>
       )
+    case 'meat': // pork, chicken… pieces with onion
+      return (
+        <>
+          {[-0.05, 0.0, 0.05, 0.02].map((x, i) => chunk(color, x, i === 3 ? 0.05 : -0.02, 0.06))}
+          <mesh position={[-0.07, 0.04, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.022, 0.007, 6, 10]} />
+            <Flat color="#ffffff" />
+          </mesh>
+        </>
+      )
+    case 'balls': // claclo: little fried balls
+      return (
+        <>
+          {[
+            [-0.05, -0.02],
+            [0.0, 0.03],
+            [0.05, -0.02],
+            [0.0, -0.05],
+            [-0.03, 0.06],
+          ].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.04 + (i === 4 ? 0.02 : 0), z]}>
+              <sphereGeometry args={[0.03, 6, 5]} />
+              <Flat color={i % 2 ? color : '#c8641c'} />
+            </mesh>
+          ))}
+        </>
+      )
+    case 'mound': // foutou / rice with its sauce
+      return (
+        <>
+          {sauce(sauceColor)}
+          <mesh position={[0, 0.05, 0]}>
+            <sphereGeometry args={[0.055, 8, 6]} />
+            <Flat color={color} />
+          </mesh>
+        </>
+      )
     default: // garba: attiéké, fried tuna, tomato
       return (
         <>
@@ -144,7 +200,7 @@ function DishOnPlate({ dish }: { dish: string }) {
 }
 
 /** A pile of plates; `wobble` makes a carried stack sway like in the games. */
-export function PlateStack({ count, wobble = false, ...props }: { count: number; wobble?: boolean } & ThreeElements['group']) {
+export function PlateStack({ count, dishes, dish, wobble = false, ...props }: { count: number; dishes?: Dish[]; dish?: Dish; wobble?: boolean } & ThreeElements['group']) {
   const ref = useRef<THREE.Group>(null)
   const pulse = useRef(0)
   const prev = useRef(count)
@@ -166,14 +222,14 @@ export function PlateStack({ count, wobble = false, ...props }: { count: number;
   return (
     <group ref={ref} {...props}>
       {Array.from({ length: count }, (_, i) => (
-        <Plate key={i} position={[0, i * 0.075, 0]} rotation={[0, i * 0.7, 0]} />
+        <Plate key={i} dish={dishes?.[i] ?? dish} position={[0, i * 0.075, 0]} rotation={[0, i * 0.7, 0]} />
       ))}
     </group>
   )
 }
 
 /** Garba station: a steel cooker (pan + attiéké basin) and, in front, a red tray where the plates pile up in columns. */
-export function Station({ plates, progress, level = 1, ...props }: { plates: number; progress: number; level?: number } & ThreeElements['group']) {
+export function Station({ plates, progress, level = 1, dish, ...props }: { plates: number; progress: number; level?: number; dish?: Dish } & ThreeElements['group']) {
   const fish = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     if (fish.current) fish.current.position.y = 0.06 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.02
@@ -239,9 +295,15 @@ export function Station({ plates, progress, level = 1, ...props }: { plates: num
         <RoundedBox args={[1.2, 0.06, 0.75]} radius={0.03} position={[0, 0.03, 0]} receiveShadow>
           <Flat color="#e8432e" />
         </RoundedBox>
-        {cols.map((n, c) => (n > 0 ? <PlateStack key={c} count={n} position={[(c - 1) * 0.36, 0.07, 0]} /> : null))}
+        {cols.map((n, c) => (n > 0 ? <PlateStack key={c} count={n} dish={dish} position={[(c - 1) * 0.36, 0.07, 0]} /> : null))}
       </group>
       <ProgressRing progress={progress} position={[0, 1.85, 0]} />
+      {dish && (
+        <mesh position={[0, 1.42, -0.37]}>
+          <planeGeometry args={[1.1, 0.24]} />
+          <meshBasicMaterial map={signTexture(DISHES[dish].label.toUpperCase(), '#2b1a12', '#ffe066', 384, 84)} toneMapped={false} />
+        </mesh>
+      )}
       {/* level badge: green arrows like the upgrade signs of the shop games */}
       <mesh position={[0.55, 1.85, 0]}>
         <planeGeometry args={[0.62, 0.26]} />
@@ -268,7 +330,8 @@ export function ProgressRing({ progress, ...props }: { progress: number } & Thre
 }
 
 /** The selling counter: red body, yellow top, a cash register, the plates waiting for customers. */
-export function Counter({ plates, name, dish = 'Garba', ...props }: { plates: number; name: string; dish?: string } & ThreeElements['group']) {
+/** `stock[i]`: plates of `dishes[i]` waiting on the counter (main dish, then the particular dishes). */
+export function Counter({ stock, dishes, name, dish = 'Garba', ...props }: { stock: number[]; dishes: Dish[]; name: string; dish?: string } & ThreeElements['group']) {
   return (
     <group {...props}>
       <RoundedBox args={[1.8, 0.95, 0.85]} radius={0.05} position={[0, 0.475, 0]} castShadow receiveShadow>
@@ -291,8 +354,7 @@ export function Counter({ plates, name, dish = 'Garba', ...props }: { plates: nu
           <Flat color="#212529" />
         </mesh>
       </group>
-      <PlateStack count={Math.min(plates, 6)} position={[0.15, 1.03, 0]} />
-      {plates > 6 && <PlateStack count={Math.min(plates - 6, 6)} position={[0.55, 1.03, 0]} />}
+      {stock.map((n, i) => (n > 0 ? <PlateStack key={i} count={Math.min(n, 8)} dish={dishes[i]} position={[-0.15 + i * 0.36, 1.03, 0.05]} /> : null))}
     </group>
   )
 }

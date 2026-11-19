@@ -13,8 +13,8 @@ type PlaceState = {
   paid: Partial<Record<Unlock, number>>
   level: number[]
   upPaid: number[]
-  station: number[]
-  counter: number
+  station: number[] // plates ready on each station (see STATION_SLOT)
+  counter: number[] // plates waiting on the counter, per dish slot (main, particular 1, particular 2)
   cash: number
   tableCash: number[]
 }
@@ -25,12 +25,18 @@ type Arcade = PlaceState & {
   owned: PlaceId[]
   places: Partial<Record<PlaceId, PlaceState>>
   delivery: { want: number; got: number; state: 'none' | 'wait' | 'away' } // the moto's current order
-  carried: number // plates in Tantie Aya's hands
-  workerCarried: number
+  carried: number[] // plates in Tantie Aya's hands (dish slot of each, bottom to top)
+  workerCarried: number[]
   pop: { id: number; text: string } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1], upPaid: [0, 0], station: [0, 0], counter: 0, cash: 0, tableCash: [0, 0, 0] })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0] })
+/** saved games from before the particular dishes: make every list the right length */
+function norm(p: Partial<PlaceState> = {}): PlaceState {
+  const f = fresh()
+  const fit = (a: unknown, d: number[]) => d.map((v, i) => (Array.isArray(a) && typeof a[i] === 'number' ? a[i] : v))
+  return { ...f, ...p, level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash) }
+}
 const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash })
 
 const KEY = 'babiland-arcade-v2'
@@ -40,10 +46,10 @@ function load(): Partial<Arcade> {
     if (!s) {
       // progress from the first version (one maquis only) becomes your Yopougon maquis
       const old = JSON.parse(localStorage.getItem('babiland-arcade-v1') || '{}')
-      return { ...fresh(), money: old.money ?? 0, served: old.served ?? 0, unlocks: old.unlocks ?? {}, paid: old.paid ?? {}, level: old.level ?? [1, 1], upPaid: old.upPaid ?? [0, 0] }
+      return { ...norm({ served: old.served ?? 0, unlocks: old.unlocks ?? {}, paid: old.paid ?? {}, level: old.level, upPaid: old.upPaid }), money: old.money ?? 0 }
     }
     const current: PlaceId = s.current ?? 'yopougon'
-    return { money: s.money ?? 0, owned: s.owned ?? ['yopougon'], places: s.places ?? {}, current, ...fresh(), ...(s.places?.[current] ?? {}) }
+    return { money: s.money ?? 0, owned: s.owned ?? ['yopougon'], places: s.places ?? {}, current, ...norm(s.places?.[current]) }
   } catch {
     return {}
   }
@@ -56,8 +62,8 @@ export const useArcade = create<Arcade>(() => ({
   owned: ['yopougon'],
   places: {},
   delivery: { want: 0, got: 0, state: 'none' },
-  carried: 0,
-  workerCarried: 0,
+  carried: [],
+  workerCarried: [],
   pop: null,
   ...load(),
 }))
@@ -80,8 +86,10 @@ export function totalServed(s: Arcade = useArcade.getState()) {
 export function goTo(id: PlaceId) {
   const s = useArcade.getState()
   if (id === s.current || !s.owned.includes(id)) return
-  const places = { ...s.places, [s.current]: { ...pick(s), counter: s.counter + s.carried } }
-  useArcade.setState({ places, current: id, ...fresh(), ...(places[id] ?? {}), carried: 0, workerCarried: 0, delivery: { want: 0, got: 0, state: 'none' } })
+  const counter = [...s.counter]
+  s.carried.forEach((k) => counter[k]++)
+  const places = { ...s.places, [s.current]: { ...pick(s), counter } }
+  useArcade.setState({ places, current: id, ...norm(places[id]), carried: [], workerCarried: [], delivery: { want: 0, got: 0, state: 'none' } })
   popText(`Bienvenue à ${PLACES[id].name} !`)
 }
 

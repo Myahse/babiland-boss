@@ -136,7 +136,7 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
 
 function Hud() {
   const money = useArcade((s) => s.money)
-  const carried = useArcade((s) => s.carried)
+  const carried = useArcade((s) => s.carried.length)
   const served = useArcade((s) => totalServed(s))
   const place = useArcade((s) => PLACES[s.current])
   const pop = useArcade((s) => s.pop)

@@ -35,12 +35,22 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 | Embaucher : vendre pour toi, servir, livrer | ✅ serveur (+ serveur rapide), caissière, livreur à moto |
 | Livraison / commandes à distance | ✅ commandes par téléphone livrées à moto |
 | Des niveaux | ✅ 20 clients servis (tous maquis confondus) par niveau ; les niveaux ouvrent les nouveaux lieux |
-| D'autres petits business (choukouya, thé, alloco…) | ⏳ à faire |
+| Le plat principal + les plats particuliers de chaque zone | ✅ chaque lieu a son plat principal et 2 plats particuliers (Yopougon : garba, porc au four, thé…), chacun avec son poste à débloquer ; chaque client commande un plat |
 | Acheter de nouveaux endroits, d'autres communes | ✅ carte : acheter un maquis à Cocody (alloco), Abobo (choukouya), Treichville (poisson braisé) ; chaque maquis garde son matériel et son équipe, l'argent te suit |
 | Commandes des maquis et restaurants (PNJ qui commandent en gros) | ⏳ à faire |
 | D'autres villes (Bouaké, Korhogo, Gagnoa, Man) | ✅ jouables avec leur plat (kedjenou, tô, sauce kplala, sauce feuille) |
 | Devenir LE boss de la ville (face aux autres boss) | ⏳ à faire |
 | Jeu en ligne, clash pour prendre le quartier d'un autre boss | ⏳ à faire (backend Go + base Neon, comme Babi Life) |
+
+## L'idée de clash (deuxième message)
+
+> On doit voir la zone qu'on gère ou qu'on possède. Si on possède déjà une zone et qu'un joueur est créé dans
+> la même zone, il doit travailler pour celui qui la possède, jusqu'à pouvoir le trahir pour lui prendre une
+> partie de sa zone.
+
+Plan : 1) plats principal + particuliers (fait) ; 2) carte des quartiers de la commune avec des boss rivaux
+gérés par l'ordinateur, qu'on peut trahir / attaquer en solo ; 3) en ligne : comptes, vrais boss et employés,
+part des gains pour le boss, trahison par un duel, protection après une attaque.
 
 ## Prochaines étapes proposées
 

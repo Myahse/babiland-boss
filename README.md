@@ -32,6 +32,7 @@ cd web && npm install && npm run dev
 - Le **poste à garba** cuit des plats tout seul ; on les ramasse en pile et on les pose sur le **comptoir**.
 - Les **clients font la queue**, prennent leurs plats (🍛 1/2), paient : l'argent s'empile par terre, on marche dessus pour le ramasser.
 - On marche sur les **carrés bleus** pour dépenser l’argent : 2e poêle (400 F), serveur qui porte les plats (1 200 F), terrasse (2 000 F) où les clients servis s’assoient pour manger.
+- **Plat principal + plats particuliers** : chaque lieu a son plat principal et 2 plats particuliers à débloquer (Yopougon : porc au four, thé ; Cocody : poulet braisé, bissap…), chacun avec son poste ; chaque client commande un plat précis (🐟 Garba 0/3), il faut lui apporter le bon.
 - **Embaucher** : serveur (puis serveur rapide), caissière (sans elle, il faut être au comptoir pour servir), livreur.
 - **Livraison à moto** : des commandes arrivent par téléphone ; on charge la moto (ou le livreur le fait), elle part livrer et rapporte 700 F par plat.
 - **Carte** : achète un maquis dans les autres communes et villes (Cocody alloco, Abobo choukouya, Treichville poisson braisé, Bouaké kedjenou, Korhogo tô, Gagnoa kplala, Man sauce feuille) dès que ton niveau le permet, puis « Y aller » de l'un à l'autre. Chaque maquis garde ses postes, son équipe et sa terrasse ; l'argent te suit.
