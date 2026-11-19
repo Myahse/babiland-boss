@@ -37,6 +37,7 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 | Des niveaux | ✅ 20 clients servis (tous maquis confondus) par niveau ; les niveaux ouvrent les nouveaux lieux |
 | Le plat principal + les plats particuliers de chaque zone | ✅ chaque lieu a son plat principal et 2 plats particuliers (Yopougon : garba, porc au four, thé…), chacun avec son poste à débloquer ; chaque client commande un plat |
 | Acheter de nouveaux endroits, d'autres communes | ✅ carte : acheter un maquis à Cocody (alloco), Abobo (choukouya), Treichville (poisson braisé) ; chaque maquis garde son matériel et son équipe, l'argent te suit |
+| Petits business (thé, choukouya, bissap…) qu'on débloque avec l'argent et le niveau | ✅ 3 stands sur le trottoir de chaque maquis (thé niv 2, choukouya du soir niv 4, bissap niv 6), chacun avec sa vendeuse ; ils vendent seuls aux passants, l'argent s'empile sur le stand (« PLEIN ! » au bout de 3 min), 5 niveaux ; ils gagnent aussi hors ligne |
 | Commandes des maquis et restaurants (PNJ qui commandent en gros) | ⏳ à faire |
 | D'autres villes (Bouaké, Korhogo, Gagnoa, Man) | ✅ jouables avec leur plat (kedjenou, tô, sauce kplala, sauce feuille) |
 | Voir les zones qu'on possède, travailler pour le boss, le trahir, prendre ses quartiers | ✅ en solo : carte 3D de chaque lieu avec ses **vrais quartiers** (OpenStreetMap) : 12 à Yopougon, Cocody, Abobo et Bouaké, 7 à 9 ailleurs ; chacun a son boss (géré par l'ordinateur), zones clés ⭐ avec bonus (marchés, gares, maquis, usines réelles), on n'attaque que les quartiers voisins ; le boss de ton quartier prend 20 % ; avec assez de respect, duel de 60 s pour le trahir ; puis attaquer les autres quartiers, qui paient un loyer ; les boss contre-attaquent |
@@ -55,7 +56,7 @@ part des gains pour le boss, trahison par un duel, protection après une attaque
 ## Prochaines étapes proposées
 
 1. ~~Mini-jeux de cuisine comme commandes spéciales~~ (fait : clients VIP).
-2. **Petits business** : stand de choukouya, vendeuse de thé, alloco, chacun avec son poste et ses clients.
+2. ~~Petits business~~ (fait : thé, choukouya du soir, bissap devant chaque maquis).
 3. **Niveaux** qui débloquent les business et les nouvelles communes.
 4. **Nouveaux lieux** : un 2e maquis dans une autre commune d'Abidjan, puis une autre ville.
 5. **Boss rivaux** (d'abord contre l'ordinateur), puis **en ligne** : comptes, classement, clash des quartiers.

@@ -17,6 +17,10 @@ type PlaceState = {
   counter: number[] // plates waiting on the counter, per dish slot (main, particular 1, particular 2)
   cash: number
   tableCash: number[]
+  /** the small businesses on the pavement (side.ts): level of each stand (0 = not open), paid toward the next level, money waiting */
+  side: number[]
+  sidePaid: number[]
+  sideCash: number[]
 }
 
 type Arcade = PlaceState & {
@@ -30,14 +34,14 @@ type Arcade = PlaceState & {
   pop: { id: number; text: string } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0] })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0] })
 /** saved games from before the particular dishes: make every list the right length */
 function norm(p: Partial<PlaceState> = {}): PlaceState {
   const f = fresh()
   const fit = (a: unknown, d: number[]) => d.map((v, i) => (Array.isArray(a) && typeof a[i] === 'number' ? a[i] : v))
-  return { ...f, ...p, level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash) }
+  return { ...f, ...p, level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash), side: fit(p.side, f.side), sidePaid: fit(p.sidePaid, f.sidePaid), sideCash: fit(p.sideCash, f.sideCash) }
 }
-const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash })
+const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash })
 
 const KEY = 'babiland-arcade-v2'
 function load(): Partial<Arcade> {

@@ -12,6 +12,7 @@ import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
+import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
 
@@ -57,12 +58,6 @@ function Joystick() {
   )
 }
 
-// Side businesses still to come (see docs/VISION.md).
-const SIDE = [
-  { name: 'Vendeuse de thé', level: 2, icon: '🍵' },
-  { name: 'Stand de choukouya du soir', level: 4, icon: '🍖' },
-  { name: 'Vendeuse de bissap', level: 6, icon: '🥤' },
-]
 
 /** One place on the map: where you are, go there, buy it, or the level it needs. */
 function PlaceRow({ id, level, onDone }: { id: PlaceId; level: number; onDone: () => void }) {
@@ -97,6 +92,20 @@ function PlaceRow({ id, level, onDone }: { id: PlaceId; level: number; onDone: (
   )
 }
 
+/** A small business: where it is in each of your maquis (the stands are opened on the pavement, on their pad). */
+function SideRow({ i, level }: { i: number; level: number }) {
+  const b = SIDE[i]
+  const lv = useArcade((s) => s.side[i])
+  return (
+    <div className={`flex items-center justify-between rounded-xl border-2 px-2.5 py-1.5 text-sm font-bold ${lv ? 'border-[var(--color-ink)] bg-white' : 'border-dashed border-[#c9b79c]'}`}>
+      <span>
+        {b.icon} {b.name}
+      </span>
+      <span className="text-xs">{lv ? `${'⭐'.repeat(lv)}${lv < SIDE_MAX ? ' · améliore-le sur son carré' : ' · MAX'}` : level >= b.level ? `${b.price} F · son carré est devant la terrasse` : `🔒 niveau ${b.level}`}</span>
+    </div>
+  )
+}
+
 function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
@@ -120,13 +129,8 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
         ))}
         <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Petits business</div>
         <div className="mt-1 space-y-1">
-          {SIDE.map((b) => (
-            <div key={b.name} className="flex items-center justify-between rounded-xl border-2 border-dashed border-[#c9b79c] px-2.5 py-1.5 text-sm font-bold">
-              <span>
-                {b.icon} {b.name}
-              </span>
-              <span className="text-xs">{level >= b.level ? 'bientôt' : `niveau ${b.level}`}</span>
-            </div>
+          {SIDE.map((b, i) => (
+            <SideRow key={b.name} i={i} level={level} />
           ))}
         </div>
         <div className="mt-3 rounded-xl bg-[#2b1a12] p-3 text-sm font-bold text-white">

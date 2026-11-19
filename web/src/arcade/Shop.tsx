@@ -259,20 +259,6 @@ function Taxi({ path, speed, offset = 0 }: { path: (t: number) => { x: number; z
   )
 }
 
-function Planter({ ...props }: ThreeElements['group']) {
-  return (
-    <group {...props}>
-      <RoundedBox args={[0.6, 0.4, 0.6]} radius={0.05} position={[0, 0.2, 0]} castShadow>
-        <Flat color="#868e96" />
-      </RoundedBox>
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <icosahedronGeometry args={[0.38, 0]} />
-        <Flat color="#40c057" />
-      </mesh>
-    </group>
-  )
-}
-
 /** The street corner: a road in front and one on the right, pavements, planters and taxis. */
 export function Streets() {
   const front = useMemo(() => (t: number) => ({ x: -16 + t * 32, z: 6.2, r: Math.PI / 2 }), [])
@@ -318,9 +304,6 @@ export function Streets() {
       <Taxi path={front} speed={0.045} />
       <Taxi path={front} speed={0.045} offset={0.5} />
       <Taxi path={side} speed={0.04} offset={0.3} />
-      {[-4.6, -1.8, 1.6].map((x) => (
-        <Planter key={x} position={[x, 0, 4.7]} />
-      ))}
     </>
   )
 }

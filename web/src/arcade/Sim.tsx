@@ -11,6 +11,8 @@ import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
 import { BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
+import { SideStands } from './SideStands'
+import { SIDE_SOLIDS } from './side'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, tickTurf } from './turf'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
@@ -138,6 +140,7 @@ export function Sim({ name }: { name: string }) {
   const solids = useMemo(
     () => [
       ...SOLIDS,
+      ...SIDE_SOLIDS,
       ...([s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2] as (true | undefined)[]).flatMap((on, i) => (on ? [{ c: STATIONS[i + 1], hx: 0.6, hz: 0.45 }] : [])),
       ...(s.unlocks.table ? TABLE_SOLIDS : []),
     ],
@@ -574,6 +577,7 @@ export function Sim({ name }: { name: string }) {
         ) : null,
       )}
       <FX />
+      <SideStands player={player} />
       <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&

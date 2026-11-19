@@ -2,6 +2,7 @@ import { STATION_LEVELS } from './layout'
 import { dishPrice, PLACES, type PlaceId } from './places'
 import { placeState, useArcade } from './store'
 import { bonusOf, cutFor, ownersOf, RENT, RENT_EVERY } from './turf'
+import { SIDE, sidePerMin } from './side'
 
 // While you are away your staff keeps the maquis open (docs/VISION.md: « embaucher des gens pour vendre pour
 // toi »): a maquis with a server AND a cashier sells by itself, slower than when you are there. When you come
@@ -19,10 +20,13 @@ export type OfflineRow = { place: PlaceId; amount: number; staff: string[]; miss
 export type Offline = { away: number; rows: OfflineRow[]; rent: number; total: number }
 
 /** What one maquis makes in a minute without you (0 if it has no server and cashier). */
+/** What the stands on the pavement make in a minute without you (their sellers stay, but sell less at night). */
+export const standsPerMinute = (id: PlaceId) => placeState(id).side.reduce((n, l, i) => n + sidePerMin(id, i, l) * 0.3, 0)
+
 export function idlePerMinute(id: PlaceId) {
   const p = placeState(id)
   const u = p.unlocks
-  if (!u.serveur || !u.caisse) return 0
+  if (!u.serveur || !u.caisse) return standsPerMinute(id)
   const place = PLACES[id]
   const menu = [0, ...(u.plat1 ? [1] : []), ...(u.plat2 ? [2] : [])]
   const price = menu.reduce((n, k) => n + dishPrice(place, k), 0) / menu.length
@@ -33,13 +37,14 @@ export function idlePerMinute(id: PlaceId) {
   let perMin = customers * PLATES * price * k * RATE * (1 + bonusOf(id, 'sales')) * (1 - cutFor(id))
   // the livreur keeps delivering phone orders
   if (u.moto && u.livreur) perMin += 0.3 * 4.5 * place.plate * 1.4 * RATE * (1 - cutFor(id))
-  return perMin
+  return perMin + standsPerMinute(id)
 }
 
 /** Who works there, and what is missing to earn while you are away. */
 function staffOf(id: PlaceId) {
   const u = placeState(id).unlocks
-  const staff = [u.serveur && (u.rapide ? 'serveur rapide' : 'serveur'), u.caisse && 'caissière', u.livreur && 'livreur'].filter(Boolean) as string[]
+  const side = placeState(id).side
+  const staff = [u.serveur && (u.rapide ? 'serveur rapide' : 'serveur'), u.caisse && 'caissière', u.livreur && 'livreur', ...SIDE.filter((_, i) => side[i]).map((b) => b.short.toLowerCase())].filter(Boolean) as string[]
   const need = [!u.serveur && 'un serveur', !u.caisse && 'une caissière'].filter(Boolean) as string[]
   return { staff, missing: need.length ? `Embauche ${need.join(' et ')} pour gagner sans toi` : undefined }
 }
