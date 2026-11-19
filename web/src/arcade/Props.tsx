@@ -1,4 +1,5 @@
-import { useMemo, useRef } from 'react'
+import { useContext, useMemo, useRef } from 'react'
+import { DishCtx } from './places'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
@@ -11,32 +12,135 @@ export function Flat({ color, ...rest }: { color: THREE.ColorRepresentation } & 
   return <meshStandardMaterial color={color} flatShading roughness={0.45} metalness={0} {...rest} />
 }
 
-/** One garba plate: white plate, attiéké mound, two pieces of fried fish, a bit of tomato. */
+/** One plate of the dish of the maquis you are in (garba, alloco, choukouya, braised fish, kedjenou, tô…). */
 export function Plate(props: ThreeElements['group']) {
+  const dish = useContext(DishCtx)
   return (
     <group {...props}>
       <mesh castShadow>
         <cylinderGeometry args={[0.15, 0.12, 0.035, 10]} />
         <Flat color="#ffffff" />
       </mesh>
-      <mesh position={[-0.03, 0.035, 0]} scale={[1, 0.55, 1]}>
-        <icosahedronGeometry args={[0.075, 0]} />
-        <Flat color="#fff1c1" />
-      </mesh>
-      <mesh position={[0.06, 0.045, 0.02]} rotation={[0, 0.5, 0.2]}>
-        <boxGeometry args={[0.07, 0.03, 0.05]} />
-        <Flat color="#d9822b" />
-      </mesh>
-      <mesh position={[0.05, 0.045, -0.05]} rotation={[0, -0.3, -0.1]}>
-        <boxGeometry args={[0.06, 0.03, 0.045]} />
-        <Flat color="#c96b1c" />
-      </mesh>
-      <mesh position={[-0.07, 0.05, 0.06]}>
-        <cylinderGeometry args={[0.022, 0.022, 0.012, 6]} />
-        <Flat color="#ff3b30" />
-      </mesh>
+      <DishOnPlate dish={dish} />
     </group>
   )
+}
+
+function DishOnPlate({ dish }: { dish: string }) {
+  const mound = (color: string, x = 0, s = 1) => (
+    <mesh position={[x, 0.035, 0]} scale={[s, 0.55 * s, s]}>
+      <icosahedronGeometry args={[0.075, 0]} />
+      <Flat color={color} />
+    </mesh>
+  )
+  const sauce = (color: string, r = 0.11) => (
+    <mesh position={[0, 0.02, 0]}>
+      <cylinderGeometry args={[r, r, 0.012, 10]} />
+      <Flat color={color} />
+    </mesh>
+  )
+  const chunk = (color: string, x: number, z: number, s = 0.05) => (
+    <mesh key={`${x}${z}`} position={[x, 0.045, z]} rotation={[0, x * 9, 0.2]}>
+      <boxGeometry args={[s, s * 0.7, s * 0.8]} />
+      <Flat color={color} />
+    </mesh>
+  )
+  const piment = (
+    <mesh position={[-0.07, 0.05, 0.06]}>
+      <cylinderGeometry args={[0.022, 0.022, 0.012, 6]} />
+      <Flat color="#ff3b30" />
+    </mesh>
+  )
+  switch (dish) {
+    case 'alloco': // fried plantain slices
+      return (
+        <>
+          {[-0.06, 0, 0.06, -0.03, 0.03].map((x, i) => (
+            <mesh key={i} position={[x, 0.03 + (i > 2 ? 0.02 : 0), i > 2 ? 0.04 : -0.02]} rotation={[0.2, 0, 0.1]}>
+              <cylinderGeometry args={[0.032, 0.032, 0.018, 8]} />
+              <Flat color={i % 2 ? '#f59f00' : '#e8890c'} />
+            </mesh>
+          ))}
+          {piment}
+        </>
+      )
+    case 'choukouya': // grilled mutton chunks with onions
+      return (
+        <>
+          {[-0.05, 0.0, 0.05, 0.02].map((x, i) => chunk(i % 2 ? '#7a3e14' : '#5c2d0c', x, i === 3 ? 0.05 : -0.02))}
+          <mesh position={[-0.06, 0.04, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.025, 0.007, 6, 10]} />
+            <Flat color="#ffffff" />
+          </mesh>
+        </>
+      )
+    case 'poisson': // a whole braised fish
+      return (
+        <>
+          {mound('#fff1c1', -0.06, 0.6)}
+          <mesh position={[0.02, 0.04, 0]} scale={[1.6, 0.45, 0.7]}>
+            <icosahedronGeometry args={[0.06, 0]} />
+            <Flat color="#a0612a" />
+          </mesh>
+          <mesh position={[0.13, 0.04, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <coneGeometry args={[0.035, 0.05, 4]} />
+            <Flat color="#8a4f1c" />
+          </mesh>
+        </>
+      )
+    case 'kedjenou': // chicken stewed in its red sauce
+      return (
+        <>
+          {sauce('#c2410c')}
+          {[-0.04, 0.04, 0].map((x, i) => (
+            <mesh key={i} position={[x, 0.04, i === 2 ? 0.05 : -0.02]}>
+              <sphereGeometry args={[0.032, 6, 5]} />
+              <Flat color="#e0a060" />
+            </mesh>
+          ))}
+        </>
+      )
+    case 'to': // tô with its sauce
+      return (
+        <>
+          {sauce('#6b7d2a')}
+          {mound('#f8f9fa', 0, 1.05)}
+        </>
+      )
+    case 'kplala': // foutou banane and dark kplala sauce
+      return (
+        <>
+          {sauce('#4a2a12')}
+          <mesh position={[0, 0.05, 0]}>
+            <sphereGeometry args={[0.055, 8, 6]} />
+            <Flat color="#ffd43b" />
+          </mesh>
+        </>
+      )
+    case 'feuille': // green leaf sauce with rice
+      return (
+        <>
+          {sauce('#2b8a3e')}
+          {mound('#ffffff', -0.03, 0.8)}
+          {chunk('#7a3e14', 0.06, 0.02, 0.04)}
+        </>
+      )
+    default: // garba: attiéké, fried tuna, tomato
+      return (
+        <>
+          {mound('#fff1c1', -0.03)}
+          <mesh position={[0.06, 0.045, 0.02]} rotation={[0, 0.5, 0.2]}>
+            <boxGeometry args={[0.07, 0.03, 0.05]} />
+            <Flat color="#d9822b" />
+          </mesh>
+          <mesh position={[0.05, 0.045, -0.05]} rotation={[0, -0.3, -0.1]}>
+            <boxGeometry args={[0.06, 0.03, 0.045]} />
+            <Flat color="#c96b1c" />
+          </mesh>
+          {piment}
+        </>
+      )
+  }
 }
 
 /** A pile of plates; `wobble` makes a carried stack sway like in the games. */
@@ -164,7 +268,7 @@ export function ProgressRing({ progress, ...props }: { progress: number } & Thre
 }
 
 /** The selling counter: red body, yellow top, a cash register, the plates waiting for customers. */
-export function Counter({ plates, name, ...props }: { plates: number; name: string } & ThreeElements['group']) {
+export function Counter({ plates, name, dish = 'Garba', ...props }: { plates: number; name: string; dish?: string } & ThreeElements['group']) {
   return (
     <group {...props}>
       <RoundedBox args={[1.8, 0.95, 0.85]} radius={0.05} position={[0, 0.475, 0]} castShadow receiveShadow>
@@ -175,7 +279,7 @@ export function Counter({ plates, name, ...props }: { plates: number; name: stri
       </RoundedBox>
       <mesh position={[0, 0.55, 0.43]}>
         <planeGeometry args={[1.5, 0.36]} />
-        <meshStandardMaterial map={signTexture(`GARBA CHEZ ${name.toUpperCase()}`, '#ffd43b', '#c92a2a', 768, 192)} roughness={0.5} />
+        <meshStandardMaterial map={signTexture(`${dish.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#ffd43b', '#c92a2a', 768, 192)} roughness={0.5} />
       </mesh>
       {/* cash register */}
       <group position={[-0.62, 1.02, -0.12]}>

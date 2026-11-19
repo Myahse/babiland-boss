@@ -6,6 +6,7 @@ import { signTexture } from '../three/textures'
 import { Flat, Plate } from './Props'
 import { ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
+import type { Place } from './places'
 
 // The maquis building, its terraces, and the street corner around it — like a busy restaurant
 // in the shop games: two floors, a big sign on the roof, people eating on the terraces, taxis going by.
@@ -93,8 +94,8 @@ const UP_PEOPLE: { who: PersonId; x: number; z: number; r: number }[] = [
   { who: 'koffi', x: 3.9, z: -0.62, r: -Math.PI / 2 },
 ]
 
-export function Building({ name }: { name: string }) {
-  const sign = useMemo(() => signTexture(`GARBA CHEZ ${name.toUpperCase()}`, '#c92a2a', '#ffe066', 1024, 192), [name])
+export function Building({ name, place }: { name: string; place: Place }) {
+  const sign = useMemo(() => signTexture(`${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#c92a2a', '#ffe066', 1024, 192), [name, place])
   const lights = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     // the bulbs of the sign twinkle a little
@@ -107,7 +108,7 @@ export function Building({ name }: { name: string }) {
     <group position={[X0, 0, Z0]}>
       {/* ground floor */}
       <RoundedBox args={[W, H1, D]} radius={0.06} position={[0, H1 / 2, 0]} castShadow receiveShadow>
-        <Flat color="#ff922b" />
+        <Flat color={place.wall} />
       </RoundedBox>
       <mesh position={[0, 0.35, D / 2 + 0.005]}>
         <planeGeometry args={[W, 0.7]} />
@@ -125,7 +126,7 @@ export function Building({ name }: { name: string }) {
       {Array.from({ length: 14 }, (_, i) => (
         <mesh key={i} castShadow position={[-W / 2 + 0.38 + i * 0.76, 2.55, D / 2 + 0.45]} rotation={[0.45, 0, 0]}>
           <boxGeometry args={[0.76, 0.04, 1.0]} />
-          <Flat color={i % 2 ? '#ffffff' : '#2f9e44'} />
+          <Flat color={i % 2 ? place.awning[1] : place.awning[0]} />
         </mesh>
       ))}
       {/* upstairs: floor slab, terrace railing, tables and people eating */}
@@ -134,7 +135,7 @@ export function Building({ name }: { name: string }) {
         <Flat color="#fff3dc" />
       </mesh>
       <RoundedBox args={[W, 2.2, 0.9]} radius={0.05} position={[0, H1 + 1.2, -D / 2 + 0.45]} castShadow>
-        <Flat color="#ffa94d" />
+        <Flat color={place.wall} />
       </RoundedBox>
       {[-3.5, -1, 1.5, 4].map((x) => (
         <Window key={x} x={x} y={H1 + 1.25} w={1.0} h={1.0} z={-D / 2 + 0.91} />
@@ -210,8 +211,8 @@ export function Building({ name }: { name: string }) {
       </group>
       {/* menu boards beside the kitchen */}
       {[
-        ['GARBA 500', -1.9],
-        ['ALLOCO 300', 1.1],
+        [`${place.dishLabel.toUpperCase()} ${place.plate}`, -1.9],
+        ['LIVRAISON 🛵', 1.1],
       ].map(([t, x]) => (
         <mesh key={t as string} position={[x as number, 1.9, D / 2 + 0.02]}>
           <planeGeometry args={[0.9, 0.3]} />

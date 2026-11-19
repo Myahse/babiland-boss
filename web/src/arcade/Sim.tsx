@@ -9,9 +9,10 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, PLATE_PRICE, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO, DELIVERY_PRICE, START, STATION_LEVELS, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { BOUNDS, CASH, COUNTER, ENTER, EXIT, PADS, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
+import { PLACES } from './places'
 
 // The whole shop simulation, updated every frame:
 //  - stations cook plates by themselves (up to 6 waiting),
@@ -75,6 +76,13 @@ export function Sim({ name }: { name: string }) {
   const [, rerender] = useState(0)
   const bump = () => rerender((n) => n + 1)
   const worker = useRef({ pos: V(-1, -1.8), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: 0 })
+  // arriving in this maquis: start at the entrance, the moto parked
+  useEffect(() => {
+    player.pos.copy(START)
+    player.vel.set(0, 0, 0)
+    moto.pos.copy(MOTO)
+    moto.visible = true
+  }, [])
   const motoT = useRef(0)
   const motoWait = useRef(4)
   const solids = useMemo(
@@ -275,7 +283,7 @@ export function Sim({ name }: { name: string }) {
         fly('plate', COUNTER_TOP, up(c.pos, 1.2), 0, 0.25)
         bump()
         if (c.got >= c.want) {
-          cash += c.want * PLATE_PRICE
+          cash += c.want * PLACES[st.current].plate
           served++
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()
@@ -357,9 +365,9 @@ export function Sim({ name }: { name: string }) {
           if (got >= delivery.want) {
             delivery = { ...delivery, state: 'away' }
             motoT.current = 0
-            cash += delivery.want * DELIVERY_PRICE
+            cash += delivery.want * Math.round(PLACES[st.current].plate * 1.4)
             for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
-            popText(`🛵 Livraison : +${delivery.want * DELIVERY_PRICE} FCFA`)
+            popText(`🛵 Livraison : +${delivery.want * Math.round(PLACES[st.current].plate * 1.4)} FCFA`)
             sfx.unlock()
           }
         }
@@ -390,7 +398,7 @@ export function Sim({ name }: { name: string }) {
         ) : null,
       )}
       <FX />
-      <Counter plates={s.counter} name={name} position={COUNTER} />
+      <Counter plates={s.counter} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&
         TABLES.map((t, i) => (

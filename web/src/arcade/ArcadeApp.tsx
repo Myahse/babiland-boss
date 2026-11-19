@@ -8,7 +8,8 @@ import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
 import { Building, Streets } from './Shop'
 import { stick } from './input'
-import { useArcade } from './store'
+import { buy, goTo, totalServed, useArcade } from './store'
+import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
 
 
@@ -53,22 +54,45 @@ function Joystick() {
   )
 }
 
-// Where the game goes next (see docs/VISION.md): other communes and cities, side businesses, the boss clash.
-const PLACES = [
-  { name: 'Yopougon', dish: 'Garba', level: 1 },
-  { name: 'Cocody', dish: 'Alloco', level: 3 },
-  { name: 'Abobo', dish: 'Choukouya', level: 5 },
-  { name: 'Treichville', dish: 'Poisson braisé', level: 7 },
-  { name: 'Bouaké', dish: 'Kedjenou', level: 10 },
-  { name: 'Korhogo', dish: 'Tô', level: 12 },
-  { name: 'Gagnoa', dish: 'Sauce kplala', level: 14 },
-  { name: 'Man', dish: 'Sauce feuille', level: 16 },
-]
+// Side businesses still to come (see docs/VISION.md).
 const SIDE = [
   { name: 'Vendeuse de thé', level: 2, icon: '🍵' },
-  { name: 'Stand de choukouya', level: 4, icon: '🍖' },
-  { name: 'Alloco du soir', level: 6, icon: '🍌' },
+  { name: 'Stand de choukouya du soir', level: 4, icon: '🍖' },
+  { name: 'Vendeuse de bissap', level: 6, icon: '🥤' },
 ]
+
+/** One place on the map: where you are, go there, buy it, or the level it needs. */
+function PlaceRow({ id, level, onDone }: { id: PlaceId; level: number; onDone: () => void }) {
+  const p = PLACES[id]
+  const current = useArcade((s) => s.current)
+  const owned = useArcade((s) => s.owned.includes(id))
+  const money = useArcade((s) => s.money)
+  const here = current === id
+  return (
+    <div className={`flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 ${here ? 'border-[var(--color-ink)] bg-[#ffe8cc]' : owned ? 'border-[var(--color-ink)] bg-white' : 'border-dashed border-[#c9b79c]'}`}>
+      <span className="h-7 w-7 shrink-0 rounded-lg border-2 border-white shadow" style={{ background: p.wall }} />
+      <div className="min-w-0 flex-1 leading-tight">
+        <div className="text-sm font-extrabold">{p.name}</div>
+        <div className="text-xs font-semibold">
+          {p.dishLabel} · {p.plate} F le plat
+        </div>
+      </div>
+      {here ? (
+        <span className="text-xs font-extrabold text-[var(--color-green)]">📍 Tu es ici</span>
+      ) : owned ? (
+        <button className="btn btn-green !px-3 !py-1.5 !text-sm" onClick={() => (goTo(id), onDone())}>
+          Y aller
+        </button>
+      ) : level < p.level ? (
+        <span className="text-xs font-extrabold opacity-70">🔒 niveau {p.level}</span>
+      ) : (
+        <button className="btn !px-3 !py-1.5 !text-sm" disabled={money < p.price} onClick={() => (buy(id), onDone())}>
+          Acheter {p.price.toLocaleString('fr-FR')} F
+        </button>
+      )}
+    </div>
+  )
+}
 
 function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
   return (
@@ -80,21 +104,17 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
             ✕
           </button>
         </div>
-        <p className="mt-1 text-sm font-semibold">Monte de niveau pour ouvrir de nouveaux maquis, de nouveaux business, puis d’autres villes.</p>
-        <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Communes et villes</div>
-        <div className="mt-1 grid grid-cols-2 gap-1.5">
-          {PLACES.map((p) => {
-            const open = level >= p.level
-            return (
-              <div key={p.name} className={`rounded-xl border-2 px-2.5 py-1.5 leading-tight ${p.level === 1 ? 'border-[var(--color-ink)] bg-[#ffe8cc]' : 'border-dashed border-[#c9b79c]'}`}>
-                <div className="text-sm font-extrabold">
-                  {p.name} {p.level === 1 ? '⭐' : open ? '🔓' : '🔒'}
-                </div>
-                <div className="text-xs font-semibold">{p.level === 1 ? `${p.dish} · ton maquis` : `${p.dish} · niveau ${p.level}`}</div>
-              </div>
-            )
-          })}
-        </div>
+        <p className="mt-1 text-sm font-semibold">Monte de niveau (clients servis dans tous tes maquis), achète un maquis dans une autre commune, puis dans d’autres villes. Chaque maquis garde son matériel et son équipe.</p>
+        {[false, true].map((city) => (
+          <div key={String(city)}>
+            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{city ? 'Autres villes' : 'Communes d’Abidjan'}</div>
+            <div className="mt-1 space-y-1.5">
+              {PLACE_IDS.filter((id) => PLACES[id].city === city).map((id) => (
+                <PlaceRow key={id} id={id} level={level} onDone={onClose} />
+              ))}
+            </div>
+          </div>
+        ))}
         <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Petits business</div>
         <div className="mt-1 space-y-1">
           {SIDE.map((b) => (
@@ -117,12 +137,13 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
 function Hud() {
   const money = useArcade((s) => s.money)
   const carried = useArcade((s) => s.carried)
-  const served = useArcade((s) => s.served)
+  const served = useArcade((s) => totalServed(s))
+  const place = useArcade((s) => PLACES[s.current])
   const pop = useArcade((s) => s.pop)
-  const goal = 20
+  const goal = PER_LEVEL
   const [sound, setSound] = useState(!isMuted())
   const [map, setMap] = useState(false)
-  const level = 1 + Math.floor(served / goal)
+  const level = levelOf(served)
   const [hint, setHint] = useState(true)
   const t = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => {
@@ -162,7 +183,7 @@ function Hud() {
         </div>
       </div>
       <div className="absolute top-20 left-3 flex flex-col items-start gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-        <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow">Yopougon · Niveau {level}</div>
+        <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow">{place.name} · Niveau {level}</div>
         <button
           className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#1c7ed6] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
           onPointerDown={(e) => e.stopPropagation()}
@@ -185,7 +206,7 @@ function Hud() {
       {hint && (
         <div className="absolute inset-x-0 bottom-0 flex justify-center p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <div className="card pop max-w-md !p-3 text-center text-base font-bold">
-            Glisse ton doigt pour bouger. Prends les plats de garba sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer.
+            Glisse ton doigt pour bouger. Prends les plats de {place.dishLabel.toLowerCase()} sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer.
           </div>
         </div>
       )}
@@ -196,14 +217,17 @@ function Hud() {
 export default function ArcadeApp() {
   const phase = useGame((s) => s.phase)
   const name = useGame((s) => s.name)
+  const current = useArcade((s) => s.current)
   return (
     <div className="relative h-full w-full">
       <Canvas shadows dpr={[1, 2]} camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}>
         <Suspense fallback={null}>
-          <ArcadeWorld />
-          <Building name={name || 'Boss'} />
-          <Streets />
-          {phase !== 'title' && <Sim name={name} />}
+          <DishCtx.Provider value={PLACES[current].dish}>
+            <ArcadeWorld />
+            <Building name={name || 'Boss'} place={PLACES[current]} />
+            <Streets />
+            {phase !== 'title' && <Sim key={current} name={name} />}
+          </DishCtx.Provider>
           <EffectComposer multisampling={0}>
             <ToneMapping mode={ToneMappingMode.NEUTRAL} />
             <SMAA />

@@ -34,11 +34,12 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 | Améliorer son endroit | ✅ terrasse avec tables ; le maquis à étage |
 | Embaucher : vendre pour toi, servir, livrer | ✅ serveur (+ serveur rapide), caissière, livreur à moto |
 | Livraison / commandes à distance | ✅ commandes par téléphone livrées à moto |
-| Des niveaux | 🟡 jauge de niveau (20 clients par niveau) — à relier aux déblocages |
+| Des niveaux | ✅ 20 clients servis (tous maquis confondus) par niveau ; les niveaux ouvrent les nouveaux lieux |
 | D'autres petits business (choukouya, thé, alloco…) | ⏳ à faire |
-| Acheter de nouveaux endroits, d'autres communes | ⏳ carte dans le jeu (communes verrouillées par niveau) — les lieux eux-mêmes à faire |
+| Acheter de nouveaux endroits, d'autres communes | ✅ carte : acheter un maquis à Cocody (alloco), Abobo (choukouya), Treichville (poisson braisé) ; chaque maquis garde son matériel et son équipe, l'argent te suit |
 | Commandes des maquis et restaurants (PNJ qui commandent en gros) | ⏳ à faire |
-| Devenir le boss de la ville, puis d'autres villes (Bouaké, Korhogo…) | ⏳ à faire |
+| D'autres villes (Bouaké, Korhogo, Gagnoa, Man) | ✅ jouables avec leur plat (kedjenou, tô, sauce kplala, sauce feuille) |
+| Devenir LE boss de la ville (face aux autres boss) | ⏳ à faire |
 | Jeu en ligne, clash pour prendre le quartier d'un autre boss | ⏳ à faire (backend Go + base Neon, comme Babi Life) |
 
 ## Prochaines étapes proposées
