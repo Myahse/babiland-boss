@@ -24,6 +24,8 @@ cd web && npm install && npm run dev
 
 ## Le jeu (style « arcade idle » des jeux de pub)
 
+Vidéo de 40 s d'une partie : [`docs/demo-arcade.mp4`](docs/demo-arcade.mp4).
+
 | Porter les plats | Servir la file | Débloquer |
 |---|---|---|
 | ![](docs/screens/arcade-porter.png) | ![](docs/screens/arcade-servir.png) | ![](docs/screens/arcade-debloquer.png) |
