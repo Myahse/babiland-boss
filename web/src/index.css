@@ -22,3 +22,17 @@ body { font-family: var(--font-sans); color: var(--color-ink); -webkit-tap-highl
 @keyframes pop { from { transform: scale(.4); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 .float-up { animation: floatUp 1s ease-out forwards; }
 @keyframes floatUp { 0% { transform: translate(-50%, 0) scale(.6); opacity: 0 } 20% { transform: translate(-50%, -10px) scale(1.15); opacity: 1 } 100% { transform: translate(-50%, -60px) scale(1); opacity: 0 } }
+
+/* VIP cooking screen */
+.vip-glow { animation: vipGlow 1.2s ease-in-out infinite alternate; }
+@keyframes vipGlow { from { filter: drop-shadow(0 0 0 #ffd43b) } to { filter: drop-shadow(0 0 14px #ffd43b) } }
+.swipe-hint { animation: swipeHint 1.6s ease-in-out infinite; }
+@keyframes swipeHint { 0% { transform: translate(-50%, -150px); opacity: 0 } 15% { opacity: 1 } 70% { transform: translate(-50%, 110px); opacity: 1 } 100% { transform: translate(-50%, 130px); opacity: 0 } }
+.flame { animation: flame .18s ease-in-out infinite alternate; }
+@keyframes flame { from { transform: translateX(-50%) scaleY(.85) } to { transform: translateX(-50%) scaleY(1.1) } }
+.bubble { animation: bubble 1s ease-out infinite; }
+@keyframes bubble { 0% { transform: scale(.2); opacity: 0 } 40% { opacity: 1 } 100% { transform: scale(1.3) translateY(-6px); opacity: 0 } }
+.smoke { animation: smoke 1.4s ease-out infinite; }
+@keyframes smoke { 0% { transform: translate(-50%, 30px) scale(.5); opacity: .8 } 100% { transform: translate(-50%, -40px) scale(1.6); opacity: 0 } }
+.shake { animation: shake .35s ease-in-out; }
+@keyframes shake { 0%, 100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 50% { transform: translateX(8px) } 75% { transform: translateX(-5px) } }

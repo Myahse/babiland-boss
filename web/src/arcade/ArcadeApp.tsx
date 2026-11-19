@@ -12,6 +12,7 @@ import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
+import { VipLayer } from './VipCook'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -194,6 +195,7 @@ function Hud() {
         </button>
         <TurfButton />
       </div>
+      <VipLayer />
       <TurfLayer />
       {map && <MapPanel level={level} onClose={() => setMap(false)} />}
       {carried > 0 && (

@@ -28,7 +28,7 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 |---|---|
 | S'inscrire, choisir son nom et sa commune | ✅ écran d'accueil (Yopougon ouvert, les autres affichés « bientôt ») |
 | Le plat principal de l'endroit (Yopougon : garba) | ✅ |
-| Sessions de cuisine à la Cooking Mama (couper, frire, monter le plat) | ✅ première version : `?mode=cuisine` — à rebrancher dans le jeu principal (commandes spéciales) |
+| Sessions de cuisine à la Cooking Mama (couper, frire, monter le plat) | ✅ **clients VIP** 👑 : de temps en temps un VIP vient au maquis ; à son tour tu cuisines son plat toi-même (couper au doigt sur les pointillés, frire / griller / mijoter au bon moment, monter l'assiette dans l'ordre), il paie jusqu'à ×3 avec pourboire. Une recette par plat principal |
 | Vendre le plat à des clients PNJ | ✅ jeu « arcade idle » : file de clients, comptoir, argent |
 | Gagner de l'argent, améliorer le matériel (cuire plus vite, bonus) | ✅ 2e poêle, postes « Plus vite » niv 2 / MAX, grand plateau |
 | Améliorer son endroit | ✅ terrasse avec tables ; le maquis à étage |
@@ -54,7 +54,7 @@ part des gains pour le boss, trahison par un duel, protection après une attaque
 
 ## Prochaines étapes proposées
 
-1. Rebrancher les mini-jeux de cuisine (couper, frire) comme **commandes spéciales** mieux payées.
+1. ~~Mini-jeux de cuisine comme commandes spéciales~~ (fait : clients VIP).
 2. **Petits business** : stand de choukouya, vendeuse de thé, alloco, chacun avec son poste et ses clients.
 3. **Niveaux** qui débloquent les business et les nouvelles communes.
 4. **Nouveaux lieux** : un 2e maquis dans une autre commune d'Abidjan, puis une autre ville.

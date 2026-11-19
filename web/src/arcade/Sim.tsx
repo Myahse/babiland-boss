@@ -14,6 +14,7 @@ import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Prop
 import { maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, tickTurf } from './turf'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
+import { RECIPES, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_SERVED, VIP_PATIENCE } from './vip'
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
 const padLabel = (u: Unlock, p: Place) => (u === 'plat1' ? DISHES[p.extras[0]].label : u === 'plat2' ? DISHES[p.extras[1]].label : PADS[u].label)
@@ -50,7 +51,7 @@ export const view = { zoom: 1 }
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
-type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number }
+type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number; vip?: string }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
@@ -118,6 +119,10 @@ export function Sim({ name }: { name: string }) {
   if (import.meta.env.DEV) Object.assign(window, { arcadeCusts: custs })
   const nextId = useRef(0)
   const spawn = useRef(1)
+  const vipT = useRef(VIP_FIRST)
+  if (import.meta.env.DEV) Object.assign(window, { arcadeVipT: vipT })
+  // leaving this maquis: a VIP waiting here is gone
+  useEffect(() => () => useVip.setState({ ready: null, open: false, done: null }), [])
   const [, rerender] = useState(0)
   const bump = () => rerender((n) => n + 1)
   const worker = useRef({ pos: V(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
@@ -141,6 +146,8 @@ export function Sim({ name }: { name: string }) {
 
   const redraw = useRef(0)
   useFrame((_, rawDt) => {
+    // the VIP's cooking screen is open: the shop waits
+    if (useVip.getState().open) return
     const dt = Math.min(rawDt, 0.1)
     // refresh the cooking timers on screen a few times a second
     redraw.current += dt
@@ -337,7 +344,54 @@ export function Sim({ name }: { name: string }) {
       nextId.current++
       bump()
     }
+    // now and then a VIP (golden crown): he wants the main dish cooked by hand (vip.ts)
+    vipT.current -= dt
+    if (vipT.current <= 0 && st.served >= VIP_MIN_SERVED && RECIPES[place.dish] && !custs.current.some((c) => c.vip) && line.length < maxQueue()) {
+      vipT.current = VIP_EVERY[0] + Math.random() * (VIP_EVERY[1] - VIP_EVERY[0])
+      const vip = VIPS[Math.floor(Math.random() * VIPS.length)]
+      custs.current.push({ id: nextId.current, who: 'koffi', pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish: 0, want: 2 + Math.floor(Math.random() * 2), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0, vip })
+      nextId.current++
+      popText(`👑 Un client VIP arrive : ${vip} !`)
+      sfx.unlock()
+      bump()
+    }
     let served = st.served
+    /** paid: they go and sit on the terrace if a seat is free, otherwise they take it away */
+    const leavePaid = (c: Cust) => {
+      c.moving = true
+      const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
+      const free = unlocks.table ? SEATS.findIndex((_, i) => !taken.has(i)) : -1
+      // walk along the aisle behind the tables, then step into the chair (never through a table)
+      const aisle = (z: number) => [V(c.pos.x - 0.6, z)]
+      if (free >= 0) {
+        c.state = 'eat'
+        c.seat = free
+        c.eat = 7
+        const a = seatApproach(free)
+        c.path = [...aisle(a.z), a, SEATS[free].clone()]
+      } else {
+        c.state = 'out'
+        c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+      }
+    }
+    // the VIP's order is cooked: he pays (up to 3 times the price) and goes to eat
+    const vd = useVip.getState().done
+    if (vd) {
+      const c = custs.current.find((o) => o.id === vd.id)
+      useVip.setState({ done: null, ready: null })
+      if (c) {
+        const pay = vipPay(st.current, c.want, vd.score)
+        cash += pay
+        served++
+        c.got = c.want
+        for (let k = 0; k < 8; k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.35)
+        popText(`👑 ${c.vip} : +${pay} FCFA`)
+        sfx.cash()
+        leavePaid(c)
+        changed = true
+        bump()
+      }
+    }
     line.forEach((c, k) => {
       const r = step(c.pos, slot(k), 1.4, dt)
       // « arrived at their place in the line »: close to it (the small nudges between neighbours don't count as walking)
@@ -350,6 +404,21 @@ export function Sim({ name }: { name: string }) {
       }
       // someone has to be at the till: Tantie Aya herself, or the cashier once hired
       const tillManned = unlocks.caisse || player.pos.distanceTo(COUNTER) < 1.8
+      if (c.vip) {
+        if (k !== 0 || !atSpot || c.state !== 'line') return
+        c.wait += dt
+        const r = useVip.getState().ready
+        if (!r || r.id !== c.id || Math.abs(r.wait - c.wait) > 0.5) useVip.setState({ ready: { id: c.id, name: c.vip, want: c.want, wait: c.wait } })
+        if (c.wait > VIP_PATIENCE) {
+          c.state = 'out'
+          c.moving = true
+          c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+          useVip.setState({ ready: null })
+          popText(`👑 ${c.vip} en a eu marre d’attendre…`)
+          bump()
+        }
+        return
+      }
       // the first in line loses patience if their dish never comes: they leave, the next one steps up
       if (k === 0 && atSpot && c.state === 'line') {
         c.wait += dt
@@ -374,22 +443,8 @@ export function Sim({ name }: { name: string }) {
           served++
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()
-          c.moving = true
           // with the terrace open, they go and sit to eat; otherwise they take it away
-          const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
-          const free = unlocks.table ? SEATS.findIndex((_, i) => !taken.has(i)) : -1
-          // walk along the aisle behind the tables, then step into the chair (never through a table)
-          const aisle = (z: number) => [V(c.pos.x - 0.6, z)]
-          if (free >= 0) {
-            c.state = 'eat'
-            c.seat = free
-            c.eat = 7
-            const a = seatApproach(free)
-            c.path = [...aisle(a.z), a, SEATS[free].clone()]
-          } else {
-            c.state = 'out'
-            c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
-          }
+          leavePaid(c)
         }
       }
     })
@@ -532,7 +587,7 @@ export function Sim({ name }: { name: string }) {
       {s.unlocks.moto && <Moto obj={moto} want={s.delivery.want} got={s.delivery.got} waiting={s.delivery.state === 'wait'} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
-          {k === 0 && c.state === 'line' && !c.moving && <Wants dish={dishes[c.dish]} want={c.want} got={c.got} />}
+          {c.vip ? <Crown /> : k === 0 && c.state === 'line' && !c.moving && <Wants dish={dishes[c.dish]} want={c.want} got={c.got} />}
         </Mover>
       ))}
       <Follow />
@@ -563,6 +618,34 @@ function Mover({ who, obj, carried = [], sitting = false, full = false, children
         </Html>
       )}
       {children}
+    </group>
+  )
+}
+
+/** The golden crown of a VIP, turning above his head. */
+function Crown() {
+  const g = useRef<THREE.Group>(null)
+  useFrame(({ clock }) => {
+    if (!g.current) return
+    g.current.rotation.y = clock.elapsedTime * 1.5
+    g.current.position.y = 2.25 + Math.sin(clock.elapsedTime * 3) * 0.06
+  })
+  return (
+    <group ref={g} position={[0, 2.25, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.2, 0.17, 0.14, 12, 1, true]} />
+        <meshStandardMaterial color="#ffd43b" metalness={0.6} roughness={0.25} emissive="#b8860b" emissiveIntensity={0.35} side={THREE.DoubleSide} />
+      </mesh>
+      {[0, 1, 2, 3, 4].map((k) => (
+        <mesh key={k} position={[Math.sin((k / 5) * Math.PI * 2) * 0.18, 0.13, Math.cos((k / 5) * Math.PI * 2) * 0.18]}>
+          <coneGeometry args={[0.05, 0.14, 6]} />
+          <meshStandardMaterial color="#ffd43b" metalness={0.6} roughness={0.25} emissive="#b8860b" emissiveIntensity={0.35} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.02, 0.19]}>
+        <sphereGeometry args={[0.04, 10, 8]} />
+        <meshStandardMaterial color="#e03131" roughness={0.2} />
+      </mesh>
     </group>
   )
 }
