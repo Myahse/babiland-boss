@@ -7,12 +7,38 @@ import type { PlaceId } from './places'
 // people do, within the time. Win and the district is yours (no more cut); then attack the other districts,
 // which pay you rent. For now the other bosses are played by the computer; online they will be real players.
 
-export type District = { name: string; boss: string; owner: 'me' | 'boss' }
+/** A bonus given by a key zone while you own it. */
+export type Bonus = { icon: string; label: string; kind: 'sales' | 'customers' | 'cook'; value: number }
+/** `cell`: where the district sits on the map grid of its place (column, row). */
+export type District = { name: string; boss: string; cell: [number, number]; bonus?: Bonus; forest?: boolean }
 
-const D = (names: string[], bosses: string[]): District[] => names.map((name, i) => ({ name, boss: bosses[i], owner: 'boss' }))
+const B = {
+  industry: { icon: '🏭', label: '+30 % de clients (les ouvriers viennent manger)', kind: 'customers', value: 0.3 },
+  market: { icon: '🧺', label: 'Postes 25 % plus rapides (ingrédients du marché)', kind: 'cook', value: 0.25 },
+  night: { icon: '🎶', label: '+20 % sur chaque vente (la nuit de Babi)', kind: 'sales', value: 0.2 },
+} satisfies Record<string, Bonus>
+
+/** 4 districts on a 2 x 2 map (the other places, for now). */
+const D = (names: string[], bosses: string[]): District[] => names.map((name, i) => ({ name, boss: bosses[i], cell: [[0, 1], [1, 1], [0, 0], [1, 0]][i] as [number, number] }))
+
+/** Map grid of each place: columns x rows. */
+export const GRID: Partial<Record<PlaceId, [number, number]>> = { yopougon: [3, 3] }
+export const gridOf = (p: PlaceId) => GRID[p] ?? ([2, 2] as [number, number])
 
 export const DISTRICTS: Record<PlaceId, District[]> = {
-  yopougon: D(['Selmer', 'Niangon', 'Toits-Rouges', 'Siporex'], ['Boss Ladji', 'Mama Bintou', 'Le Vieux Séry', 'Commandant Zézé']),
+  // Yopougon: placed roughly where they are (west Port-Bouët 2, north the industrial zone, south the lagoon,
+  // the Banco forest in the north-east). District 0 is where your maquis is.
+  yopougon: [
+    { name: 'Selmer', boss: 'Boss Ladji', cell: [1, 2] },
+    { name: 'Niangon', boss: 'Mama Bintou', cell: [0, 2] },
+    { name: 'Rue Princesse', boss: 'DJ Kpakpato', cell: [2, 2], bonus: B.night },
+    { name: 'Port-Bouët 2', boss: 'Tonton Gnaoré', cell: [0, 1] },
+    { name: 'Toits-Rouges', boss: 'Le Vieux Séry', cell: [1, 1] },
+    { name: 'Siporex', boss: 'Commandant Zézé', cell: [2, 1], bonus: B.market },
+    { name: 'Andokoi', boss: 'Mama Akoua', cell: [0, 0] },
+    { name: 'Zone industrielle', boss: 'Le Patron Konaté', cell: [1, 0], bonus: B.industry },
+    { name: 'Forêt du Banco', boss: '', cell: [2, 0], forest: true },
+  ],
   cocody: D(['Riviera', 'Angré', 'Deux-Plateaux', 'Blockhaus'], ['Boss Kader', 'Tantie Rose', 'Le Grand Yves', 'Mama Akissi']),
   abobo: D(['Avocatier', 'PK18', 'Anador', 'Samaké'], ['Boss Drissa', 'Mama Salimata', 'Le Vieux Bamba', 'Petit Koné']),
   treichville: D(['Arras', 'Biafra', 'Belleville', 'Habitat'], ['Boss Tapé', 'Tantie Lou', 'Le Doyen Gnahoré', 'Mama Adjoua']),
@@ -22,10 +48,16 @@ export const DISTRICTS: Record<PlaceId, District[]> = {
   man: D(['Libreville', 'Domoraud', 'Air France', 'Grand Gbapleu'], ['Boss Tia', 'Mama Gueu', 'Le Vieux Dan', 'Tantie Sahi']),
 }
 
+/** Districts touching district `i` on the map (you can only attack next to what you hold). */
+export function neighbours(p: PlaceId, i: number) {
+  const [c, r] = DISTRICTS[p][i].cell
+  return DISTRICTS[p].map((d, j) => (j !== i && !d.forest && Math.abs(d.cell[0] - c) + Math.abs(d.cell[1] - r) === 1 ? j : -1)).filter((j) => j >= 0)
+}
+
 export const CUT = 0.2 // what the boss of your home district takes while you work for him
 export const RESPECT_FOR_BETRAYAL = 15 // customers served in this place
 export const BETRAY_PRICE = 1000 // to rally the district behind you
-export const ATTACK_PRICE = (i: number) => 1500 + i * 1000 // the other districts are harder
+export const ATTACK_PRICE = (p: PlaceId, i: number) => 1500 + i * 500 + (DISTRICTS[p][i].bonus ? 2000 : 0) // key zones cost more
 export const DUEL_TIME = 60
 export const DUEL_TARGET = 8
 export const COOLDOWN = 90 // seconds before trying again after losing
@@ -61,7 +93,15 @@ useTurf.subscribe((s) => {
   }
 })
 
-export const ownersOf = (p: PlaceId) => useTurf.getState().owners[p] ?? DISTRICTS[p].map(() => 'boss' as const)
+/** Owner of every district of a place (older saves had fewer districts: the new ones belong to their boss). */
+export const ownersOf = (p: PlaceId, s = useTurf.getState()) => DISTRICTS[p].map((_, i) => (s.owners[p]?.[i] === 'me' ? ('me' as const) : ('boss' as const)))
+/** Can you attack district i: your own district freed, i touches one of yours, not already yours. */
+export const canAttack = (p: PlaceId, i: number, owners = ownersOf(p)) => i > 0 && !DISTRICTS[p][i].forest && owners[0] === 'me' && owners[i] !== 'me' && neighbours(p, i).some((j) => owners[j] === 'me')
+/** Total bonus of a kind from the key zones you own in a place (0.3 = +30 %). */
+export const bonusOf = (p: PlaceId, kind: Bonus['kind']) => {
+  const o = ownersOf(p)
+  return DISTRICTS[p].reduce((n, d, i) => n + (o[i] === 'me' && d.bonus?.kind === kind ? d.bonus.value : 0), 0)
+}
 /** Do you still work for the boss of your home district (district 0)? */
 export const underBoss = (p: PlaceId) => ownersOf(p)[0] !== 'me'
 export const cutFor = (p: PlaceId) => (underBoss(p) ? CUT : 0)
@@ -69,7 +109,8 @@ export const cutFor = (p: PlaceId) => (underBoss(p) ? CUT : 0)
 /** Start a duel for district `idx` (0 = betray your own boss). The caller has checked respect and paid. */
 export function startDuel(place: PlaceId, idx: number, served: number) {
   // the boss's people serve at a pace that would reach the target a bit before the time runs out
-  const rate = DUEL_TARGET / (DUEL_TIME * (0.85 - idx * 0.07))
+  const key = DISTRICTS[place][idx].bonus ? 0.12 : 0
+  const rate = DUEL_TARGET / (DUEL_TIME * (0.85 - key - Math.min(0.15, idx * 0.025)))
   useTurf.setState({ duel: { place, idx, left: DUEL_TIME, mine: 0, rival: 0, startServed: served, rate }, result: null })
 }
 
@@ -90,7 +131,7 @@ export function tickTurf(place: PlaceId, served: number, dt: number) {
     const nd = { ...d, left: d.left - dt, mine: served - d.startServed, rival: d.rival + d.rate * dt }
     const D0 = DISTRICTS[place][d.idx]
     if (nd.mine >= DUEL_TARGET) {
-      const owners = [...ownersOf(place)]
+      const owners = [...ownersOf(place, s)]
       owners[d.idx] = 'me'
       Object.assign(patch, { duel: null, owners: { ...s.owners, [place]: owners }, result: { won: true, name: D0.name, boss: D0.boss } })
     } else if (nd.rival >= DUEL_TARGET || nd.left <= 0) {

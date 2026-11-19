@@ -12,7 +12,7 @@ import { moveInput } from './input'
 import { BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
 import { maxQueue, popText, priceLeft, useArcade } from './store'
-import { cutFor, tickTurf } from './turf'
+import { bonusOf, cutFor, tickTurf } from './turf'
 import { DISHES, dishPrice, placeDishes, PLACES, type Dish, type Place } from './places'
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
@@ -163,7 +163,8 @@ export function Sim({ name }: { name: string }) {
         progress.current[i] = 1
         continue
       }
-      progress.current[i] += dt / L.cook
+      // key zone « marché »: stations cook faster
+      progress.current[i] += (dt * (1 + bonusOf(st.current, 'cook'))) / L.cook
       if (progress.current[i] >= 1) {
         progress.current[i] = 0
         plates[i]++
@@ -326,7 +327,8 @@ export function Sim({ name }: { name: string }) {
     spawn.current -= dt
     const line = custs.current.filter((c) => c.state === 'line')
     if (spawn.current <= 0 && line.length < maxQueue()) {
-      spawn.current = 1.6 + Math.random() * 1.6
+      // key zone « zone industrielle »: more customers
+      spawn.current = (1.6 + Math.random() * 1.6) / (1 + bonusOf(st.current, 'customers'))
       // what they want: mostly the main dish, sometimes a particular dish that is already on the menu
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
@@ -368,7 +370,7 @@ export function Sim({ name }: { name: string }) {
         bump()
         if (c.got >= c.want) {
           // while you work for the boss of the district, he takes his cut
-          cash += Math.round(c.want * dishPrice(place, c.dish) * (1 - cutFor(st.current)))
+          cash += Math.round(c.want * dishPrice(place, c.dish) * (1 + bonusOf(st.current, 'sales')) * (1 - cutFor(st.current)))
           served++
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()

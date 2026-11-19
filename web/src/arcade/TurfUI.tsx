@@ -1,121 +1,175 @@
+import { useState } from 'react'
+import type { PlaceId } from './places'
 import { PLACES } from './places'
 import { useArcade } from './store'
-import { ATTACK_PRICE, BETRAY_PRICE, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
+import { ATTACK_PRICE, BETRAY_PRICE, canAttack, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf } from './turf'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 
-// A small drawn map of the commune: the 4 districts as areas, the lagoon along the south, roads between them.
-// The layout is stylised (the same shapes for every place), not the exact surveyed borders.
-const AREAS = [
-  { d: 'M70 70 L150 55 L165 120 L95 140 L60 115 Z', label: [110, 95] }, // 0: your home district, in the middle
-  { d: 'M10 60 L70 70 L60 115 L95 140 L80 175 L20 165 L5 110 Z', label: [40, 130] }, // 1: west
-  { d: 'M150 55 L230 40 L245 100 L200 130 L165 120 Z', label: [200, 85] }, // 2: north-east
-  { d: 'M165 120 L200 130 L245 100 L290 120 L280 170 L190 180 L95 140 Z', label: [215, 150] }, // 3: east, by the lagoon
-]
+// The big map of the place you are in (full screen): its districts as areas coloured by owner, the key zones ⭐
+// and their bonus, your maquis. Tap a district to see its boss and betray / attack it.
+// The districts are placed roughly where they really are, on a grid (not the exact surveyed borders).
 
-function DistrictMap({ names, bosses, owners }: { names: string[]; bosses: string[]; owners: ('me' | 'boss')[] }) {
+const W = 400
+const H = 560
+const TOP = 30
+const BOTTOM = 470 // the lagoon starts below
+
+/** Corner points of the map grid, nudged a little so the borders don't look like a chessboard. */
+function corners(cols: number, rows: number) {
+  const pts: [number, number][][] = []
+  for (let r = 0; r <= rows; r++) {
+    pts.push([])
+    for (let c = 0; c <= cols; c++) {
+      const edgeX = c === 0 || c === cols
+      const edgeY = r === 0 || r === rows
+      const jx = edgeX ? 0 : Math.sin(r * 2.3 + c * 1.7) * 22
+      const jy = edgeY ? Math.sin(c * 2.1 + r) * 10 : Math.cos(r * 1.9 + c * 2.7) * 20
+      pts[r].push([12 + (c / cols) * (W - 24) + jx, TOP + (r / rows) * (BOTTOM - TOP) + jy])
+    }
+  }
+  return pts
+}
+
+function BigMap({ place, owners, selected, onPick }: { place: PlaceId; owners: ('me' | 'boss')[]; selected: number; onPick: (i: number) => void }) {
+  const [cols, rows] = gridOf(place)
+  const P = corners(cols, rows)
+  const ds = DISTRICTS[place]
   return (
-    <svg viewBox="0 0 300 215" className="mt-3 w-full rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#e9d8a6]">
-      {/* lagoon along the south */}
-      <path d="M0 185 Q60 170 120 188 T240 182 T300 178 L300 215 L0 215 Z" fill="#4dabf7" />
-      <path d="M0 192 Q60 180 120 196 T240 190 T300 187" fill="none" stroke="#a5d8ff" strokeWidth="2" />
-      <text x="250" y="206" fontSize="9" fontWeight="800" fill="#e7f5ff">Lagune</text>
-      {AREAS.map((a, i) => {
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full">
+      <rect width={W} height={H} fill="#e9d8a6" />
+      {/* the lagoon along the south */}
+      <path d={`M0 ${BOTTOM + 25} Q80 ${BOTTOM + 5} 160 ${BOTTOM + 28} T320 ${BOTTOM + 20} T400 ${BOTTOM + 12} L400 ${H} L0 ${H} Z`} fill="#4dabf7" />
+      <path d={`M0 ${BOTTOM + 38} Q80 ${BOTTOM + 20} 160 ${BOTTOM + 42} T320 ${BOTTOM + 34} T400 ${BOTTOM + 28}`} fill="none" stroke="#a5d8ff" strokeWidth="3" />
+      <text x="300" y={H - 22} fontSize="15" fontWeight="800" fill="#e7f5ff">Lagune Ébrié</text>
+      {ds.map((d, i) => {
+        const [c, r] = d.cell
+        const poly = [P[r][c], P[r][c + 1], P[r + 1][c + 1], P[r + 1][c]]
+        const cx = poly.reduce((n, p) => n + p[0], 0) / 4
+        const cy = poly.reduce((n, p) => n + p[1], 0) / 4
         const mine = owners[i] === 'me'
+        const open = !d.forest && (i === 0 ? !mine : canAttack(place, i, owners))
+        const fill = d.forest ? '#2f9e44' : mine ? '#69db7c' : '#ff8787'
         return (
-          <g key={i}>
-            <path d={a.d} fill={mine ? '#69db7c' : '#ff8787'} stroke="#2b1a12" strokeWidth="2.5" strokeLinejoin="round" />
-            <text x={a.label[0]} y={a.label[1]} textAnchor="middle" fontSize="11" fontWeight="800" fill="#2b1a12">
-              {names[i]}
+          <g key={d.name} onClick={() => !d.forest && onPick(i)} style={{ cursor: d.forest ? 'default' : 'pointer' }}>
+            <path d={`M${poly.map((p) => p.join(' ')).join(' L')} Z`} fill={fill} stroke={selected === i ? '#fff' : '#2b1a12'} strokeWidth={selected === i ? 6 : 3} strokeLinejoin="round" />
+            {d.forest &&
+              [0, 1, 2, 3, 4].map((k) => <circle key={k} cx={cx - 40 + k * 20} cy={cy + Math.sin(k * 2) * 18} r="13" fill="#2b8a3e" stroke="#1b5e20" strokeWidth="2" />)}
+            {d.bonus && (
+              <>
+                <circle cx={cx} cy={cy - 30} r="17" fill="#ffd43b" stroke="#2b1a12" strokeWidth="2.5" />
+                <text x={cx} y={cy - 24} textAnchor="middle" fontSize="17">
+                  {d.bonus.icon}
+                </text>
+              </>
+            )}
+            <text x={cx} y={cy + 4} textAnchor="middle" fontSize="15" fontWeight="800" fill={d.forest ? '#fff' : '#2b1a12'} stroke="#fff" strokeWidth={d.forest ? 0 : 3} paintOrder="stroke">
+              {d.name}
             </text>
-            <text x={a.label[0]} y={a.label[1] + 12} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#2b1a12">
-              {mine ? '👑 À toi' : `😎 ${bosses[i]}`}
-            </text>
+            {!d.forest && (
+              <text x={cx} y={cy + 22} textAnchor="middle" fontSize="11.5" fontWeight="700" fill="#2b1a12">
+                {mine ? '👑 À toi' : `😎 ${d.boss}`}
+              </text>
+            )}
+            {open && (
+              <text x={cx} y={cy + 40} textAnchor="middle" fontSize="11" fontWeight="800" fill="#c92a2a">
+                {i === 0 ? '🗡️ à trahir' : '⚔️ attaquable'}
+              </text>
+            )}
           </g>
         )
       })}
-      {/* main roads */}
-      <path d="M0 55 L300 30" stroke="#868e96" strokeWidth="5" strokeLinecap="round" />
-      <path d="M0 55 L300 30" stroke="#fff" strokeWidth="1" strokeDasharray="6 5" />
       {/* your maquis */}
-      <g transform="translate(110 62)">
-        <path d="M0 0 C-9 -12 -9 -22 0 -22 C9 -22 9 -12 0 0 Z" fill="#e8590c" stroke="#fff" strokeWidth="2" />
-        <circle cx="0" cy="-15" r="3.5" fill="#fff" />
-      </g>
+      {(() => {
+        const [c, r] = ds[0].cell
+        const x = (P[r][c][0] + P[r][c + 1][0]) / 2 + 30
+        const y = (P[r][c][1] + P[r + 1][c][1]) / 2 - 10
+        return (
+          <g transform={`translate(${x} ${y})`} style={{ pointerEvents: 'none' }}>
+            <path d="M0 0 C-12 -16 -12 -30 0 -30 C12 -30 12 -16 0 0 Z" fill="#e8590c" stroke="#fff" strokeWidth="2.5" />
+            <circle cx="0" cy="-20" r="5" fill="#fff" />
+          </g>
+        )
+      })()}
     </svg>
   )
 }
 
-/** The small district view of the place you are in: who owns what, betray / attack. */
+/** Full-screen map of the districts, with the card of the district you tapped. */
 function TurfPanel({ onClose }: { onClose: () => void }) {
   const place = useArcade((s) => s.current)
   const served = useArcade((s) => s.served)
   const money = useArcade((s) => s.money)
-  const owners = useTurf((s) => s.owners[place]) ?? DISTRICTS[place].map(() => 'boss')
+  useTurf((s) => s.owners) // re-render when owners change
+  const owners = ownersOf(place)
   const cooldown = useTurf((s) => s.cooldown)
   const duel = useTurf((s) => s.duel)
   const ds = DISTRICTS[place]
   const free = owners[0] === 'me'
+  const [sel, setSel] = useState(free ? -1 : 0)
+  const d = sel >= 0 ? ds[sel] : null
+  const mine = sel >= 0 && owners[sel] === 'me'
+  const price = sel === 0 ? BETRAY_PRICE : sel > 0 ? ATTACK_PRICE(place, sel) : 0
+  const respectOk = served >= RESPECT_FOR_BETRAYAL
+  const canGo = sel === 0 ? !mine && respectOk : sel > 0 && canAttack(place, sel, owners)
 
-  const act = (i: number) => {
-    const price = i === 0 ? BETRAY_PRICE : ATTACK_PRICE(i)
-    if (money < price) return
+  const act = () => {
+    if (money < price || !canGo) return
     useArcade.setState({ money: money - price })
-    startDuel(place, i, served)
+    startDuel(place, sel, served)
     onClose()
   }
+  const keys = ds.filter((x) => x.bonus)
+  const ownedKeys = ds.filter((x, i) => x.bonus && owners[i] === 'me').length
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-40 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={onClose}>
-      <div className="card pop max-h-[88%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">🏙️ Quartiers de {PLACES[place].name}</h2>
-          <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
-            ✕
-          </button>
+    <div className="pointer-events-auto absolute inset-0 z-40 flex flex-col bg-[#e9d8a6]" onPointerDown={stop}>
+      <div className="flex items-center justify-between bg-[var(--color-cream)] px-3 py-2 shadow" style={{ paddingTop: 'max(8px, env(safe-area-inset-top))' }}>
+        <div>
+          <h2 className="text-xl leading-tight font-extrabold">🏙️ {PLACES[place].name}</h2>
+          <div className="text-xs font-bold">
+            {owners.filter((o, i) => o === 'me' && !ds[i].forest).length}/{ds.filter((x) => !x.forest).length} quartiers
+            {keys.length > 0 && ` · ⭐ ${ownedKeys}/${keys.length} zones clés`}
+          </div>
         </div>
-        <p className="mt-1 text-sm font-semibold">
-          {free
-            ? 'Tu es ton propre boss ici. Prends les autres quartiers : chacun te paie un loyer.'
-            : `Tu travailles pour ${ds[0].boss} : il garde ${CUT * 100} % de ce que tu gagnes. Gagne du respect, puis trahis-le.`}
-        </p>
-        <DistrictMap names={ds.map((d) => d.name)} bosses={ds.map((d) => d.boss)} owners={owners} />
-        {/* the 4 districts with their actions */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {ds.map((d, i) => {
-            const mine = owners[i] === 'me'
-            const canBetray = i === 0 && !mine
-            const canAttack = i > 0 && !mine && free
-            const price = i === 0 ? BETRAY_PRICE : ATTACK_PRICE(i)
-            const respectOk = served >= RESPECT_FOR_BETRAYAL
-            return (
-              <div key={d.name} className={`rounded-2xl border-[3px] p-2.5 leading-tight ${mine ? 'border-[var(--color-green)] bg-[#d3f9d8]' : 'border-[#c92a2a] bg-[#fff5f5]'}`}>
-                <div className="text-sm font-extrabold">
-                  {i === 0 && '📍 '}
-                  {d.name}
-                </div>
-                <div className="text-xs font-bold">{mine ? '👑 À toi' : `😎 ${d.boss}`}</div>
-                {mine && i > 0 && <div className="text-[11px] font-semibold">+{RENT} F toutes les {RENT_EVERY} s</div>}
-                {(canBetray || canAttack) && (
-                  <>
-                    {canBetray && <div className="mt-1 text-[11px] font-semibold">Respect : {Math.min(served, RESPECT_FOR_BETRAYAL)}/{RESPECT_FOR_BETRAYAL} clients</div>}
-                    <button
-                      className="btn mt-1.5 w-full !px-2 !py-1 !text-xs"
-                      disabled={!!duel || cooldown > 0 || money < price || (canBetray && !respectOk)}
-                      onClick={() => act(i)}
-                    >
-                      {cooldown > 0 ? `Attends ${Math.ceil(cooldown)} s` : `${canBetray ? '🗡️ Trahir' : '⚔️ Attaquer'} · ${price} F`}
-                    </button>
-                  </>
-                )}
-                {i > 0 && !mine && !free && <div className="mt-1 text-[11px] font-semibold opacity-70">🔒 Libère d’abord ton quartier</div>}
+        <button className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xl font-extrabold shadow" onClick={onClose} aria-label="Fermer">
+          ✕
+        </button>
+      </div>
+      <div className="min-h-0 flex-1">
+        <BigMap place={place} owners={owners} selected={sel} onPick={setSel} />
+      </div>
+      <div className="bg-[var(--color-cream)] p-3 shadow-[0_-4px_12px_rgba(0,0,0,.15)]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        {!d ? (
+          <p className="text-sm font-bold">
+            {free ? 'Touche un quartier voisin des tiens pour l’attaquer. Les zones clés ⭐ donnent un bonus.' : `Tu travailles pour ${ds[0].boss} : il garde ${CUT * 100} % de tes gains. Touche ton quartier pour le trahir.`}
+          </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="text-lg font-extrabold">
+                {sel === 0 && '📍 '}
+                {d.name}
               </div>
-            )
-          })}
-        </div>
-        <div className="mt-3 rounded-xl bg-[#fff3bf] p-2.5 text-xs font-semibold">
-          ⚔️ Le duel : sers {DUEL_TARGET} clients avant que les gens du boss en servent autant, en 60 secondes. Si tu perds, tu dois attendre {COOLDOWN} s.
-          Bientôt en ligne : les boss seront de vrais joueurs.
+              <div className="text-sm font-bold">{mine ? '👑 À toi' : `😎 ${d.boss}`}</div>
+              {d.bonus && (
+                <div className="text-xs font-bold text-[#e8590c]">
+                  ⭐ {d.bonus.icon} {d.bonus.label}
+                </div>
+              )}
+              {mine && sel > 0 && <div className="text-xs font-semibold">Loyer : +{RENT} F toutes les {RENT_EVERY} s</div>}
+              {sel === 0 && !mine && <div className="text-xs font-semibold">Respect : {Math.min(served, RESPECT_FOR_BETRAYAL)}/{RESPECT_FOR_BETRAYAL} clients servis</div>}
+              {sel > 0 && !mine && !canGo && <div className="text-xs font-semibold opacity-75">{free ? '🔒 Prends d’abord un quartier voisin' : '🔒 Libère d’abord ton quartier'}</div>}
+            </div>
+            {!mine && (
+              <button className="btn shrink-0 !px-3 !py-2 !text-sm" disabled={!!duel || cooldown > 0 || money < price || !canGo} onClick={act}>
+                {cooldown > 0 ? `Attends ${Math.ceil(cooldown)} s` : `${sel === 0 ? '🗡️ Trahir' : '⚔️ Attaquer'} · ${price} F`}
+              </button>
+            )}
+          </div>
+        )}
+        <div className="mt-2 text-[11px] font-semibold opacity-80">
+          ⚔️ Duel : sers {DUEL_TARGET} clients avant les gens du boss, en 60 s. Défaite : attends {COOLDOWN} s.
         </div>
       </div>
     </div>

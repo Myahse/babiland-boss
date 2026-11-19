@@ -39,7 +39,7 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 | Acheter de nouveaux endroits, d'autres communes | ✅ carte : acheter un maquis à Cocody (alloco), Abobo (choukouya), Treichville (poisson braisé) ; chaque maquis garde son matériel et son équipe, l'argent te suit |
 | Commandes des maquis et restaurants (PNJ qui commandent en gros) | ⏳ à faire |
 | D'autres villes (Bouaké, Korhogo, Gagnoa, Man) | ✅ jouables avec leur plat (kedjenou, tô, sauce kplala, sauce feuille) |
-| Voir les zones qu'on possède, travailler pour le boss, le trahir, prendre ses quartiers | ✅ en solo : 4 quartiers par lieu, chacun à un boss (géré par l'ordinateur) ; le boss de ton quartier prend 20 % ; avec assez de respect, duel de 60 s pour le trahir ; puis attaquer les autres quartiers, qui paient un loyer |
+| Voir les zones qu'on possède, travailler pour le boss, le trahir, prendre ses quartiers | ✅ en solo : grande carte : 8 quartiers à Yopougon (4 ailleurs pour l'instant), chacun à un boss (géré par l'ordinateur), zones clés ⭐ avec bonus, on n'attaque que les quartiers voisins ; le boss de ton quartier prend 20 % ; avec assez de respect, duel de 60 s pour le trahir ; puis attaquer les autres quartiers, qui paient un loyer |
 | Jeu en ligne, clash pour prendre le quartier d'un autre boss | ⏳ à faire (backend Go + base Neon, comme Babi Life) |
 
 ## L'idée de clash (deuxième message)
