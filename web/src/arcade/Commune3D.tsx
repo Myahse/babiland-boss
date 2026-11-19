@@ -40,10 +40,10 @@ function rng(seed: number) {
 
 /** A name label drawn on a canvas, shown as a sprite that always faces the camera. */
 const labels = new Map<string, THREE.CanvasTexture>()
-function labelTexture(text: string) {
+function labelTexture(text: string, w = 640) {
   if (labels.has(text)) return labels.get(text)!
   const c = document.createElement('canvas')
-  c.width = 640
+  c.width = w
   c.height = 128
   const g = c.getContext('2d')!
   g.font = '800 56px "Baloo 2", sans-serif'
@@ -52,14 +52,19 @@ function labelTexture(text: string) {
   g.lineJoin = 'round'
   g.lineWidth = 14
   g.strokeStyle = '#ffffff'
-  g.strokeText(text, 320, 68)
+  g.strokeText(text, w / 2, 68)
   g.fillStyle = '#2b1a12'
-  g.fillText(text, 320, 68)
+  g.fillText(text, w / 2, 68)
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   labels.set(text, t)
   return t
 }
+
+// each boss has a colour (like territories on a strategy map); yours is always green
+const BOSS = ['#ff8787', '#ffa94d', '#fcc2d7', '#d0bfff', '#ffd43b', '#91a7ff', '#e599f7', '#99c1f2', '#ffc078', '#a5d8ff', '#f783ac', '#eebefa'] // no green: green means « yours »
+const MINE = '#69db7c'
+const flagOf = (i: number, mine: boolean) => (mine ? '#2f9e44' : new THREE.Color(BOSS[i % BOSS.length]).multiplyScalar(0.7).getStyle())
 
 const WALLS = ['#ffd8a8', '#a5d8ff', '#ffc9c9', '#d3f9d8', '#fff3bf', '#e5dbff', '#ffe8cc', '#c5f6fa']
 const ROOF = '#c3c9cf' // tin roofs
@@ -74,7 +79,7 @@ function inside(p: THREE.Vector2, poly: THREE.Vector2[]) {
   return c
 }
 
-type DistrictGeo = { i: number; poly: THREE.Vector2[]; label: THREE.Vector2; shape: THREE.Shape; houses: { x: number; z: number; w: number; d: number; h: number; c: string; r: number }[] }
+type DistrictGeo = { i: number; ring: THREE.Vector2[]; poly: THREE.Vector2[]; label: THREE.Vector2; shape: THREE.Shape; road: THREE.Shape; houses: { x: number; z: number; w: number; d: number; h: number; c: string; r: number }[]; trees: { x: number; z: number; s: number; palm: boolean }[] }
 
 function buildDistricts(geo: Geo): DistrictGeo[] {
   const P = projector(geo)
@@ -82,20 +87,29 @@ function buildDistricts(geo: Geo): DistrictGeo[] {
     const ring = f.geometry.coordinates[0].map(([lng, lat]) => P(lng, lat))
     // shrink a little towards the centre so the streets between districts show
     const c = ring.reduce((a, p) => a.add(p), new THREE.Vector2()).divideScalar(ring.length)
-    const poly = ring.map((p) => p.clone().sub(c).multiplyScalar(0.97).add(c))
+    const poly = ring.map((p) => p.clone().sub(c).multiplyScalar(0.95).add(c))
     const shape = new THREE.Shape(poly.map((p) => new THREE.Vector2(p.x, -p.y)))
+    // the full outline, flat and grey: what shows between two districts is the street
+    const road = new THREE.Shape(ring.map((p) => new THREE.Vector2(p.x, -p.y)))
     const label = P(f.properties.label[0], f.properties.label[1])
     // houses scattered inside the district
     const r = rng(1000 + f.properties.i * 77)
     const min = poly.reduce((a, p) => a.min(p), poly[0].clone())
     const max = poly.reduce((a, p) => a.max(p), poly[0].clone())
+    // a few taller buildings in the busy central districts
     const houses: DistrictGeo['houses'] = []
     for (let k = 0; k < 900 && houses.length < 22; k++) {
       const p = new THREE.Vector2(min.x + r() * (max.x - min.x), min.y + r() * (max.y - min.y))
       if (!inside(p, poly) || p.distanceTo(label) < 12 || houses.some((o) => Math.hypot(o.x - p.x, o.z - p.y) < 5)) continue
-      houses.push({ x: p.x, z: p.y, w: 1.6 + r() * 1.4, d: 1.6 + r() * 1.2, h: 0.9 + r() * (r() < 0.15 ? 3 : 1.2), c: WALLS[Math.floor(r() * WALLS.length)], r: r() * Math.PI })
+      houses.push({ x: p.x, z: p.y, w: 1.6 + r() * 1.4, d: 1.6 + r() * 1.2, h: 0.9 + r() * (r() < (f.properties.i < 6 ? 0.3 : 0.1) ? 4 : 1.2), c: WALLS[Math.floor(r() * WALLS.length)], r: r() * Math.PI })
     }
-    return { i: f.properties.i, poly, label, shape, houses }
+    const trees: DistrictGeo['trees'] = []
+    for (let k = 0; k < 600 && trees.length < 9; k++) {
+      const p = new THREE.Vector2(min.x + r() * (max.x - min.x), min.y + r() * (max.y - min.y))
+      if (!inside(p, poly) || p.distanceTo(label) < 10 || houses.some((o) => Math.hypot(o.x - p.x, o.z - p.y) < 3.5)) continue
+      trees.push({ x: p.x, z: p.y, s: 0.9 + r() * 0.8, palm: r() < 0.6 })
+    }
+    return { i: f.properties.i, ring, poly, label, shape, road, houses, trees }
   })
 }
 
@@ -136,12 +150,11 @@ function Houses({ list }: { list: DistrictGeo['houses'] }) {
 }
 
 /** The boss's maquis (or yours) with its sign and flag. */
-function Maquis({ name, mine, home }: { name: string; mine: boolean; home: boolean }) {
+function Maquis({ name, mine, home, color }: { name: string; mine: boolean; home: boolean; color: string }) {
   const flag = useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
     if (flag.current) flag.current.rotation.y = Math.sin(clock.elapsedTime * 3) * 0.25
   })
-  const color = mine ? '#2f9e44' : '#c92a2a'
   return (
     <group>
       <RoundedBox args={[6, 3.4, 4.5]} radius={0.3} position={[0, 1.2 + 1.7, 0]} castShadow>
@@ -259,7 +272,16 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: Distr
     g.current.position.y += ((selected ? 3 : 0) - g.current.position.y) * Math.min(1, dt * 6)
   })
   const open = d.i === 0 ? !mine : canAttack(place, d.i, owners)
+  const roadGeom = useMemo(() => new THREE.ShapeGeometry(d.road), [d.road])
+  const marker = useRef<THREE.Sprite>(null)
+  useFrame(({ clock }) => {
+    if (marker.current) marker.current.position.y = 34 + Math.sin(clock.elapsedTime * 3 + d.i) * 1.5
+  })
   return (
+    <>
+    <mesh geometry={roadGeom} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
+      <meshStandardMaterial color="#868e96" roughness={0.9} />
+    </mesh>
     <group ref={g}>
       <mesh
         geometry={geom}
@@ -271,20 +293,141 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick }: { d: Distr
           onPick()
         }}
       >
-        <meshStandardMaterial color={mine ? '#8ce99a' : '#ffa8a8'} roughness={0.85} />
+        <meshStandardMaterial color={mine ? MINE : BOSS[d.i % BOSS.length]} roughness={0.85} />
       </mesh>
+      {selected && (
+        <mesh geometry={geom} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} scale={[1, 1, 1.15]}>
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.35} />
+        </mesh>
+      )}
       <Houses list={d.houses} />
+      <Trees list={d.trees} />
       <group position={[d.label.x, 0, d.label.y]}>
         <group scale={1.7}>
-        <Maquis name={info.name} mine={mine} home={d.i === 0} />
+        <Maquis name={info.name} mine={mine} home={d.i === 0} color={flagOf(d.i, mine)} />
         {info.bonus && <Landmark kind={info.bonus.icon} />}
         </group>
+        {(open || mine) && (
+          <sprite ref={marker} position={[0, 34, 0]} scale={[7, 7, 1]}>
+            <spriteMaterial map={labelTexture(mine ? '👑' : '⚔️', 128)} depthTest={false} transparent />
+          </sprite>
+        )}
         <sprite position={[0, 24, 0]} scale={[46, 9.2, 1]}>
           <spriteMaterial map={labelTexture(`${d.i === 0 ? '📍 ' : ''}${info.bonus ? `${info.bonus.icon} ` : ''}${mine ? '👑 ' : open ? (d.i === 0 ? '🗡️ ' : '⚔️ ') : ''}${info.name}`)} depthTest={false} transparent />
         </sprite>
       </group>
     </group>
+    </>
   )
+}
+
+/** Palms and round trees between the houses. */
+function Trees({ list }: { list: DistrictGeo['trees'] }) {
+  return (
+    <>
+      {list.map((t, k) => (
+        <group key={k} position={[t.x, 1.2, t.z]} scale={t.s}>
+          <mesh position={[0, 2, 0]} castShadow>
+            <cylinderGeometry args={[0.18, 0.26, 4, 6]} />
+            <meshStandardMaterial color="#a07f5c" />
+          </mesh>
+          {t.palm ? (
+            [0, 1, 2, 3, 4].map((j) => (
+              <mesh key={j} position={[Math.cos(j * 1.256) * 1, 4.1, Math.sin(j * 1.256) * 1]} rotation={[0, -j * 1.256, -0.5]} scale={[1, 0.12, 0.4]} castShadow>
+                <icosahedronGeometry args={[1.3, 0]} />
+                <meshStandardMaterial color={j % 2 ? '#2f9e44' : '#40c057'} flatShading />
+              </mesh>
+            ))
+          ) : (
+            <mesh position={[0, 4.4, 0]} castShadow>
+              <icosahedronGeometry args={[1.7, 0]} />
+              <meshStandardMaterial color="#37b24d" flatShading />
+            </mesh>
+          )}
+        </group>
+      ))}
+    </>
+  )
+}
+
+/** Gbakas and taxis going round the streets (the outlines of the districts). */
+function Traffic({ ds }: { ds: DistrictGeo[] }) {
+  const cars = useMemo(() => {
+    const r = rng(7)
+    return Array.from({ length: 16 }, (_, k) => {
+      const d = ds[k % ds.length]
+      return { ring: d.ring, t: r(), speed: 0.006 + r() * 0.006, color: ['#fcc419', '#f08c00', '#40c057', '#1c7ed6'][k % 4], big: k % 2 === 0 }
+    })
+  }, [ds])
+  const refs = useRef<(THREE.Group | null)[]>([])
+  const a = useMemo(() => new THREE.Vector2(), [])
+  useFrame((_, dt) => {
+    cars.forEach((c, k) => {
+      const g = refs.current[k]
+      if (!g) return
+      c.t = (c.t + dt * c.speed) % 1
+      const n = c.ring.length - 1
+      const f = c.t * n
+      const i = Math.floor(f)
+      const p0 = c.ring[i]
+      const p1 = c.ring[(i + 1) % n]
+      a.lerpVectors(p0, p1, f - i)
+      g.position.set(a.x, 0.6, a.y)
+      g.rotation.y = Math.atan2(p1.x - p0.x, p1.y - p0.y)
+    })
+  })
+  return (
+    <>
+      {cars.map((c, k) => (
+        <group key={k} ref={(el) => void (refs.current[k] = el)}>
+          <RoundedBox args={[1.4, 1.2, c.big ? 3.4 : 2.4]} radius={0.3} castShadow>
+            <meshStandardMaterial color={c.color} />
+          </RoundedBox>
+        </group>
+      ))}
+    </>
+  )
+}
+
+/** A few clouds drifting over the city (their shadows move on the ground). */
+function Clouds({ c }: { c: THREE.Vector2 }) {
+  const g = useRef<THREE.Group>(null)
+  useFrame((_, dt) => {
+    if (!g.current) return
+    g.current.position.x += dt * 1.6
+    if (g.current.position.x > 120) g.current.position.x = -120
+  })
+  const puffs = useMemo(() => {
+    const r = rng(99)
+    return Array.from({ length: 5 }, () => ({ x: c.x + (r() - 0.5) * 260, z: c.y + (r() - 0.5) * 220, s: 2.5 + r() * 2.5 }))
+  }, [c])
+  return (
+    <group ref={g}>
+      {puffs.map((p, k) => (
+        <group key={k} position={[p.x, 115, p.z]}>
+          {[-1, 0, 1].map((j) => (
+            <mesh key={j} position={[j * p.s * 0.9, Math.abs(j) * -1, 0]} castShadow>
+              <sphereGeometry args={[p.s * (j === 0 ? 1.2 : 0.9), 12, 10]} />
+              <meshStandardMaterial color="#ffffff" transparent opacity={0.55} depthWrite={false} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  )
+}
+
+/** The camera flies down from the sky onto your district when the screen opens. */
+function FlyIn({ to }: { to: THREE.Vector3 }) {
+  const t = useRef(0)
+  useFrame(({ camera }, dt) => {
+    if (t.current >= 1) return
+    t.current = Math.min(1, t.current + dt / 2.2)
+    const k = 1 - Math.pow(1 - t.current, 3)
+    camera.position.set(to.x + 70 * k, 420 - 245 * k, to.z + 40 + 110 * k)
+    camera.lookAt(to.x, 0, to.z)
+  })
+  return null
 }
 
 function Forest({ center }: { center: THREE.Vector2 }) {
@@ -326,7 +469,7 @@ export function Commune3D({ place, owners, selected, onPick }: { place: PlaceId;
     <Canvas shadows dpr={[1, 2]} camera={{ fov: 40, position: [home.x + 70, 175, home.y + 150], near: 1, far: 2000 }}>
       <color attach="background" args={['#bfe6ff']} />
       <fog attach="fog" args={['#bfe6ff', 250, 600]} />
-      <hemisphereLight args={['#e3f4ff', '#d9b38c', 1.4]} />
+      <hemisphereLight args={['#e3f4ff', '#d9b38c', 1.3]} />
       <directionalLight castShadow position={[c.x + 80, 160, c.y + 60]} intensity={2} shadow-mapSize={[2048, 2048]} shadow-camera-left={-150} shadow-camera-right={150} shadow-camera-top={150} shadow-camera-bottom={-150} shadow-camera-far={500} />
       {/* ground, lagoon to the south, forest to the east */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, -0.05, c.y]} receiveShadow>
@@ -341,6 +484,9 @@ export function Commune3D({ place, owners, selected, onPick }: { place: PlaceId;
       {ds.map((d) => (
         <DistrictBlock key={d.i} d={d} place={place} owner={owners[d.i]} owners={owners} selected={selected === d.i} onPick={() => onPick(d.i)} />
       ))}
+      <Traffic ds={ds} />
+      <Clouds c={c} />
+      <FlyIn to={new THREE.Vector3(home.x, 0, home.y)} />
       <MapControls target={[home.x, 0, home.y]} maxPolarAngle={1.2} minDistance={40} maxDistance={420} enableDamping />
     </Canvas>
   )
