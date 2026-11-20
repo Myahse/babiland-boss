@@ -50,11 +50,19 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 // Migrate applies every embedded migrations/*.sql file that has not run yet,
 // in filename order. Files are forward-only: fix mistakes with a new file.
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
+	// Our own list of what has run (another app's « schema_migrations » in the same database is never read).
+	if _, err := pool.Exec(ctx, `CREATE TABLE IF NOT EXISTS babiland_migrations (
 		name TEXT PRIMARY KEY,
 		applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
 	)`); err != nil {
 		return err
+	}
+	// A database where another app already has a « users » table (Babi Life's, say): never touch it.
+	var ran, foreign bool
+	_ = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM babiland_migrations)`).Scan(&ran)
+	_ = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'users')`).Scan(&foreign)
+	if !ran && foreign {
+		return fmt.Errorf("this database already has another app's tables (users): give Babiland Boss its own database (Neon: Databases, New database « babiland », then use /babiland in DATABASE_URL)")
 	}
 
 	names, err := fs.Glob(migrations, "migrations/*.sql")
@@ -66,7 +74,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	for _, path := range names {
 		name := strings.TrimPrefix(path, "migrations/")
 		var exists bool
-		if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name = $1)`, name).Scan(&exists); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM babiland_migrations WHERE name = $1)`, name).Scan(&exists); err != nil {
 			return err
 		}
 		if exists {
@@ -84,7 +92,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO babiland_migrations (name) VALUES ($1)`, name); err != nil {
 			_ = tx.Rollback(ctx)
 			return err
 		}
