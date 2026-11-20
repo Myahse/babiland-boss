@@ -64,6 +64,8 @@ export function Station({ plates, progress, level = 1, dish, ...props }: { plate
   const cols = [0, 1, 2].map((c) => Math.max(0, Math.min(per, plates - c * per)))
   return (
     <group {...props}>
+      {/* steam over the pan while it cooks (a full station stops) */}
+      <Steam on={progress < 1} position={[-0.22, 0.98, -0.05]} />
       <RoundedBox args={[1.2, 0.85, 0.9]} radius={0.05} position={[0, 0.425, 0]} castShadow receiveShadow>
         <Flat color="#dfe3e8" />
       </RoundedBox>
@@ -188,8 +190,20 @@ export function Counter({ stock, dishes, name, dish = 'Garba', ...props }: { sto
 /** Big green cash blocks piling up (3 x 3 per layer), waiting to be picked up. */
 export function CashPile({ amount, ...props }: { amount: number } & ThreeElements['group']) {
   const n = Math.min(45, Math.ceil(amount / 200))
+  // a little jump each time money lands on it
+  const g = useRef<THREE.Group>(null)
+  const prev = useRef(amount)
+  const k = useRef(0)
+  useFrame((_, dt) => {
+    if (amount > prev.current) k.current = 1
+    prev.current = amount
+    k.current = Math.max(0, k.current - dt * 3.5)
+    const b = Math.sin(k.current * Math.PI) * 0.18
+    g.current?.scale.set(1 + b * 0.4, 1 + b, 1 + b * 0.4)
+  })
   return (
     <group {...props}>
+     <group ref={g}>
       {Array.from({ length: n }, (_, i) => {
         const col = i % 3
         const row = Math.floor(i / 3) % 3
@@ -210,6 +224,36 @@ export function CashPile({ amount, ...props }: { amount: number } & ThreeElement
           </group>
         )
       })}
+     </group>
+    </group>
+  )
+}
+
+/** Steam rising from a stove while it cooks. */
+const STEAM = new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false, roughness: 1 })
+const PUFF = new THREE.SphereGeometry(1, 8, 6)
+export function Steam({ on, ...props }: { on: boolean } & ThreeElements['group']) {
+  const g = useRef<THREE.Group>(null)
+  const seeds = useMemo(() => Array.from({ length: 5 }, (_, i) => ({ o: i / 5, x: (Math.random() - 0.5) * 0.3, z: (Math.random() - 0.5) * 0.2 })), [])
+  useFrame(({ clock }) => {
+    const grp = g.current
+    if (!grp) return
+    grp.visible = on
+    if (!on) return
+    grp.children.forEach((c, i) => {
+      const s = seeds[i]
+      const t = (clock.elapsedTime * 0.55 + s.o) % 1
+      c.position.set(s.x + Math.sin(t * 6 + i) * 0.05, t * 0.9, s.z)
+      c.scale.setScalar(0.06 + t * 0.16)
+      // fades as it rises (each puff its own material would cost: the shared one is half see-through)
+      c.visible = t < 0.85
+    })
+  })
+  return (
+    <group ref={g} {...props}>
+      {seeds.map((_, i) => (
+        <mesh key={i} geometry={PUFF} material={STEAM} />
+      ))}
     </group>
   )
 }
@@ -347,12 +391,32 @@ export function Palm({ s = 1, ...props }: { s?: number } & ThreeElements['group'
         <cylinderGeometry args={[0.1, 0.16, 2.4, 6]} />
         <Flat color="#b07d4f" />
       </mesh>
+      <PalmLeaves>
       {Array.from({ length: 6 }, (_, i) => (
         <mesh key={i} castShadow position={[Math.cos((i / 6) * Math.PI * 2) * 0.55, 2.35, Math.sin((i / 6) * Math.PI * 2) * 0.55]} rotation={[0, -(i / 6) * Math.PI * 2, -0.5]} scale={[1, 0.12, 0.35]}>
           <icosahedronGeometry args={[0.7, 0]} />
           <Flat color={i % 2 ? '#2fb344' : '#40c057'} />
         </mesh>
       ))}
+      </PalmLeaves>
+    </group>
+  )
+}
+
+/** The leaves of a palm moving in the wind. */
+function PalmLeaves({ children }: { children: React.ReactNode }) {
+  const g = useRef<THREE.Group>(null)
+  const phase = useMemo(() => Math.random() * 10, [])
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime + phase
+    if (g.current) {
+      g.current.rotation.z = Math.sin(t * 0.9) * 0.04
+      g.current.rotation.x = Math.sin(t * 0.7 + 1) * 0.03
+    }
+  })
+  return (
+    <group ref={g} position={[0, 2.3, 0]}>
+      <group position={[0, -2.3, 0]}>{children}</group>
     </group>
   )
 }

@@ -29,6 +29,50 @@ export function burst(at: THREE.Vector3, n = 40) {
   if (bits.length > 200) bits.splice(0, bits.length - 200)
 }
 
+/** Words and faces floating up from someone: « +1 000 » when a customer pays, 😋 served, 😤 gone. */
+type Float = { text: string; color: string; pos: THREE.Vector3; t: number; big: boolean }
+const floats: Float[] = []
+export function floatText(at: THREE.Vector3, text: string, color = '#2b8a3e', big = false) {
+  if (floats.length > 10) floats.shift()
+  floats.push({ text, color, pos: at.clone(), t: 0, big })
+}
+/** a few small sparks of colour (a customer happy with his plate) */
+export function sparks(at: THREE.Vector3, n = 12) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2
+    const sp = 0.6 + Math.random() * 0.9
+    bits.push({ pos: at.clone(), vel: new THREE.Vector3(Math.cos(a) * sp, 1.6 + Math.random() * 1.4, Math.sin(a) * sp), rot: Math.random() * 6, life: 0.8, color: CONFETTI[i % 4] })
+  }
+  if (bits.length > 200) bits.splice(0, bits.length - 200)
+}
+const floatTex = new Map<string, THREE.CanvasTexture>()
+function floatTexture(text: string, color: string) {
+  const key = text + color
+  if (floatTex.has(key)) return floatTex.get(key)!
+  const c = document.createElement('canvas')
+  c.width = 256
+  c.height = 128
+  const g = c.getContext('2d')!
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  if (color) {
+    g.font = '800 64px "Baloo 2", sans-serif'
+    g.lineWidth = 12
+    g.strokeStyle = '#ffffff'
+    g.strokeText(text, 128, 66)
+    g.fillStyle = color
+    g.fillText(text, 128, 66)
+  } else {
+    g.font = '86px sans-serif'
+    g.fillText(text, 128, 70)
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  floatTex.set(key, t)
+  return t
+}
+const FLOATS = 10
+
 const PLATES = 24
 const CASH = 24
 
@@ -36,6 +80,7 @@ export function FX() {
   const plates = useRef<(THREE.Group | null)[]>([])
   const cash = useRef<(THREE.Mesh | null)[]>([])
   const conf = useRef<THREE.InstancedMesh>(null)
+  const words = useRef<(THREE.Sprite | null)[]>([])
   const dummy = useMemo(() => new THREE.Object3D(), [])
   const col = useMemo(() => new THREE.Color(), [])
   const p = useMemo(() => new THREE.Vector3(), [])
@@ -67,6 +112,29 @@ export function FX() {
     }
     for (; pi < PLATES; pi++) if (plates.current[pi]) plates.current[pi]!.visible = false
     for (; ci < CASH; ci++) if (cash.current[ci]) cash.current[ci]!.visible = false
+
+    // the floating words and faces: up, a little bigger, then fade
+    for (let i = floats.length - 1; i >= 0; i--) {
+      floats[i].t += dt / 1.3
+      if (floats[i].t >= 1) floats.splice(i, 1)
+    }
+    words.current.forEach((sp, i) => {
+      if (!sp) return
+      const f = floats[i]
+      sp.visible = !!f
+      if (!f) return
+      const mat = sp.material as THREE.SpriteMaterial
+      const tex = floatTexture(f.text, f.color)
+      if (mat.map !== tex) {
+        mat.map = tex
+        mat.needsUpdate = true
+      }
+      const pop = Math.min(1, f.t * 6)
+      sp.position.copy(f.pos).add(new THREE.Vector3(0, 1.9 + f.t * 0.9, 0))
+      const s = (f.big ? 0.75 : 0.95) * (0.6 + 0.4 * pop)
+      sp.scale.set(s * 2, s, 1)
+      mat.opacity = f.t < 0.7 ? 1 : 1 - (f.t - 0.7) / 0.3
+    })
 
     const m = conf.current
     if (m) {
@@ -108,6 +176,11 @@ export function FX() {
           <boxGeometry args={[0.3, 0.14, 0.17]} />
           <meshStandardMaterial color="#69db3c" roughness={0.45} />
         </mesh>
+      ))}
+      {Array.from({ length: FLOATS }, (_, i) => (
+        <sprite key={`w${i}`} ref={(el) => void (words.current[i] = el)} visible={false} renderOrder={10}>
+          <spriteMaterial transparent depthTest={false} />
+        </sprite>
       ))}
       <instancedMesh ref={conf} args={[undefined, undefined, 200]} frustumCulled={false}>
         <boxGeometry args={[0.08, 0.02, 0.12]} />

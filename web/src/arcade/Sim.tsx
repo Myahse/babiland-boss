@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { Avatar } from './Avatar'
-import { burst, fly, FX } from './fx'
+import { burst, floatText, fly, FX, sparks } from './fx'
 import { sfx } from './sfx'
 import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
@@ -460,6 +460,8 @@ export function Sim({ name }: { name: string }) {
         c.got = c.want
         for (let k = 0; k < 8; k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.35)
         popText(`👑 ${c.vip} : +${pay} FCFA`)
+        sparks(c.pos.clone().add(new THREE.Vector3(0, 1.6, 0)), 24)
+        floatText(c.pos.clone().add(new THREE.Vector3(0.5, -0.4, 0)), `+${pay}`, '#f08c00')
         sfx.cash()
         leavePaid(c)
         changed = true
@@ -515,8 +517,12 @@ export function Sim({ name }: { name: string }) {
           // while you work for the boss of the district, he takes his cut
           // x2 boost and Pass Boss (shop), key zones; the boss of your district takes his share
           const gross = (c.want * sellPrice(st.current, c.dish, st.stage) + F.drink) * (1 + bonusOf(st.current, 'sales')) * saleBoost()
-          cash += Math.round(gross * (1 - cutFor(st.current)))
+          const earned = Math.round(gross * (1 - cutFor(st.current)))
+          cash += earned
           payCut(st.current, gross)
+          // what they paid floats up, with a few sparks
+          sparks(c.pos.clone().add(new THREE.Vector3(0, 1.6, 0)))
+          floatText(c.pos.clone().add(new THREE.Vector3(0.5, -0.4, 0)), `+${earned.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ')}`)
           addFame(FAME.customer * F.fame)
           served++
           missionEvent('serve')
@@ -662,6 +668,7 @@ export function Sim({ name }: { name: string }) {
         cash += pay
         for (let k = 0; k < 10; k++) fly('cash', up(CRATE, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.45)
         popText(`📦 ${bulk.name} : +${pay} FCFA`)
+        floatText(CRATE, `+${pay}`, '#f08c00')
         burst(CRATE)
         sfx.unlock()
         missionEvent('bulk', 1)
