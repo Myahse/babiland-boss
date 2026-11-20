@@ -7,10 +7,15 @@ import { placeState } from './store'
 // room (more chairs, a TV for the football, fans, music, a drinks fridge). Each one shows in the shop and does
 // something: faster cooking, a second server, someone who picks up the money, more tips, more customers…
 
-export type ItemId = 'cuisiniere' | 'serveur2' | 'ramasseur' | 'chaises' | 'tele' | 'ventilo' | 'musique' | 'frigo'
-export type Item = { id: ItemId; kind: 'staff' | 'room'; icon: IconName; label: string; text: string; price: number; needs?: (s: ReturnType<typeof placeState>) => string | null }
+export type ItemId = 'cuisiniere' | 'serveur2' | 'ramasseur' | 'chaises' | 'tele' | 'ventilo' | 'musique' | 'frigo' | 'cuisine' | 'vitrine' | 'parking' | 'livraison'
+export type Item = { id: ItemId; kind: 'staff' | 'room' | 'zone'; icon: IconName; label: string; text: string; price: number; needs?: (s: ReturnType<typeof placeState>) => string | null }
 
 export const ITEMS: Item[] = [
+  // the zones: a real kitchen inside, and across the side street the annexe (Annexe.tsx)
+  { id: 'cuisine', kind: 'zone', icon: 'fire', label: 'La cuisine à part', text: 'Les réchauds dans une vraie cuisine carrelée, avec sa grande hotte et son passe-plat : tout cuit 15 % plus vite.', price: 5000, needs: (s) => (s.stage >= 1 ? null : 'Quand ton coin sera devenu un maquis') },
+  { id: 'vitrine', kind: 'zone', icon: 'box', label: 'La vitrine à emporter', text: 'De l’autre côté de la petite rue : remplis la vitrine de plats, les passants les achètent tout seuls, 20 % plus cher.', price: 4000, needs: (s) => (s.stage >= 1 ? null : 'Quand ton coin sera devenu un maquis') },
+  { id: 'livraison', kind: 'zone', icon: 'moto', label: 'Le service de livraison', text: 'Un vrai point livraison avec ses motos : elles reviennent deux fois plus vite et chaque livraison paie 30 % de plus.', price: 9000, needs: (s) => (s.unlocks.moto ? null : 'Ouvre d’abord la livraison moto') },
+  { id: 'parking', kind: 'zone', icon: 'car', label: 'Le parking', text: 'Les clients viennent aussi en voiture et en taxi : ils se garent et viennent faire la queue.', price: 7000, needs: (s) => (s.stage >= 1 ? null : 'Quand ton coin sera devenu un maquis') },
   { id: 'cuisiniere', kind: 'staff', icon: 'chef', label: 'Une cuisinière', text: 'Elle aide aux réchauds : tous les plats cuisent 35 % plus vite.', price: 3000 },
   { id: 'serveur2', kind: 'staff', icon: 'chef', label: 'Un 2e serveur', text: 'Il porte aussi les plats des réchauds au comptoir.', price: 4000, needs: (s) => (s.unlocks.serveur ? null : 'Embauche d’abord le 1er serveur') },
   { id: 'ramasseur', kind: 'staff', icon: 'person', label: 'Un commis', text: 'Il ramasse l’argent par terre et les pourboires des tables pour toi.', price: 3500, needs: (s) => (s.unlocks.caisse ? null : 'Embauche d’abord la caissière') },
@@ -30,7 +35,7 @@ export const fx = (place: PlaceId) => {
   const h = (id: ItemId) => st.items.includes(id)
   const sf = styleFx(st.style)
   return {
-    cook: (h('cuisiniere') ? 1.35 : 1) * sf.cook,
+    cook: (h('cuisiniere') ? 1.35 : 1) * (h('cuisine') ? 1.15 : 1) * sf.cook,
     customers: (h('tele') ? 1.15 : 1) * (h('musique') ? 1.1 : 1) * sf.customers,
     patience: (h('ventilo') ? 1.6 : 1) * (h('tele') ? 1.2 : 1) * sf.patience,
     tips: (h('chaises') ? 1.6 : 1) * sf.tips,

@@ -33,6 +33,8 @@ type PlaceState = {
   items: string[]
   /** the look of each part of the place, 1..10 (styles.ts) */
   style: Style
+  /** plates waiting in the takeaway window of the annexe */
+  vitrine: number
 }
 
 type Arcade = PlaceState & {
@@ -52,11 +54,13 @@ type Arcade = PlaceState & {
   marketUntil: number
   /** the map of the places is open (from the HUD, or the gbaka station) */
   mapOpen: boolean
+  /** how the maquis is seen: inside (close), outside (the street and the annexe), the upstairs terrace */
+  cam: 'dedans' | 'dehors' | 'terrasse'
   /** a bulk order from a restaurant (not saved): plates of one dish to put in the crate before the time runs out */
   bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE } })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE }, vitrine: 0 })
 /** saved games from before the particular dishes: make every list the right length */
 function norm(p: Partial<PlaceState> = {}): PlaceState {
   const f = fresh()
@@ -66,7 +70,7 @@ function norm(p: Partial<PlaceState> = {}): PlaceState {
   if (old) p = { ...p, stage: 1, fame: Math.max(FAME_AT[1], p.served ?? 0) }
   return { ...f, ...p, items: Array.isArray(p.items) ? p.items : [], style: p.style ? normStyle(p.style) : grownStyle(p.stage ?? 0), level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash), side: fit(p.side, f.side), sidePaid: fit(p.sidePaid, f.sidePaid), sideCash: fit(p.sideCash, f.sideCash) }
 }
-const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items, style: s.style })
+const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items, style: s.style, vitrine: s.vitrine })
 
 const KEY = 'babiland-arcade-v2'
 function load(): Partial<Arcade> {
@@ -99,6 +103,7 @@ export const useArcade = create<Arcade>(() => ({
   view: 'maquis',
   marketUntil: 0,
   mapOpen: false,
+  cam: 'dedans',
   ...load(),
 }))
 

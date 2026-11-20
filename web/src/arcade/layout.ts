@@ -24,7 +24,8 @@ export const START = V(-0.4, -0.6)
 export const TABLES = [V(-4.7, 2.75), V(-2.7, 2.75), V(-0.7, 2.75)]
 export const SEATS = TABLES.flatMap((t) => [t.clone().add(V(-0.62, 0)), t.clone().add(V(0.62, 0))])
 
-export const BOUNDS = { minX: -5.6, maxX: 5.2, minZ: -2.0, maxZ: 4.2 }
+// (the right edge reaches the annexe across the side street: the takeaway window, the delivery point, the parking)
+export const BOUNDS = { minX: -5.6, maxX: 16.2, minZ: -2.0, maxZ: 4.2 }
 
 /** Boxes the player can't walk through (centre, half size x, half size z). */
 export const SOLIDS: { c: THREE.Vector3; hx: number; hz: number }[] = [
@@ -97,3 +98,15 @@ export const GROW_PAD = V(-4.9, 1.75)
 export const BIN = V(1.25, 1.2)
 /** what you can unlock while the place is still a little corner on the pavement */
 export const CORNER_PADS: Unlock[] = ['pan2', 'plateau']
+
+// ------------------------------------------------------------------ the annexe, across the side street
+/** the takeaway window (« la vitrine »): a glass kiosk by the front road; stand at its side to fill it */
+export const VITRINE = V(11.6, 3.2)
+export const VITRINE_DROP = V(10.55, 3.2)
+export const VITRINE_MAX = 16
+/** the delivery point: a shed with its motos */
+export const HUB = V(11.8, -0.9)
+/** the parking: four places, the cars come in from the front road */
+export const PARK_SPOTS = [V(15.0, -1.3), V(15.0, 0.4), V(15.0, 2.1), V(15.0, 3.8)]
+/** the kitchen, around the stoves: a tiled floor, two half walls, the hood, the pass */
+export const KITCHEN = { minX: -5.55, maxX: 0.95, minZ: -2.2, maxZ: -0.95 }

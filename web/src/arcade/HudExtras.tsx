@@ -256,9 +256,9 @@ function AmenagerPanel({ onClose }: { onClose: () => void }) {
         </div>
         <p className="text-sm font-semibold opacity-75">{PLACES[place].name} : prends du monde avec toi et équipe ta salle.</p>
         <StyleSection />
-        {(['staff', 'room'] as const).map((kind) => (
+        {(['zone', 'staff', 'room'] as const).map((kind) => (
           <div key={kind}>
-            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'staff' ? 'Assistants' : 'La salle'}</div>
+            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'zone' ? 'Les zones · cuisine et annexe de l’autre côté de la rue' : kind === 'staff' ? 'Assistants' : 'La salle'}</div>
             <div className="mt-1 space-y-1.5">
               {ITEMS.filter((it) => it.kind === kind).map((it) => {
                 const owned = items.includes(it.id)

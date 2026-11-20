@@ -9,13 +9,14 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { BIN, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
-import { fx } from './items'
+import { fx, has } from './items'
+import { arrivals, Zones } from './Annexe'
 import { tier } from './looks'
 import { Icon, type IconName } from './Icons'
 import { STAGE_ICONS } from './HudExtras'
@@ -89,6 +90,8 @@ function motoPath(t: number) {
 }
 /** camera distance (1 = normal); a « zoom out » button could change it */
 export const view = { zoom: 1 }
+const TERRACE_CAM = new THREE.Vector3(2.4, 10.2, 9.2)
+const TERRACE_LOOK = new THREE.Vector3(-0.5, 3.1, -3.3)
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
@@ -172,6 +175,7 @@ export function Sim({ name }: { name: string }) {
   const bump = () => rerender((n) => n + 1)
   const fullHint = useRef(0)
   const binT = useRef(0)
+  const vitT = useRef(3)
   const worker = useRef({ pos: V(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
   // arriving in this maquis: start at the entrance, the moto parked
   useEffect(() => {
@@ -260,6 +264,7 @@ export function Sim({ name }: { name: string }) {
     const counter = [...st.counter]
     let cash = st.cash
     let money = st.money
+    let vitrine = st.vitrine
     const w = worker.current
     const wCarried = [...w.carried]
     const wMax = st.unlocks.rapide ? 10 : 5
@@ -275,6 +280,14 @@ export function Sim({ name }: { name: string }) {
           sfx.pick()
           break
         }
+      }
+      // the takeaway window of the annexe: the plates you carry go in (any dish), up to VITRINE_MAX
+      if (carried.length > 0 && vitrine < VITRINE_MAX && has(st.current, 'vitrine') && player.pos.distanceTo(VITRINE_DROP) < 0.9) {
+        carried.pop()
+        vitrine++
+        changed = true
+        fly('plate', hands(player, () => carried.length)(), VITRINE.clone().setY(1.0))
+        sfx.drop()
       }
       // the bin: the plates you carry go in, one by one
       // (only after half a second standing on it: walking across it never throws anything away)
@@ -417,9 +430,30 @@ export function Sim({ name }: { name: string }) {
       w.carried = wCarried
     }
 
+    // the takeaway window sells by itself to the people walking by
+    vitT.current -= dt
+    if (vitrine > 0 && vitT.current <= 0) {
+      vitT.current = 2.5 + Math.random() * 2.5
+      vitrine--
+      const pay = Math.round(sellPrice(st.current, 0, st.stage) * 1.2 * (1 - cutFor(st.current)))
+      money += pay
+      changed = true
+      floatText(VITRINE.clone().setY(0.6), `+${pay}`, '#f08c00')
+      sfx.cash()
+    }
+
     // 6. customers: arrive, line up, take their plates, pay, leave
     spawn.current -= dt
     const line = custs.current.filter((c) => c.state === 'line')
+    // the parking: someone gets out of a car that has just parked and comes to queue
+    while (arrivals.length) {
+      const at = arrivals.shift()!
+      if (line.length >= maxQueue() + 2) continue
+      const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
+      custs.current.push({ id: nextId.current, who: others(WHO)[nextId.current % WHO.length], pos: at.clone(), rot: -Math.PI / 2, state: 'line', dish: menu[Math.floor(Math.random() * menu.length)], want: 1 + Math.floor(Math.random() * 3), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0 })
+      nextId.current++
+      bump()
+    }
     if (spawn.current <= 0 && line.length < maxQueue()) {
       // key zone « zone industrielle »: more customers
       // more customers when the place is bigger and more people know you
@@ -633,14 +667,14 @@ export function Sim({ name }: { name: string }) {
           if (got >= delivery.want) {
             delivery = { ...delivery, state: 'away' }
             motoT.current = 0
-            cash += Math.round(delivery.want * sellPrice(st.current, 0, st.stage) * 1.4 * (1 - cutFor(st.current)))
+            cash += Math.round(delivery.want * sellPrice(st.current, 0, st.stage) * (has(st.current, 'livraison') ? 1.82 : 1.4) * (1 - cutFor(st.current)))
             for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
-            popText(`Livraison : +${delivery.want * Math.round(sellPrice(st.current, 0, st.stage) * 1.4)} FCFA`)
+            popText(`Livraison : +${delivery.want * Math.round(sellPrice(st.current, 0, st.stage) * (has(st.current, 'livraison') ? 1.82 : 1.4))} FCFA`)
             sfx.unlock()
           }
         }
       } else if (delivery.state === 'away') {
-        motoT.current += dt / 14
+        motoT.current += dt / (has(st.current, 'livraison') ? 7 : 14)
         if (motoT.current >= 1) {
           delivery = { want: 0, got: 0, state: 'none' }
           motoWait.current = 3 + Math.random() * 4
@@ -711,7 +745,7 @@ export function Sim({ name }: { name: string }) {
       sfx.cash()
       changed = true
     }
-    if (changed || carried.length !== st.carried.length) set({ station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery, stage, growPaid })
+    if (changed || carried.length !== st.carried.length) set({ vitrine, station: plates, carried, counter, cash, money, unlocks, paid, served, workerCarried: wCarried, tableCash, level, upPaid, delivery, stage, growPaid })
   })
 
   const dishes = placeDishes(PLACES[s.current])
@@ -729,6 +763,7 @@ export function Sim({ name }: { name: string }) {
           <PadHint at={p.pos} who={player} icon={p.icon} title={p.label} text={p.text} price={p.left} />
         </group>
       ))}
+      <Zones player={player} />
       <Bin position={BIN} />
       <PadHint at={BIN} who={player} icon="trash" title="Poubelle" text="Reste dessus pour jeter les plats que tu portes (un plat que personne ne commande)." />
       <FX />
@@ -897,12 +932,33 @@ function Follow() {
     camYaw.v = Math.PI / 4
     if (import.meta.env.DEV) Object.assign(window, { __cam: camera })
   }, [camera])
-  useFrame((_, dt) => {
-    // seen from a corner, high up: the shop looks like a diamond, like in the shop games
-    const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom
-    const t = new THREE.Vector3(player.pos.x * 0.7, 0, player.pos.z * 0.7)
-    camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), 1 - Math.exp(-dt * 4))
-    look.lerp(t, 1 - Math.exp(-dt * 4))
+  useFrame(({ scene }, dt) => {
+    const cam = useArcade.getState().cam
+    const k = 1 - Math.exp(-dt * 4)
+    // the haze far away: further when the camera is pulled back (« Dehors »), or it would hide everything
+    const fog = scene.fog as THREE.Fog | null
+    if (fog) {
+      const [n, f] = cam === 'dehors' ? [45, 95] : [20, 44]
+      fog.near += (n - fog.near) * k
+      fog.far += (f - fog.far) * k
+    }
+    if (cam === 'terrasse' && useArcade.getState().stage >= 2) {
+      // the upstairs terrace of the restaurant, seen from the street in front, at its height
+      camera.position.lerp(TERRACE_CAM, k)
+      look.lerp(TERRACE_LOOK, k)
+      camYaw.v = Math.atan2(TERRACE_CAM.x - TERRACE_LOOK.x, TERRACE_CAM.z - TERRACE_LOOK.z)
+      camera.lookAt(look)
+      return
+    }
+    camYaw.v = Math.PI / 4
+    // seen from a corner, high up: the shop looks like a diamond, like in the shop games. « Dehors »: further back
+    // and following you more, to see the street, the annexe across the side street, the parking
+    const out = cam === 'dehors'
+    const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom * (out ? 1.65 : 1)
+    const follow = out ? 0.9 : 0.7
+    const t = new THREE.Vector3(player.pos.x * follow, 0, player.pos.z * follow)
+    camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), k)
+    look.lerp(t, k)
     camera.lookAt(look)
   })
   return null

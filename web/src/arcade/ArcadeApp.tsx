@@ -10,7 +10,7 @@ import { StreetDecor } from './StreetDecor'
 import { StreetLife } from './StreetLife'
 import { GameClock } from './daynight'
 import { stick } from './input'
-import { buy, goTo, totalServed, useArcade } from './store'
+import { buy, goTo, popText, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
@@ -213,8 +213,9 @@ function Hud({ street }: { street: boolean }) {
         <MissionsButton />
         <OnlineButton />
       </div>
-      <div className="pointer-events-none absolute top-[4.4rem] right-3 flex justify-end" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+      <div className="pointer-events-none absolute top-[4.4rem] right-3 flex flex-col items-end gap-1.5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <GameClock />
+        {!street && <CamSwitch />}
       </div>
       <BulkBanner />
       <StoryLayer />
@@ -314,6 +315,33 @@ export default function ArcadeApp() {
           <OnlineRuntime />
         </>
       )}
+    </div>
+  )
+}
+
+/** Inside, outside, the upstairs terrace: three ways to look at the maquis. */
+function CamSwitch() {
+  const cam = useArcade((s) => s.cam)
+  const stage = useArcade((s) => s.stage)
+  const opts: { id: 'dedans' | 'dehors' | 'terrasse'; label: string }[] = [
+    { id: 'dedans', label: 'Dedans' },
+    { id: 'dehors', label: 'Dehors' },
+    { id: 'terrasse', label: 'Terrasse' },
+  ]
+  return (
+    <div className="pointer-events-auto flex rounded-full bg-white/85 p-0.5 text-[11px] font-extrabold shadow">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          className={`rounded-full px-2 py-0.5 ${cam === o.id ? 'bg-[#2b1a12] text-white' : 'text-[#2b1a12]'}`}
+          onClick={() => {
+            if (o.id === 'terrasse' && stage < 2) return popText('La terrasse du haut s’ouvre quand ton maquis devient un restaurant')
+            useArcade.setState({ cam: o.id })
+          }}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   )
 }
