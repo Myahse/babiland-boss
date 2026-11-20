@@ -56,26 +56,52 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
         bearing: -18,
         maxPitch: 70,
       }
-      let m: AnyMap
-      if (TOKEN) {
-        const mb = (await import('mapbox-gl')).default
-        await import('mapbox-gl/dist/mapbox-gl.css')
-        mb.accessToken = TOKEN
-        m = new mb.Map({ ...opts, style: 'mapbox://styles/mapbox/streets-v12' } as never) as unknown as AnyMap
-        lib.current = mb as never
-      } else {
+      // Mapbox when there is a token; if it refuses (wrong or restricted token, no network to it), the free map
+      const free = async () => {
         const ml = await import('maplibre-gl')
         await import('maplibre-gl/dist/maplibre-gl.css')
-        m = new ml.Map({ ...opts, style: 'https://tiles.openfreemap.org/styles/liberty' } as never) as unknown as AnyMap
         lib.current = ml as never
+        return new ml.Map({ ...opts, style: 'https://tiles.openfreemap.org/styles/liberty' } as never) as unknown as AnyMap
       }
+      let m: AnyMap
+      let mapbox = false
+      if (TOKEN) {
+        try {
+          const mb = (await import('mapbox-gl')).default
+          await import('mapbox-gl/dist/mapbox-gl.css')
+          mb.accessToken = TOKEN
+          m = new mb.Map({ ...opts, style: 'mapbox://styles/mapbox/streets-v12' } as never) as unknown as AnyMap
+          lib.current = mb as never
+          mapbox = true
+          const ok = await new Promise<boolean>((res) => {
+            const t = setTimeout(() => res(false), 9000)
+            m.on('load', () => (clearTimeout(t), res(true)))
+            m.on('error', (e: unknown) => {
+              const st = (e as { error?: { status?: number } })?.error?.status
+              if (st === 401 || st === 403) clearTimeout(t), res(false)
+            })
+          })
+          if (!ok) {
+            console.warn('Mapbox ne répond pas (jeton ?) : carte OpenStreetMap à la place')
+            m.remove()
+            if (gone) return
+            m = await free()
+            mapbox = false
+          }
+        } catch {
+          m = await free()
+          mapbox = false
+        }
+      } else m = await free()
       if (gone) return m.remove()
       map.current = m
-      m.on('load', () => {
+      const loaded = (m as unknown as { loaded?: () => boolean }).loaded?.() && mapbox
+      const onLoad = (fn: () => void) => (loaded ? fn() : m.on('load', fn))
+      onLoad(() => {
         m.addSource('districts', { type: 'geojson', data: geo })
         // real buildings in relief (OpenFreeMap: « openmaptiles », Mapbox streets: « composite »)
-        const bsrc = TOKEN ? 'composite' : 'openmaptiles'
-        const h = TOKEN ? ['coalesce', ['get', 'height'], 8] : ['coalesce', ['get', 'render_height'], 8]
+        const bsrc = mapbox ? 'composite' : 'openmaptiles'
+        const h = mapbox ? ['coalesce', ['get', 'height'], 8] : ['coalesce', ['get', 'render_height'], 8]
         try {
           m.addLayer({ id: 'b3d', type: 'fill-extrusion', source: bsrc, 'source-layer': 'building', minzoom: 12.5, paint: { 'fill-extrusion-color': '#efe3cf', 'fill-extrusion-height': h, 'fill-extrusion-opacity': 0.85 } })
         } catch {

@@ -109,7 +109,22 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
   const ds = DISTRICTS[place]
   const free = owners[0] === 'me'
   const [sel, setSel] = useState(free ? -1 : 0)
-  const [view, setView] = useState<'3d' | 'map'>('3d')
+  // the real map first (your choice is remembered)
+  const [view, setView0] = useState<'3d' | 'map'>(() => {
+    try {
+      return localStorage.getItem('babiland-mapview') === '3d' ? '3d' : 'map'
+    } catch {
+      return 'map'
+    }
+  })
+  const setView = (v: '3d' | 'map') => {
+    setView0(v)
+    try {
+      localStorage.setItem('babiland-mapview', v)
+    } catch {
+      /* private mode */
+    }
+  }
   const d = sel >= 0 ? ds[sel] : null
   const mine = sel >= 0 && owners[sel] === 'me'
   const price = sel === 0 ? BETRAY_PRICE : sel > 0 ? ATTACK_PRICE(place, sel) : 0
@@ -138,7 +153,7 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         {REAL_MAP.includes(place) && (
-          <button className="ml-auto mr-2 rounded-xl bg-white px-3 py-2 text-sm font-extrabold shadow" onClick={() => setView(view === '3d' ? 'map' : '3d')}>
+          <button className="ml-auto mr-2 rounded-xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-3 py-2 text-sm font-extrabold shadow" onClick={() => setView(view === '3d' ? 'map' : '3d')}>
             {view === '3d' ? 'Vraie carte' : 'Vue 3D'}
           </button>
         )}
