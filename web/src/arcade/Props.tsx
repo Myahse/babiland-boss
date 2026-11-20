@@ -6,6 +6,8 @@ import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import { DishModel } from './DishModels'
 import { drawIcon, Icon, type IconName } from './Icons'
+import { StationBody } from './LookModels'
+import { STATION_LEVELS } from './layout'
 
 // The arcade-idle look: chunky simple shapes, flat-shaded facets, bright saturated colours,
 // a slightly glossy "plastic toy" finish.
@@ -73,34 +75,14 @@ export function Station({ plates, progress, level = 1, dish, ...props }: { plate
   useFrame(({ clock }) => {
     if (fish.current) fish.current.position.y = 0.06 + Math.abs(Math.sin(clock.elapsedTime * 6)) * 0.02
   })
-  const per = [6, 8, 10][level - 1]
+  const per = Math.ceil(STATION_LEVELS[Math.min(STATION_LEVELS.length, level) - 1].max / 3)
   const cols = [0, 1, 2].map((c) => Math.max(0, Math.min(per, plates - c * per)))
   return (
     <group {...props}>
       {/* steam over the pan while it cooks (a full station stops) */}
       <Steam on={progress < 1} position={[-0.22, 0.98, -0.05]} />
-      <RoundedBox args={[1.2, 0.85, 0.9]} radius={0.05} position={[0, 0.425, 0]} castShadow receiveShadow>
-        <Flat color="#dfe3e8" />
-      </RoundedBox>
-      <mesh position={[0, 0.3, 0.452]}>
-        <planeGeometry args={[1.0, 0.45]} />
-        <Flat color="#e8432e" />
-      </mesh>
-      {[-0.3, 0, 0.3].map((x) => (
-        <mesh key={x} position={[x, 0.62, 0.46]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.04, 0.04, 0.04, 8]} />
-          <Flat color="#868e96" />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.87, 0]} receiveShadow>
-        <boxGeometry args={[1.22, 0.04, 0.92]} />
-        <Flat color="#495057" />
-      </mesh>
-      {/* back hood */}
-      <mesh position={[0, 1.15, -0.42]} castShadow>
-        <boxGeometry args={[1.2, 0.55, 0.08]} />
-        <Flat color="#ced4da" />
-      </mesh>
+      {/* the stove itself: its look changes with its level (LookModels) */}
+      <StationBody level={level} />
       <group position={[-0.25, 0.89, -0.05]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.24, 0.19, 0.08, 14]} />
@@ -140,7 +122,7 @@ export function Station({ plates, progress, level = 1, dish, ...props }: { plate
       </group>
       <ProgressRing progress={progress} position={[0, 1.85, 0]} />
       {dish && (
-        <mesh position={[0, 1.42, -0.37]}>
+        <mesh position={[0, 1.42, -0.33]}>
           <planeGeometry args={[1.1, 0.24]} />
           <meshBasicMaterial map={signTexture(DISHES[dish].label.toUpperCase(), '#2b1a12', '#ffe066', 384, 84)} toneMapped={false} />
         </mesh>
@@ -148,7 +130,7 @@ export function Station({ plates, progress, level = 1, dish, ...props }: { plate
       {/* level badge: green arrows like the upgrade signs of the shop games */}
       <mesh position={[0.55, 1.85, 0]}>
         <planeGeometry args={[0.62, 0.26]} />
-        <meshBasicMaterial map={signTexture(level >= 3 ? 'MAX' : `NIV ${level}`, level >= 3 ? '#e8432e' : '#2f9e44', '#fff', 256, 96)} toneMapped={false} />
+        <meshBasicMaterial map={signTexture(level >= STATION_LEVELS.length ? 'MAX' : `NIV ${level}`, level >= STATION_LEVELS.length ? '#e8432e' : '#2f9e44', '#fff', 256, 96)} toneMapped={false} />
       </mesh>
     </group>
   )

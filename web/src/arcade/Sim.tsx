@@ -16,6 +16,7 @@ import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx } from './items'
+import { tier } from './looks'
 import { Icon, type IconName } from './Icons'
 import { STAGE_ICONS } from './HudExtras'
 import { nightCustomers } from './daynight'
@@ -45,7 +46,7 @@ function padsShown(st: ReturnType<typeof useArcade.getState>): PadView[] {
     all.push({ key: `u:${u}`, u, price: PADS[u].price, left: PADS[u].price - (st.paid[u] ?? 0), pos: PADS[u].pos, label: padLabel(u, place), icon: PAD_INFO[u].icon, text: u === 'plat1' || u === 'plat2' ? `${padLabel(u, place)} : ${PAD_INFO[u].text}` : PAD_INFO[u].text })
   }
   STATIONS.forEach((_, i) => {
-    if (!(i === 0 || st.unlocks[(['pan2', 'plat1', 'plat2'] as Unlock[])[i - 1]]) || st.level[i] >= 3) return
+    if (!(i === 0 || st.unlocks[(['pan2', 'plat1', 'plat2'] as Unlock[])[i - 1]]) || st.level[i] >= STATION_LEVELS.length) return
     const price = UPGRADE_PRICES[st.level[i] - 1]
     all.push({ key: `up:${i}`, i, price, left: price - st.upPaid[i], pos: UPGRADE_PADS[i], label: `Plus vite · niv ${st.level[i] + 1}`, icon: UPGRADE_INFO.icon, text: UPGRADE_INFO.text })
   })
@@ -389,7 +390,7 @@ export function Sim({ name }: { name: string }) {
     const level = [...st.level]
     const upPaid = [...st.upPaid]
     for (const i of active) {
-      if (!shown.has(`up:${i}`) || level[i] >= 3 || money <= 0 || player.pos.distanceTo(UPGRADE_PADS[i]) > 0.6) continue
+      if (!shown.has(`up:${i}`) || level[i] >= STATION_LEVELS.length || money <= 0 || player.pos.distanceTo(UPGRADE_PADS[i]) > 0.6) continue
       const price = UPGRADE_PRICES[level[i] - 1]
       const give = Math.min(money, Math.ceil((price / 1.4) * dt), price - upPaid[i])
       money -= give
@@ -399,7 +400,7 @@ export function Sim({ name }: { name: string }) {
         level[i]++
         missionEvent('unlock')
         upPaid[i] = 0
-        popText(level[i] === 3 ? 'Poste au MAX !' : 'Poste plus rapide !')
+        popText(`Réchaud niveau ${level[i]}${level[i] >= STATION_LEVELS.length ? ' (MAX)' : ''} : ${tier(level[i]).name} !`)
         burst(STATIONS[i])
         sfx.unlock()
       }

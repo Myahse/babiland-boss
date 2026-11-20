@@ -67,13 +67,11 @@ export const UPGRADE_INFO = { icon: 'bolt' as IconName, text: 'Ce réchaud cuit 
 
 export const PLATE_PRICE = 500
 
-/** Station upgrades « Plus vite »: level 1 -> 2 -> 3 (MAX). Faster cooking and room for more plates. */
-export const STATION_LEVELS = [
-  { cook: 2.6, max: 18 },
-  { cook: 1.8, max: 24 },
-  { cook: 1.2, max: 30 },
-]
-export const UPGRADE_PRICES = [600, 1500] // to reach level 2, then level 3
+/** Station upgrades « Plus vite »: level 1 to 10 (MAX). Each level cooks faster, keeps more plates ready, and
+ *  changes the look of the stove (looks.ts: from the rusty drum to the palace range). */
+export const STATION_LEVELS = [2.6, 2.2, 1.9, 1.65, 1.45, 1.3, 1.15, 1.02, 0.9, 0.8].map((cook, i) => ({ cook, max: 18 + i * 3 }))
+/** the price to reach level 2, 3, … 10 */
+export const UPGRADE_PRICES = [600, 1500, 3000, 5000, 8000, 12000, 18000, 26000, 36000]
 export const UPGRADE_PADS = STATIONS.map((st) => V(st.x, 0.6)) // one under each station
 
 /** Staff spots */
