@@ -1,4 +1,5 @@
 import { RoundButton } from './HudButton'
+import { Icon } from './Icons'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { levelOf, PLACES } from './places'
@@ -95,7 +96,7 @@ export function OnlineButton() {
   if (!ONLINE_ON) return null
   return (
     <>
-      <RoundButton icon={token ? (live ? '🟢' : '🟠') : '🌐'} label={token ? `En ligne · ${presence.length}` : 'En ligne'} color="#0b7285" badge={tribute > 0 ? '💰' : null} onClick={() => setOpen(true)} />
+      <RoundButton icon={<Icon name="globe" size={28} />} label={token ? `${live ? 'En ligne' : 'Connexion…'} · ${presence.length}` : 'En ligne'} color={token && live ? '#2b8a3e' : '#0b7285'} badge={tribute > 0 ? '!' : null} onClick={() => setOpen(true)} />
       {open && createPortal(token ? <LivePanel onClose={() => setOpen(false)} /> : <AccountPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   )
@@ -228,7 +229,7 @@ function LivePanel({ onClose }: { onClose: () => void }) {
           <div key={r.name} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold ${r.name === name ? 'bg-[#fff3bf]' : 'bg-white'}`}>
             <span className="w-6 text-center font-extrabold">{['🥇', '🥈', '🥉'][i] ?? i + 1}</span>
             <span className="min-w-0 flex-1 truncate">
-              {r.name} {r.pass && '👑'}
+              {r.name} {r.pass && <Icon name="crown" size={14} className="inline align-[-2px]" />}
             </span>
             <span className="text-xs">🏙️ {r.districts}</span>
             <span className="text-xs">📣 {r.fame}</span>
@@ -264,7 +265,7 @@ export function DiamondButton() {
         onClick={() => setOpen(true)}
         aria-label="Boutique"
       >
-        <span className="text-lg">{pass ? '👑' : '💎'}</span>
+        <Icon name={pass ? 'crown' : 'gem'} size={24} />
         <span className="text-lg font-extrabold text-[#343a40]">{token ? diamonds : '+'}</span>
       </button>
       {open && createPortal(token ? <ShopPanel onClose={() => setOpen(false)} /> : <AccountPanel onClose={() => setOpen(false)} />, document.body)}

@@ -4,6 +4,7 @@ import { PLACES } from './places'
 import { useArcade } from './store'
 import { RealMap } from './RealMap'
 import { RoundButton } from './HudButton'
+import { Icon } from './Icons'
 import { Commune3D } from './Commune3D'
 import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf, DEFEND_TARGET, SHIELD, GUARD_MAX, GUARD_PRICE, GUARD_SLOW, hireGuards, keyOf, bossName, rivalOf } from './turf'
 
@@ -286,7 +287,7 @@ function DuelHud() {
 export function TurfButton() {
   return (
     <>
-      <RoundButton icon="🏙️" label="Quartiers" color="#c92a2a" onClick={() => useTurf.setState({ panel: true })} />
+      <RoundButton icon={<Icon name="city" size={28} />} label="Quartiers" color="#c92a2a" onClick={() => useTurf.setState({ panel: true })} />
     </>
   )
 }

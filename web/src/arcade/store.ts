@@ -130,7 +130,9 @@ export function buy(id: PlaceId) {
 }
 
 let popId = 0
-export const popText = (text: string) => useArcade.setState({ pop: { id: ++popId, text } })
+// the game's messages are written without emojis (they look generated): any left in a text is taken out
+const NO_EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu
+export const popText = (text: string) => useArcade.setState({ pop: { id: ++popId, text: text.replace(NO_EMOJI, '').replace(/\s+/g, ' ').trim() } })
 
 export const maxQueue = () => {
   const s = useArcade.getState()

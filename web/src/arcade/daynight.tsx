@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { Icon } from './Icons'
 
 // Day and night. A day of the game lasts DAY_MINUTES real minutes and is worked out from the real clock, so
 // every player (online too) sees the same hour at the same time — like Babi Life « à l'heure d'Abidjan ».
@@ -120,16 +121,16 @@ export function GameClock() {
     return () => clearInterval(t)
   }, [])
   const n = nightOf(h)
-  const icon = h >= 21 || h < 5 ? '🌙' : h < 8 ? '🌅' : h < 17 ? '☀️' : h < 19.5 ? '🌇' : '🌆'
+  const moon = h >= 19.5 || h < 6
   const hh = Math.floor(h)
   const mm = Math.floor(((h - hh) * 60) / 10) * 10
   return (
     <div className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-extrabold shadow ${n > 0.5 ? 'bg-[#1b2440]/85 text-[#ffe066]' : 'bg-white/85 text-[#2b1a12]'}`}>
-      <span>{icon}</span>
+      <Icon name={moon ? 'moon' : 'sun'} size={15} />
       <span>
         {String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}
       </span>
-      {n > 0.5 && <span className="opacity-90">· heure des maquis 🔥</span>}
+      {n > 0.5 && <span className="opacity-90">· heure des maquis</span>}
     </div>
   )
 }

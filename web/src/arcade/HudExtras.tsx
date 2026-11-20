@@ -1,4 +1,5 @@
 import { RoundButton } from './HudButton'
+import { Icon, type IconName } from './Icons'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DISHES, placeDishes, PLACES } from './places'
@@ -25,7 +26,7 @@ export function MissionsButton() {
   return (
     <>
       <RoundButton
-        icon="🎯"
+        icon={<Icon name="target" size={28} />}
         label="Missions"
         color="#7048e8"
         badge={ready || null}
@@ -132,6 +133,9 @@ export function BulkBanner() {
 }
 
 /** Who knows you here, and how far to the next level (under the place's name). */
+/** the picture of each stage of a place (growth.ts) */
+export const STAGE_ICONS: IconName[] = ['stool', 'house', 'cloche', 'crown']
+
 export function FameChip({ level }: { level: number }) {
   const place = useArcade((s) => s.current)
   const fame = useArcade((s) => s.fame)
@@ -144,16 +148,22 @@ export function FameChip({ level }: { level: number }) {
   return (
     <div className="w-48 rounded-2xl bg-white/85 px-2.5 py-1.5 shadow backdrop-blur-sm">
       <div className="flex items-baseline justify-between gap-1 text-[12px] leading-tight font-extrabold">
-        <span className="truncate">
-          {STAGES[stage].icon} {PLACES[place].name}
+        <span className="flex min-w-0 items-center gap-1 truncate">
+          <Icon name={STAGE_ICONS[stage]} size={16} /> {PLACES[place].name}
         </span>
         <span className="shrink-0 rounded-full bg-[#e8432e] px-1.5 text-[10px] text-white">niv {level}</span>
       </div>
-      <div className="mt-0.5 truncate text-[10.5px] leading-tight font-bold opacity-80">📣 {fameText(place, lv)}</div>
+      <div className="mt-0.5 flex items-center gap-1 truncate text-[10.5px] leading-tight font-bold opacity-80">
+        <Icon name="megaphone" size={13} /> {fameText(place, lv)}
+      </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
         <div className="h-full rounded-full bg-gradient-to-r from-[#ffa94d] to-[#f76707] transition-all" style={{ width: `${k * 100}%` }} />
       </div>
-      {boss && <div className="mt-1 truncate text-[10px] leading-tight font-extrabold text-[#7048e8]">😎 {boss} prend 20 %</div>}
+      {boss && (
+        <div className="mt-1 flex items-center gap-1 truncate text-[10px] leading-tight font-extrabold text-[#7048e8]">
+          <Icon name="boss" size={13} /> {boss} prend 20 %
+        </div>
+      )}
     </div>
   )
 }
@@ -212,7 +222,7 @@ export function AmenagerButton() {
   if (stage < 1) return null
   return (
     <>
-      <RoundButton icon="🛠️" label="Aménager" color="#e8590c" onClick={() => setOpen(true)} />
+      <RoundButton icon={<Icon name="tools" size={28} />} label="Aménager" color="#e8590c" onClick={() => setOpen(true)} />
       {open && createPortal(<AmenagerPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   )

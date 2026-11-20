@@ -60,7 +60,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
         for (let k = 0; k < Math.min(8, Math.ceil(v / 150)); k++) fly('cash', up(SIDE_POS[i], 1.0), up(player.pos, 1.0), k * 0.05, 0.35)
         money += v
         cash[i] -= v
-        popText(`${SIDE[i].icon} +${v} FCFA`)
+        popText(`+${v} FCFA`)
         missionEvent('stand', v)
         sfx.cash()
         changed = true
@@ -99,11 +99,11 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
           {/* a stand's pad shows once your level opens it (a locked price on the floor only confuses) */}
           {side[i] < SIDE_MAX && stage >= 1 && level >= b.level && (
             <>
-              <Pad label={side[i] ? `${b.short} · niv ${side[i] + 1}` : b.short} icon={b.icon} price={sidePrice(i, side[i])} left={sidePrice(i, side[i]) - sidePaid[i]} position={SIDE_PAD[i]} />
+              <Pad label={side[i] ? `${b.short} · niv ${side[i] + 1}` : b.short} icon={b.art} price={sidePrice(i, side[i])} left={sidePrice(i, side[i]) - sidePaid[i]} position={SIDE_PAD[i]} />
               <PadHint
                 at={SIDE_PAD[i]}
                 who={player}
-                icon={b.icon}
+                icon={b.art}
                 title={side[i] ? `${b.name} : niveau ${side[i] + 1}` : b.name}
                 text={side[i] ? 'Le stand vend plus vite et garde plus d’argent.' : 'Un stand sur le trottoir avec sa vendeuse : il vend tout seul aux passants, viens ramasser l’argent.'}
                 price={sidePrice(i, side[i]) - sidePaid[i]}

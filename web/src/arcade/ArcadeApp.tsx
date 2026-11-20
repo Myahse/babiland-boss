@@ -21,6 +21,7 @@ import { AmenagerButton, BulkBanner, FameChip, MissionsButton, NewsLayer } from 
 import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
 import { Intro, StoryLayer } from './Story'
 import { RoundButton } from './HudButton'
+import { Icon } from './Icons'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -169,7 +170,7 @@ function Hud() {
           }}
           aria-label={sound ? 'Couper le son' : 'Remettre le son'}
         >
-          {sound ? '🔊' : '🔇'}
+          <Icon name={sound ? 'soundOn' : 'soundOff'} size={28} />
         </button>
         {/* level gauge: customers served toward the next level */}
         <div className="relative flex min-w-0 flex-1 items-center">
@@ -180,18 +181,18 @@ function Hud() {
           <div className="absolute inset-0 grid place-items-center pl-8 text-lg font-extrabold text-white" style={{ textShadow: '1px 1px 0 #7a1a10' }}>
             {served % goal} / {goal}
           </div>
-          <div className="z-10 -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full border-4 border-white bg-[#f3e3c3] text-xl shadow-md">🍛</div>
+          <div className="z-10 -ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full border-4 border-white bg-[#f3e3c3] text-xl shadow-md"><Icon name="plate" size={26} /></div>
         </div>
         <DiamondButton />
         {/* money */}
         <div key={money} className="pop flex shrink-0 items-center gap-1.5 rounded-xl bg-white py-1 pr-3 pl-1 shadow-[0_4px_0_rgba(0,0,0,.2)]">
-          <span className="grid h-9 w-12 place-items-center rounded-md bg-[#69db3c] text-lg">💵</span>
+          <span className="grid h-9 w-11 place-items-center"><Icon name="bill" size={32} /></span>
           <span className="text-2xl font-extrabold text-[#343a40]">{money >= 10000 ? `${(money / 1000).toFixed(1)}K` : money}</span>
         </div>
       </div>
       <div className="absolute top-[72px] left-3 flex flex-col items-start gap-1.5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <FameChip level={level} />
-        <RoundButton icon="🗺️" label="Carte" color="#1c7ed6" onClick={() => setMap(true)} />
+        <RoundButton icon={<Icon name="map" size={28} />} label="Carte" color="#1c7ed6" onClick={() => setMap(true)} />
         <TurfButton />
         <AmenagerButton />
         <MissionsButton />
@@ -210,7 +211,7 @@ function Hud() {
       {map && <MapPanel level={level} onClose={() => setMap(false)} />}
       {carried > 0 && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-sm font-extrabold shadow">
-          🍛 {carried}
+          <Icon name="plate" size={16} className="inline align-[-3px]" /> {carried}
         </div>
       )}
       {pop && (

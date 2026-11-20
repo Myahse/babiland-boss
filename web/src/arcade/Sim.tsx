@@ -16,6 +16,8 @@ import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx } from './items'
+import { Icon, type IconName } from './Icons'
+import { STAGE_ICONS } from './HudExtras'
 import { nightCustomers } from './daynight'
 import { saleBoost } from './online'
 import { others, playerWho } from './profile'
@@ -33,7 +35,7 @@ const padOpen = (u: Unlock, stage: number) => stage >= 1 || CORNER_PADS.includes
 /** The pads you can see now: only the next few things to buy (the cheapest first, and any you started paying),
  * so the floor isn't covered with prices. The same list decides what you can pay on. */
 const SHOWN = 3
-type PadView = { key: string; u?: Unlock; i?: number; price: number; left: number; pos: THREE.Vector3; label: string; icon: string; text: string }
+type PadView = { key: string; u?: Unlock; i?: number; price: number; left: number; pos: THREE.Vector3; label: string; icon: IconName; text: string }
 function padsShown(st: ReturnType<typeof useArcade.getState>): PadView[] {
   const place = PLACES[st.current]
   const all: PadView[] = []
@@ -774,7 +776,7 @@ function GrowPad({ stage, fame, paid }: { stage: number; fame: number; paid: num
   })
   return (
     <group position={GROW_PAD}>
-      <Pad label={ok ? `${next.icon} Agrandir : ${next.name}` : `🔒 ${next.name}`} price={price} left={price - paid} />
+      <Pad label={`Agrandir : ${next.name}`} icon={STAGE_ICONS[stage + 1]} price={price} left={price - paid} />
       {ok && (
         <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
           <ringGeometry args={[0.8, 0.9, 6]} />
@@ -783,7 +785,9 @@ function GrowPad({ stage, fame, paid }: { stage: number; fame: number; paid: num
       )}
       {ok && (
         <Html position={[0, 1.1, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
-          <div className="vip-glow rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffe066] px-2.5 py-0.5 text-xs font-extrabold whitespace-nowrap shadow-lg">⬆️ Agrandir !</div>
+          <div className="vip-glow flex items-center gap-1 rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffe066] px-2.5 py-0.5 text-xs font-extrabold whitespace-nowrap shadow-lg">
+            <Icon name="up" size={16} /> Agrandir !
+          </div>
         </Html>
       )}
     </group>
@@ -814,7 +818,7 @@ function Crate({ dish, got, want }: { dish: Dish; got: number; want: number }) {
       <PlateStack count={Math.min(got, 12)} dishes={Array(Math.min(got, 12)).fill(dish)} position={[0, 0.46, 0]} />
       <Html position={[0, 1.55, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
         <div className="pop flex items-center gap-1 rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffe066] px-2.5 py-0.5 text-lg font-extrabold whitespace-nowrap shadow-lg">
-          📦 {DISHES[dish].icon} {got}/{want}
+          <Icon name="box" size={20} /> {got}/{want}
         </div>
       </Html>
       <ToonPerson who="koffi" moving={false} position={[0.75, 0, 0.55]} rotation={[0, -2.2, 0]} scale={1.1} />
@@ -855,7 +859,6 @@ function Wants({ dish, want, got }: { dish: Dish; want: number; got: number }) {
   return (
     <Html position={[0, 1.95, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
       <div className="pop flex items-center gap-1.5 rounded-2xl border-[3px] border-[var(--color-ink)] bg-white px-3 py-1 text-xl font-extrabold whitespace-nowrap shadow-lg">
-        <span>{DISHES[dish].icon}</span>
         <span className="text-xs leading-none">{DISHES[dish].label}</span>
         <span>
           {got}/{want}

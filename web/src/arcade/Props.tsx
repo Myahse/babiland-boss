@@ -5,6 +5,7 @@ import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import { DishModel } from './DishModels'
+import { drawIcon, Icon, type IconName } from './Icons'
 
 // The arcade-idle look: chunky simple shapes, flat-shaded facets, bright saturated colours,
 // a slightly glossy "plastic toy" finish.
@@ -258,7 +259,7 @@ export function Steam({ on, ...props }: { on: boolean } & ThreeElements['group']
   )
 }
 
-function padTexture(label: string, left: number, icon = '') {
+function padTexture(label: string, left: number, icon?: IconName) {
   const c = document.createElement('canvas')
   c.width = c.height = 256
   const g = c.getContext('2d')!
@@ -283,10 +284,7 @@ function padTexture(label: string, left: number, icon = '') {
   g.textAlign = 'center'
   g.textBaseline = 'middle'
   // what it is: a big picture, then the price, then its name in big letters
-  if (icon) {
-    g.font = '64px sans-serif'
-    g.fillText(icon, 128, 72)
-  }
+  if (icon) drawIcon(g, icon, 128, 70, 76)
   g.fillStyle = '#ffffff'
   g.strokeStyle = '#a0612a'
   g.lineWidth = 8
@@ -306,7 +304,7 @@ function padTexture(label: string, left: number, icon = '') {
 }
 
 /** An unlock / upgrade pad on the floor, like in the shop games: price, a bill, the name. It fills while you stand on it. */
-export function Pad({ label, left, price, icon = '', ...props }: { label: string; left: number; price: number; icon?: string } & ThreeElements['group']) {
+export function Pad({ label, left, price, icon, ...props }: { label: string; left: number; price: number; icon?: IconName } & ThreeElements['group']) {
   const tex = useMemo(() => padTexture(label, left, icon), [label, left, icon])
   const done = Math.max(0.001, 1 - left / price)
   return (
@@ -423,7 +421,7 @@ function PalmLeaves({ children }: { children: React.ReactNode }) {
 
 
 /** The bubble over a pad when you walk up to it: what it is, what it does. */
-export function PadHint({ at, who, icon, title, text, price }: { at: THREE.Vector3; who: { pos: THREE.Vector3 }; icon: string; title: string; text: string; price?: number }) {
+export function PadHint({ at, who, icon, title, text, price }: { at: THREE.Vector3; who: { pos: THREE.Vector3 }; icon: IconName; title: string; text: string; price?: number }) {
   const [near, setNear] = useState(false)
   useFrame(() => {
     const n = who.pos.distanceTo(at) < 1.25
@@ -433,8 +431,8 @@ export function PadHint({ at, who, icon, title, text, price }: { at: THREE.Vecto
   return (
     <Html position={[at.x, 1.25, at.z]} center zIndexRange={[15, 0]} style={{ pointerEvents: 'none' }}>
       <div className="pop w-52 rounded-2xl border-[3px] border-[var(--color-ink)] bg-white px-2.5 py-1.5 text-center shadow-lg">
-        <div className="text-sm leading-tight font-extrabold">
-          {icon} {title}
+        <div className="flex items-center justify-center gap-1 text-sm leading-tight font-extrabold">
+          <Icon name={icon} size={18} /> {title}
         </div>
         <div className="mt-0.5 text-[11px] leading-snug font-semibold">{text}</div>
         {price !== undefined && <div className="mt-0.5 text-[11px] font-extrabold text-[#2b8a3e]">Reste dessus pour payer · {price.toLocaleString('fr-FR')} F</div>}
