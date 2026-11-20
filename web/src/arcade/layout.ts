@@ -119,12 +119,38 @@ export const FLOOR1 = 3.02
 /** the four tables upstairs, and their eight seats (seat i is at table floor(i / 2)) */
 export const UP_TABLES = [-4.1, -1.6, 0.5, 2.8].map((x) => new THREE.Vector3(x, FLOOR1, -2.85))
 export const UP_SEATS = UP_TABLES.flatMap((t) => [t.clone().add(V(-0.62, 0)), t.clone().add(V(0.62, 0))])
-/** all the tables and seats: the 3 of the ground terrace first, then the 4 upstairs (from the restaurant on) */
-export const ALL_TABLES = [...TABLES, ...UP_TABLES]
-export const ALL_SEATS = [...SEATS, ...UP_SEATS]
-export const isUp = (seat: number) => seat >= SEATS.length
+// ------------------------------------------------------------------ the extension (« Grand restaurant »)
+/** the air-conditioned room built on the empty lot left of the maquis, past its side wall: 4 tables in 2 rows */
+export const EXT = { minX: -11.6, maxX: -6.45, minZ: -1.7, maxZ: 4.3 }
+export const EXT_TABLES = [V(-10.4, -0.1), V(-8.2, -0.1), V(-10.4, 2.4), V(-8.2, 2.4)]
+export const EXT_SEATS = EXT_TABLES.flatMap((t) => [t.clone().add(V(-0.62, 0)), t.clone().add(V(0.62, 0))])
+/** the way in: along the front of the terrace (between the tables and the stands), through the opening at the end
+ *  of the side wall, then the aisle inside the room along that wall */
+export const EXT_FRONT_Z = 3.75
+export const EXT_AISLE_X = -6.95
+export const EXT_TABLE_SOLIDS = EXT_TABLES.map((c) => ({ c, hx: 0.95, hz: 0.45 }))
+/** where the player can walk: the plot, the opening, the room (only once it is built) */
+export const EXT_WALK = [
+  { minX: -7.3, maxX: -5.5, minZ: 3.2, maxZ: 4.2 },
+  { minX: -11.35, maxX: -6.75, minZ: -1.45, maxZ: 4.2 },
+]
+
+/** all the tables and seats: the 3 of the ground terrace first, then the 4 upstairs (from the restaurant on), then
+ *  the 4 of the extension (from the grand restaurant on) */
+export const ALL_TABLES = [...TABLES, ...UP_TABLES, ...EXT_TABLES]
+export const ALL_SEATS = [...SEATS, ...UP_SEATS, ...EXT_SEATS]
+const FIRST_EXT = SEATS.length + UP_SEATS.length
+export const isUp = (seat: number) => seat >= SEATS.length && seat < FIRST_EXT
+export const isExt = (seat: number) => seat >= FIRST_EXT
+/** table kinds: 0 the terrace downstairs, 1 upstairs, 2 the extension */
+export const tableZone = (t: number) => (t < TABLES.length ? 0 : t < TABLES.length + UP_TABLES.length ? 1 : 2)
 /** where you stand to sit down / get up: in front of the chair, on the side of the street */
-export const approach = (i: number) => (isUp(i) ? new THREE.Vector3(ALL_SEATS[i].x, FLOOR1, -2.25) : seatApproach(i))
+export const approach = (i: number) => (isUp(i) ? new THREE.Vector3(ALL_SEATS[i].x, FLOOR1, -2.25) : isExt(i) ? V(ALL_SEATS[i].x, ALL_TABLES[Math.floor(i / 2)].z + 0.85) : seatApproach(i))
+/** the way from the front of the terrace to an extension seat (and back, reversed) */
+export const extPath = (i: number) => {
+  const a = approach(i)
+  return [V(-5.7, EXT_FRONT_Z), V(EXT_AISLE_X, EXT_FRONT_Z), V(EXT_AISLE_X, a.z), a, ALL_SEATS[i].clone()]
+}
 /** the stairs, along the left wall: you start climbing at the foot (STAIR_IN), you arrive at the top (STAIR_TOP) */
 export const STAIR_X = -5.3
 export const STAIR_IN = V(STAIR_X, 1.65)

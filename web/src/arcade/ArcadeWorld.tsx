@@ -5,6 +5,7 @@ import { Flat, Palm } from './Props'
 import { floorTexture, tier } from './looks'
 import { laterite } from './StreetDecor'
 import { DayNight } from './daynight'
+import { Extension } from './Extension'
 
 // The street around the shop, kept simple and bright so the gameplay reads at a glance.
 
@@ -40,16 +41,18 @@ export function ArcadeWorld({ stage = 1, room = 3 }: { stage?: number; room?: nu
         <meshStandardMaterial color="#d6b98c" roughness={0.95} />
       </mesh>
       {/* low side wall with a red trim (the open side faces the camera) */}
-      <mesh position={[-6.25, 0.8, 1.3]} castShadow receiveShadow>
-        <boxGeometry args={[0.3, 1.6, 7.8]} />
+      {/* (with the extension, the wall stops before the front: the way in to the air-conditioned room) */}
+      <mesh position={[-6.25, 0.8, stage >= 3 ? 0.25 : 1.3]} castShadow receiveShadow>
+        <boxGeometry args={[0.3, 1.6, stage >= 3 ? 5.7 : 7.8]} />
         <Flat color={room >= 2 ? tier(room).body : '#ffe8b0'} />
       </mesh>
-      <mesh position={[-6.25, 1.63, 1.3]}>
-        <boxGeometry args={[0.36, 0.1, 7.86]} />
+      <mesh position={[-6.25, 1.63, stage >= 3 ? 0.25 : 1.3]}>
+        <boxGeometry args={[0.36, 0.1, stage >= 3 ? 5.76 : 7.86]} />
         <Flat color={room >= 2 ? tier(room).trim : '#e8432e'} />
       </mesh>
-      <Palm position={[-6.8, 0, -1.8]} />
-      <Palm position={[-6.6, 0, 4.4]} s={1.1} />
+      {stage < 3 && <Palm position={[-6.8, 0, -1.8]} />}
+      {stage < 3 && <Palm position={[-6.6, 0, 4.4]} s={1.1} />}
+      <Extension stage={stage} room={room} />
       <Palm position={[5.6, 0, -1.6]} s={0.85} />
       {/* neighbours on both sides of the maquis */}
       {SHOPS.map((s, i) => (

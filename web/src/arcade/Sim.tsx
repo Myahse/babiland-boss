@@ -9,7 +9,7 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { COUNTER_BACK, ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { EXIT, EXT_AISLE_X, EXT_FRONT_Z, EXT_TABLES, EXT_TABLE_SOLIDS, EXT_WALK, extPath, isExt, tableZone, COUNTER_BACK, ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
@@ -101,13 +101,14 @@ const TERRACE_LOOK = new THREE.Vector3(-0.5, 3.1, -3.3)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
 /** where a customer can ask to sit (« Je veux m'asseoir… »): you take them there yourself for a big tip */
-export type Wish = 'haut' | 'bas' | 'seul' | 'monde' | 'deco'
+export type Wish = 'haut' | 'bas' | 'seul' | 'monde' | 'deco' | 'salle'
 export const WISHES: Record<Wish, { text: string; icon: IconName }> = {
   haut: { text: 'En haut, sur la terrasse', icon: 'up' },
   bas: { text: 'En bas, dehors', icon: 'chair' },
   seul: { text: 'Une table pour moi seul', icon: 'person' },
   monde: { text: 'À côté de quelqu’un', icon: 'hand' },
   deco: { text: 'Près d’une décoration', icon: 'leaves' },
+  salle: { text: 'Dans la salle climatisée', icon: 'fan' },
 }
 const ASK_WAIT = 16 // seconds they wait to be taken to a table, then they find a place themselves
 const LEAD_TIME = 35 // seconds they follow you before giving up and sitting anywhere
@@ -233,6 +234,7 @@ export function Sim({ name }: { name: string }) {
       ...([s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2] as (true | undefined)[]).flatMap((on, i) => (on ? [{ c: STATIONS[i + 1], hx: 0.6, hz: 0.45 }] : [])),
       ...(s.unlocks.table ? TABLE_SOLIDS : []),
       ...(s.stage >= 2 ? [STAIR_SOLID] : []),
+      ...(s.stage >= 3 ? EXT_TABLE_SOLIDS : []),
     ],
     [s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2, s.unlocks.table, s.stage],
   )
@@ -303,8 +305,21 @@ export function Sim({ name }: { name: string }) {
     } else if (player.moving) {
       const p = player.pos
       const B = player.floor ? UP_BOUNDS : BOUNDS
-      p.x = THREE.MathUtils.clamp(p.x + v.x * dt, B.minX, B.maxX)
-      p.z = THREE.MathUtils.clamp(p.z + v.z * dt, B.minZ, B.maxZ)
+      // downstairs with the extension: the plot, the opening at the end of the side wall, the room
+      const rects = !player.floor && st.stage >= 3 ? [B, ...EXT_WALK] : [B]
+      const nx = p.x + v.x * dt
+      const nz = p.z + v.z * dt
+      let best = Infinity
+      for (const r of rects) {
+        const cx = THREE.MathUtils.clamp(nx, r.minX, r.maxX)
+        const cz = THREE.MathUtils.clamp(nz, r.minZ, r.maxZ)
+        const d = Math.hypot(cx - nx, cz - nz)
+        if (d < best) {
+          best = d
+          p.x = cx
+          p.z = cz
+        }
+      }
       p.y = player.floor ? FLOOR1 : 0
       for (const b of player.floor ? [] : solids) {
         const dx = p.x - b.c.x
@@ -562,12 +577,12 @@ export function Sim({ name }: { name: string }) {
     /** paid: they go and sit on the terrace if a seat is free, otherwise they take it away */
     const taken0 = () => new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
     /** can table `t` take one more person, and is it open here */
-    const tableOpen = (t: number, taken: Set<number>) => (t >= TABLES.length ? st.stage >= 2 : !!unlocks.table) && (!taken.has(2 * t) || !taken.has(2 * t + 1))
+    const tableOpen = (t: number, taken: Set<number>) => (tableZone(t) === 2 ? st.stage >= 3 : tableZone(t) === 1 ? st.stage >= 2 : !!unlocks.table) && (!taken.has(2 * t) || !taken.has(2 * t + 1))
     const sitters = (t: number, taken: Set<number>) => (taken.has(2 * t) ? 1 : 0) + (taken.has(2 * t + 1) ? 1 : 0)
     const nearDecor = (t: number) => t < TABLES.length && st.decor.some((d) => Math.hypot(d.x - ALL_TABLES[t].x, d.z - ALL_TABLES[t].z) < 2.4)
     /** does table `t` give the customer what they asked for */
     const fits = (wish: Wish, t: number, taken: Set<number>) =>
-      wish === 'haut' ? t >= TABLES.length : wish === 'bas' ? t < TABLES.length : wish === 'seul' ? sitters(t, taken) === 0 : wish === 'monde' ? sitters(t, taken) === 1 : nearDecor(t)
+      wish === 'haut' ? tableZone(t) === 1 : wish === 'bas' ? tableZone(t) === 0 : wish === 'salle' ? tableZone(t) === 2 : wish === 'seul' ? sitters(t, taken) === 0 : wish === 'monde' ? sitters(t, taken) === 1 : nearDecor(t)
     /** sit `c` at table `t` (a free seat of it), from where they stand */
     const sitAt = (c: Cust, t: number, taken: Set<number>) => {
       const seat = taken.has(2 * t) ? 2 * t + 1 : 2 * t
@@ -578,14 +593,14 @@ export function Sim({ name }: { name: string }) {
       c.follow = false
       c.trail = undefined
       const a = approach(seat)
-      c.path = isUp(seat) ? [a, ALL_SEATS[seat].clone()] : [V(c.pos.x, a.z), a, ALL_SEATS[seat].clone()]
+      c.path = isUp(seat) || isExt(seat) ? [a, ALL_SEATS[seat].clone()] : [V(c.pos.x, a.z), a, ALL_SEATS[seat].clone()]
     }
     const leavePaid = (c: Cust, noAsk = false) => {
       c.moving = true
       const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
       // some customers want a particular place (from the time there are two kinds of tables, or decorations):
       // they wait beside the counter; take them there yourself (walk up to them, they follow you)
-      if (!c.vip && !noAsk && Math.random() < 0.4) {
+      if (!c.vip && !noAsk && Math.random() < 0.4 && !custs.current.some((o) => o.state === 'ask')) {
         const open = ALL_TABLES.map((_, t) => t).filter((t) => tableOpen(t, taken))
         const can = (Object.keys(WISHES) as Wish[]).filter((w) => {
           const ok = open.filter((t) => fits(w, t, taken))
@@ -605,10 +620,11 @@ export function Sim({ name }: { name: string }) {
       }
       // the free seats: the terrace downstairs once it is open, and upstairs from the restaurant on (some like it
       // up there: half of them go up when there is room)
-      const freeSeats = ALL_SEATS.map((_, i) => i).filter((i) => !taken.has(i) && (isUp(i) ? st.stage >= 2 : unlocks.table))
-      const ups = freeSeats.filter(isUp)
-      const downs = freeSeats.filter((i) => !isUp(i))
-      const free = ups.length && (!downs.length || Math.random() < 0.5) ? ups[Math.floor(Math.random() * ups.length)] : downs.length ? downs[0] : -1
+      const freeSeats = ALL_SEATS.map((_, i) => i).filter((i) => !taken.has(i) && (isExt(i) ? st.stage >= 3 : isUp(i) ? st.stage >= 2 : unlocks.table))
+      // one of the open places at random (downstairs, upstairs, the extension), then a seat there
+      const zones = [freeSeats.filter((i) => !isUp(i) && !isExt(i)), freeSeats.filter(isUp), freeSeats.filter(isExt)].filter((z) => z.length)
+      const zone = zones.length ? zones[Math.floor(Math.random() * zones.length)] : []
+      const free = zone.length ? (isUp(zone[0]) || isExt(zone[0]) ? zone[Math.floor(Math.random() * zone.length)] : zone[0]) : -1
       // walk along the aisle behind the tables, then step into the chair (never through a table)
       const aisle = (z: number) => [V(c.pos.x - 0.6, z)]
       if (free >= 0) {
@@ -617,7 +633,11 @@ export function Sim({ name }: { name: string }) {
         c.eat = 7
         const a = approach(free)
         // upstairs: to the foot of the stairs, up the steps, along the terrace to the chair
-        c.path = isUp(free) ? [V(c.pos.x - 0.6, 1.65), STAIR_IN.clone(), STAIR_FOOT.clone(), STAIR_TOP.clone(), a, ALL_SEATS[free].clone()] : [...aisle(a.z), a, ALL_SEATS[free].clone()]
+        c.path = isUp(free)
+          ? [V(c.pos.x - 0.6, 1.65), STAIR_IN.clone(), STAIR_FOOT.clone(), STAIR_TOP.clone(), a, ALL_SEATS[free].clone()]
+          : isExt(free)
+            ? [...aisle(EXT_FRONT_Z), ...extPath(free)]
+            : [...aisle(a.z), a, ALL_SEATS[free].clone()]
       } else {
         c.state = 'out'
         c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
@@ -785,7 +805,7 @@ export function Sim({ name }: { name: string }) {
       const taken = taken0()
       if (pFloor >= 0 && sameFloor && flatTo(c.pos, player.pos) < 2.6) {
         for (let t = 0; t < ALL_TABLES.length; t++) {
-          if ((t >= TABLES.length) !== (pFloor === 1) || !tableOpen(t, taken) || flatTo(ALL_TABLES[t], player.pos) > 1.45) continue
+          if ((tableZone(t) === 1) !== (pFloor === 1) || !tableOpen(t, taken) || flatTo(ALL_TABLES[t], player.pos) > 1.45) continue
           const good = fits(c.wish!, t, taken)
           sitAt(c, t, taken)
           const at = c.pos.clone().add(new THREE.Vector3(0, 2.2, 0))
@@ -862,7 +882,7 @@ export function Sim({ name }: { name: string }) {
         // they leave a tip on the table
         tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips * (c.tip ?? 1))
         const a = approach(c.seat)
-        c.path = isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, 1.65), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
+        c.path = isExt(c.seat) ? [a, V(EXT_AISLE_X, a.z), V(EXT_AISLE_X, 5.6), EXIT.clone()] : isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, 1.65), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
         changed = true
         bump()
       }
@@ -1037,6 +1057,11 @@ export function Sim({ name }: { name: string }) {
         TABLES.map((t, i) => (
           <SquareTable key={i} position={t.toArray()} look={s.style.terrace} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
+      {s.stage >= 3 &&
+        EXT_TABLES.map((t, i) => {
+          const k = ALL_TABLES.length - EXT_TABLES.length + i
+          return <SquareTable key={`x${i}`} position={t.toArray()} look={Math.max(6, s.style.room)} cash={s.tableCash[k] ?? 0} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === k).length} />
+        })}
       {STAGES[s.stage + 1] && fameLevel(s.fame) >= STAGES[s.stage + 1].fame && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
       <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} outfit={myOutfit} outfitKind="boss" />
       {s.unlocks.serveur && <Mover who={others(["yao"])[0]} obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} outfit={s.style.team} />}
@@ -1232,7 +1257,10 @@ function Follow() {
     const out = cam === 'dehors'
     const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom * (out ? 1.65 : 1)
     const follow = out ? 0.9 : 0.7
-    const t = new THREE.Vector3(player.pos.x * follow, player.pos.y * 0.85, player.pos.z * follow)
+    // in the extension (left of the side wall) the camera follows you fully, or you would leave the screen
+    const px = player.pos.x
+    const tx = px < -6 ? -6 * follow + (px + 6) : px * follow
+    const t = new THREE.Vector3(tx, player.pos.y * 0.85, player.pos.z * follow)
     camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), k)
     look.lerp(t, k)
     camera.lookAt(look)
