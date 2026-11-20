@@ -14,7 +14,7 @@ import { TurfButton, TurfLayer } from './TurfUI'
 import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
-import { BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
+import { AmenagerButton, BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
 import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
 import { Intro, StoryLayer } from './Story'
 
@@ -197,6 +197,7 @@ function Hud() {
           🗺️ Carte
         </button>
         <TurfButton />
+        <AmenagerButton />
         <MissionsButton />
         <OnlineButton />
       </div>

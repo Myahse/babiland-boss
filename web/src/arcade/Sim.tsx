@@ -15,9 +15,11 @@ import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
+import { fx } from './items'
 import { saleBoost } from './online'
 import { others, playerWho } from './profile'
 import { StoryArrow } from './Story'
+import { Staff } from './Staff'
 import { useStory } from './story'
 import { DISHES, placeDishes, PLACES, type Dish, type Place } from './places'
 import { missionEvent } from './missions'
@@ -66,19 +68,19 @@ type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state:
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
-const stationFront = (i: number) => STATIONS[i].clone().add(V(0.55, 1.0))
-const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
+export const stationFront = (i: number) => STATIONS[i].clone().add(V(0.55, 1.0))
+export const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
 const up = (v: THREE.Vector3, y: number) => v.clone().add(new THREE.Vector3(0, y, 0))
-const TRAY = (i: number) => STATIONS[i].clone().add(new THREE.Vector3(0, 0.5, 1.0))
-const COUNTER_TOP = (k = 0) => COUNTER.clone().add(new THREE.Vector3(-0.15 + k * 0.36, 1.15, 0))
+export const TRAY = (i: number) => STATIONS[i].clone().add(new THREE.Vector3(0, 0.5, 1.0))
+export const COUNTER_TOP = (k = 0) => COUNTER.clone().add(new THREE.Vector3(-0.15 + k * 0.36, 1.15, 0))
 /** top of the stack in someone's hands (moves with them) */
-const hands = (o: { pos: THREE.Vector3; rot: number }, n: () => number) => () =>
+export const hands = (o: { pos: THREE.Vector3; rot: number }, n: () => number) => () =>
   o.pos.clone().add(new THREE.Vector3(Math.sin(o.rot) * 0.45, 1.05 + n() * 0.075, Math.cos(o.rot) * 0.45))
 
 // everyone the simulation walks (customers, server) keeps a velocity: they speed up, slow down as they
 // arrive, and round the corners of their path instead of moving like robots
 const vels = new WeakMap<THREE.Vector3, THREE.Vector3>()
-function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number, stopAtEnd = true) {
+export function step(pos: THREE.Vector3, to: THREE.Vector3, speed: number, dt: number, stopAtEnd = true) {
   let v = vels.get(pos)
   if (!v) vels.set(pos, (v = new THREE.Vector3()))
   const d = new THREE.Vector3(to.x - pos.x, 0, to.z - pos.z)
@@ -120,7 +122,7 @@ function separate(people: THREE.Vector3[], fixed: THREE.Vector3[], dt: number) {
     }
   }
 }
-const turn = (from: number, to: number, k: number) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k
+export const turn = (from: number, to: number, k: number) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k
 
 export function Sim({ name }: { name: string }) {
   const s = useArcade()
@@ -176,6 +178,8 @@ export function Sim({ name }: { name: string }) {
     // the stations that work here: the main one, then the ones unlocked
     const active = [0, ...(st.unlocks.pan2 ? [1] : []), ...(st.unlocks.plat1 ? [2] : []), ...(st.unlocks.plat2 ? [3] : [])]
     const place = PLACES[st.current]
+    // what the assistants and the things in the room do (« Aménager »)
+    const F = fx(st.current)
 
     // 1. cooking
     const plates = [...st.station]
@@ -187,7 +191,7 @@ export function Sim({ name }: { name: string }) {
         continue
       }
       // key zone « marché »: stations cook faster
-      progress.current[i] += (dt * (1 + bonusOf(st.current, 'cook'))) / L.cook
+      progress.current[i] += (dt * (1 + bonusOf(st.current, 'cook')) * F.cook) / L.cook
       if (progress.current[i] >= 1) {
         progress.current[i] = 0
         plates[i]++
@@ -374,7 +378,7 @@ export function Sim({ name }: { name: string }) {
     if (spawn.current <= 0 && line.length < maxQueue()) {
       // key zone « zone industrielle »: more customers
       // more customers when the place is bigger and more people know you
-      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame))
+      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame) * F.customers)
       // what they want: mostly the main dish, sometimes a particular dish that is already on the menu
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
@@ -466,7 +470,7 @@ export function Sim({ name }: { name: string }) {
       // the first in line loses patience if their dish never comes: they leave, the next one steps up
       if (k === 0 && atSpot && c.state === 'line') {
         c.wait += dt
-        if (c.wait > 25 && c.got === 0) {
+        if (c.wait > 25 * F.patience && c.got === 0) {
           c.state = 'out'
           c.moving = true
           c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
@@ -484,10 +488,10 @@ export function Sim({ name }: { name: string }) {
         if (c.got >= c.want) {
           // while you work for the boss of the district, he takes his cut
           // x2 boost and Pass Boss (shop), key zones; the boss of your district takes his share
-          const gross = c.want * sellPrice(st.current, c.dish, st.stage) * (1 + bonusOf(st.current, 'sales')) * saleBoost()
+          const gross = (c.want * sellPrice(st.current, c.dish, st.stage) + F.drink) * (1 + bonusOf(st.current, 'sales')) * saleBoost()
           cash += Math.round(gross * (1 - cutFor(st.current)))
           payCut(st.current, gross)
-          addFame(FAME.customer)
+          addFame(FAME.customer * F.fame)
           served++
           missionEvent('serve')
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
@@ -528,7 +532,7 @@ export function Sim({ name }: { name: string }) {
       if (c.eat <= 0) {
         c.state = 'out'
         // they leave a tip on the table
-        tableCash[Math.floor(c.seat / 2)] += 100 * c.want
+        tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips)
         const a = seatApproach(c.seat)
         c.path = [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
         changed = true
@@ -674,6 +678,7 @@ export function Sim({ name }: { name: string }) {
       <FX />
       <SideStands player={player} />
       <StoryArrow />
+      <Staff />
       {s.bulk && <Crate dish={dishes[s.bulk.dish]} got={s.bulk.got} want={s.bulk.want} />}
       <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
@@ -698,7 +703,7 @@ export function Sim({ name }: { name: string }) {
 }
 
 /** A person whose position/rotation is driven by the simulation (player, server or customer). */
-function Mover({ who, obj, carried = [], sitting = false, full = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: Dish[]; sitting?: boolean; full?: boolean; children?: React.ReactNode }) {
+export function Mover({ who, obj, carried = [], sitting = false, full = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: Dish[]; sitting?: boolean; full?: boolean; children?: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null)
   const [moving, setMoving] = useState(obj.moving)
   useFrame(() => {

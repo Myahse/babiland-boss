@@ -4,7 +4,8 @@ import { DISHES, placeDishes, PLACES } from './places'
 import { FAME_AT, fameLevel, fameNews, fameText, STAGES } from './growth'
 import { sfx } from './sfx'
 import { popText, useArcade } from './store'
-import { CHEST, claim, freshMissions, MISSION_ICON, missionText, readyCount, useMissions } from './missions'
+import { ITEMS, itemPrice, type Item } from './items'
+import { CHEST, claim, freshMissions, MISSION_ICON, missionEvent, missionText, readyCount, useMissions } from './missions'
 
 const stop = (e: React.PointerEvent) => e.stopPropagation()
 const fcfa = (n: number) => n.toLocaleString('fr-FR').replace(/ | /g, ' ')
@@ -193,5 +194,81 @@ export function NewsLayer() {
       </div>
     </div>,
     document.body,
+  )
+}
+
+/** 🛠️ Aménager: hire assistants and fit out the room (items.ts), from the moment the place is a maquis. */
+export function AmenagerButton() {
+  const stage = useArcade((s) => s.stage)
+  const [open, setOpen] = useState(false)
+  if (stage < 1) return null
+  return (
+    <>
+      <button
+        className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#e8590c] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
+        onPointerDown={stop}
+        onClick={() => setOpen(true)}
+      >
+        🛠️ Aménager
+      </button>
+      {open && createPortal(<AmenagerPanel onClose={() => setOpen(false)} />, document.body)}
+    </>
+  )
+}
+
+function AmenagerPanel({ onClose }: { onClose: () => void }) {
+  const place = useArcade((s) => s.current)
+  const money = useArcade((s) => s.money)
+  const items = useArcade((s) => s.items)
+  const state = useArcade((s) => s)
+  const buy = (it: Item) => {
+    const price = itemPrice(place, it)
+    const s = useArcade.getState()
+    if (s.money < price || s.items.includes(it.id)) return
+    useArcade.setState({ money: s.money - price, items: [...s.items, it.id] })
+    missionEvent('unlock')
+    sfx.unlock()
+    popText(`${it.icon} ${it.label} !`)
+  }
+  return (
+    <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={onClose}>
+      <div className="card pop max-h-[88%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-extrabold">🛠️ Aménager</h2>
+          <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
+            ✕
+          </button>
+        </div>
+        <p className="text-sm font-semibold opacity-75">{PLACES[place].name} : prends du monde avec toi et équipe ta salle.</p>
+        {(['staff', 'room'] as const).map((kind) => (
+          <div key={kind}>
+            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'staff' ? '👥 Assistants' : '🪑 La salle'}</div>
+            <div className="mt-1 space-y-1.5">
+              {ITEMS.filter((it) => it.kind === kind).map((it) => {
+                const owned = items.includes(it.id)
+                const blocked = it.needs?.(state) ?? null
+                const price = itemPrice(place, it)
+                return (
+                  <div key={it.id} className={`flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 ${owned ? 'border-[#2f9e44] bg-[#d3f9d8]' : 'border-[var(--color-ink)] bg-white'}`}>
+                    <span className="text-3xl">{it.icon}</span>
+                    <div className="min-w-0 flex-1 leading-tight">
+                      <div className="text-sm font-extrabold">{it.label}</div>
+                      <div className="text-[11px] font-semibold opacity-75">{blocked && !owned ? `🔒 ${blocked}` : it.text}</div>
+                    </div>
+                    {owned ? (
+                      <span className="text-xl">✅</span>
+                    ) : (
+                      <button className="btn !px-2.5 !py-1.5 !text-sm" disabled={!!blocked || money < price} onClick={() => buy(it)}>
+                        {fcfa(price)} F
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
