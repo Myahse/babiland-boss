@@ -100,7 +100,19 @@ const TERRACE_LOOK = new THREE.Vector3(-0.5, 3.1, -3.3)
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
-type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'eat' | 'out'; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number; vip?: string }
+/** where a customer can ask to sit (« Je veux m'asseoir… »): you take them there yourself for a big tip */
+export type Wish = 'haut' | 'bas' | 'seul' | 'monde' | 'deco'
+export const WISHES: Record<Wish, { text: string; icon: IconName }> = {
+  haut: { text: 'En haut, sur la terrasse', icon: 'up' },
+  bas: { text: 'En bas, dehors', icon: 'chair' },
+  seul: { text: 'Une table pour moi seul', icon: 'person' },
+  monde: { text: 'À côté de quelqu’un', icon: 'hand' },
+  deco: { text: 'Près d’une décoration', icon: 'leaves' },
+}
+const ASK_WAIT = 16 // seconds they wait to be taken to a table, then they find a place themselves
+const LEAD_TIME = 35 // seconds they follow you before giving up and sitting anywhere
+let askHinted = false
+type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'ask' | 'eat' | 'out'; wish?: Wish; follow?: boolean; trail?: THREE.Vector3[]; tip?: number; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number; vip?: string }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
@@ -523,9 +535,49 @@ export function Sim({ name }: { name: string }) {
     }
     let served = st.served
     /** paid: they go and sit on the terrace if a seat is free, otherwise they take it away */
-    const leavePaid = (c: Cust) => {
+    const taken0 = () => new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
+    /** can table `t` take one more person, and is it open here */
+    const tableOpen = (t: number, taken: Set<number>) => (t >= TABLES.length ? st.stage >= 2 : !!unlocks.table) && (!taken.has(2 * t) || !taken.has(2 * t + 1))
+    const sitters = (t: number, taken: Set<number>) => (taken.has(2 * t) ? 1 : 0) + (taken.has(2 * t + 1) ? 1 : 0)
+    const nearDecor = (t: number) => t < TABLES.length && st.decor.some((d) => Math.hypot(d.x - ALL_TABLES[t].x, d.z - ALL_TABLES[t].z) < 2.4)
+    /** does table `t` give the customer what they asked for */
+    const fits = (wish: Wish, t: number, taken: Set<number>) =>
+      wish === 'haut' ? t >= TABLES.length : wish === 'bas' ? t < TABLES.length : wish === 'seul' ? sitters(t, taken) === 0 : wish === 'monde' ? sitters(t, taken) === 1 : nearDecor(t)
+    /** sit `c` at table `t` (a free seat of it), from where they stand */
+    const sitAt = (c: Cust, t: number, taken: Set<number>) => {
+      const seat = taken.has(2 * t) ? 2 * t + 1 : 2 * t
+      c.state = 'eat'
+      c.seat = seat
+      c.eat = 7
+      c.moving = true
+      c.follow = false
+      c.trail = undefined
+      const a = approach(seat)
+      c.path = isUp(seat) ? [a, ALL_SEATS[seat].clone()] : [V(c.pos.x, a.z), a, ALL_SEATS[seat].clone()]
+    }
+    const leavePaid = (c: Cust, noAsk = false) => {
       c.moving = true
       const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
+      // some customers want a particular place (from the time there are two kinds of tables, or decorations):
+      // they wait beside the counter; take them there yourself (walk up to them, they follow you)
+      if (!c.vip && !noAsk && Math.random() < 0.4) {
+        const open = ALL_TABLES.map((_, t) => t).filter((t) => tableOpen(t, taken))
+        const can = (Object.keys(WISHES) as Wish[]).filter((w) => {
+          const ok = open.filter((t) => fits(w, t, taken))
+          return ok.length > 0 && ok.length < open.length
+        })
+        if (open.length >= 2 && can.length) {
+          c.state = 'ask'
+          c.wish = can[Math.floor(Math.random() * can.length)]
+          c.wait = 0
+          c.path = [V(c.pos.x - 0.6, COUNTER.z + 1.9), V(COUNTER.x - 1.35, COUNTER.z + 1.9)]
+          if (!askHinted) {
+            askHinted = true
+            popText(`Ce client veut choisir sa place : ${WISHES[c.wish].text.toLowerCase()}. Va le chercher et emmène-le à une table !`)
+          }
+          return
+        }
+      }
       // the free seats: the terrace downstairs once it is open, and upstairs from the restaurant on (some like it
       // up there: half of them go up when there is room)
       const freeSeats = ALL_SEATS.map((_, i) => i).filter((i) => !taken.has(i) && (isUp(i) ? st.stage >= 2 : unlocks.table))
@@ -636,8 +688,107 @@ export function Sim({ name }: { name: string }) {
         }
       }
     })
+    // those who asked for a place: they wait by the counter; walk up to them and they follow you (in your steps,
+    // up the stairs too); stop by a table and they sit. The place they wanted: a big tip
+    const pFloor = player.climb ? -1 : player.floor
     custs.current.forEach((c) => {
-      if (c.state === 'line') return
+      if (c.state !== 'ask') return
+      c.wait += dt
+      const flatTo = (a: THREE.Vector3, b: THREE.Vector3) => Math.hypot(a.x - b.x, a.z - b.z)
+      const sameFloor = Math.abs(c.pos.y - player.pos.y) < 0.5
+      if (!c.follow) {
+        if (c.path.length) {
+          const r = step(c.pos, c.path[0], 1.4, dt, c.path.length === 1)
+          if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+          if (!r.moving || (c.path.length > 1 && c.pos.distanceTo(c.path[0]) < 0.4)) c.path.shift()
+        } else {
+          c.rot = turn(c.rot, Math.atan2(player.pos.x - c.pos.x, player.pos.z - c.pos.z), Math.min(1, dt * 4))
+          if (c.moving) {
+            c.moving = false
+            bump()
+          }
+        }
+        if (sameFloor && flatTo(c.pos, player.pos) < 1.0) {
+          c.follow = true
+          c.wait = 0
+          c.path = []
+          c.trail = [player.pos.clone()]
+          floatText(c.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), 'Je te suis !', '#1c7ed6')
+          sfx.pick()
+          bump()
+        } else if (c.wait > ASK_WAIT) {
+          // nobody came: they find a place themselves (no tip bonus)
+          c.wish = undefined
+          c.state = 'line'
+          floatText(c.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), 'Bon… je me débrouille', '#868e96')
+          leavePaid(c, true)
+          bump()
+        }
+        return
+      }
+      // following you: walk your steps, keep a little behind
+      const tr = c.trail!
+      const last = tr[tr.length - 1]
+      if (!last || last.distanceTo(player.pos) > 0.3) tr.push(player.pos.clone())
+      const close = sameFloor && flatTo(c.pos, player.pos) < 0.95
+      if (!close && tr.length) {
+        const to = tr[0]
+        if (Math.abs(to.y - c.pos.y) > 0.01) {
+          const d = to.clone().sub(c.pos)
+          const l = d.length()
+          if (l < 0.08) c.pos.copy(to), tr.shift()
+          else c.pos.addScaledVector(d, Math.min(1, (2.2 * dt) / l))
+          c.rot = turn(c.rot, Math.atan2(d.x, d.z), Math.min(1, dt * 8))
+        } else {
+          const r = step(c.pos, to, 2.6, dt, false)
+          if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 8))
+          if (flatTo(c.pos, to) < 0.35) tr.shift()
+        }
+        if (!c.moving) {
+          c.moving = true
+          bump()
+        }
+      } else {
+        // caught up: drop the steps already done
+        while (tr.length > 1 && flatTo(tr[0], c.pos) < 1.2 && Math.abs(tr[0].y - c.pos.y) < 0.3) tr.shift()
+        if (c.moving) {
+          c.moving = false
+          bump()
+        }
+      }
+      // you stop by a table with a free seat, they are with you: they sit
+      const taken = taken0()
+      if (pFloor >= 0 && sameFloor && flatTo(c.pos, player.pos) < 2.6) {
+        for (let t = 0; t < ALL_TABLES.length; t++) {
+          if ((t >= TABLES.length) !== (pFloor === 1) || !tableOpen(t, taken) || flatTo(ALL_TABLES[t], player.pos) > 1.45) continue
+          const good = fits(c.wish!, t, taken)
+          sitAt(c, t, taken)
+          const at = c.pos.clone().add(new THREE.Vector3(0, 2.2, 0))
+          if (good) {
+            c.tip = 3
+            addFame(FAME.customer * 2 * F.fame)
+            floatText(at, 'Parfait, merci !', '#2f9e44')
+            sparks(at, 16)
+            sfx.unlock()
+          } else {
+            floatText(at, 'Bof… c’est pas ce que j’ai demandé', '#e8590c')
+          }
+          bump()
+          return
+        }
+      }
+      if (c.wait > LEAD_TIME) {
+        c.wish = undefined
+        c.follow = false
+        c.trail = undefined
+        c.state = 'line'
+        floatText(c.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), 'Je vais m’asseoir où je peux', '#868e96')
+        leavePaid(c, true)
+        bump()
+      }
+    })
+    custs.current.forEach((c) => {
+      if (c.state === 'line' || c.state === 'ask') return
       // follow the path one point at a time
       if (c.path.length && Math.abs(c.path[0].y - c.pos.y) > 0.01) {
         // on the stairs: straight up (or down) the steps
@@ -684,7 +835,7 @@ export function Sim({ name }: { name: string }) {
       if (c.eat <= 0) {
         c.state = 'out'
         // they leave a tip on the table
-        tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips)
+        tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips * (c.tip ?? 1))
         const a = approach(c.seat)
         c.path = isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, 1.65), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
         changed = true
@@ -867,7 +1018,7 @@ export function Sim({ name }: { name: string }) {
       {s.unlocks.moto && <Moto obj={moto} want={s.delivery.want} got={s.delivery.got} waiting={s.delivery.state === 'wait'} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
-          {c.vip ? <Crown /> : k === 0 && c.state === 'line' && !c.moving && <Wants dish={dishes[c.dish]} want={c.want} got={c.got} />}
+          {c.vip ? <Crown /> : c.state === 'ask' && c.wish ? <WishBubble wish={c.wish} follow={!!c.follow} /> : k === 0 && c.state === 'line' && !c.moving && <Wants dish={dishes[c.dish]} want={c.want} got={c.got} />}
         </Mover>
       ))}
       <Follow />
@@ -989,6 +1140,20 @@ function Crown() {
         <meshStandardMaterial color="#e03131" roughness={0.2} />
       </mesh>
     </group>
+  )
+}
+
+/** Where a customer wants to sit (they wait for you by the counter, then follow you). */
+function WishBubble({ wish, follow }: { wish: Wish; follow: boolean }) {
+  const w = WISHES[wish]
+  return (
+    <Html position={[0, 2.05, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+      <div className={`pop flex items-center gap-1.5 rounded-2xl border-[3px] border-[var(--color-ink)] px-2.5 py-1 font-extrabold whitespace-nowrap shadow-lg ${follow ? 'bg-[#d0ebff]' : 'bg-[#fff3bf]'}`}>
+        <Icon name="chair" size={18} />
+        <Icon name={w.icon} size={18} />
+        <span className="text-xs leading-tight">{w.text}</span>
+      </div>
+    </Html>
   )
 }
 
