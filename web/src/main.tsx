@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource/baloo-2/600.css'
 import '@fontsource/baloo-2/800.css'
@@ -6,7 +7,10 @@ import App from './App'
 import ArcadeApp from './arcade/ArcadeApp'
 
 // the arcade shop game is the main game; the first cooking-minigame version stays at ?mode=cuisine
-const Root = new URLSearchParams(location.search).get('mode') === 'cuisine' ? App : ArcadeApp
+const mode = new URLSearchParams(location.search).get('mode')
+// ?mode=plats: every dish up close (development only)
+const Gallery = import.meta.env.DEV && mode === 'plats' ? lazy(() => import('./arcade/DishGallery')) : null
+const Root = Gallery ? () => <Suspense fallback={null}><Gallery /></Suspense> : mode === 'cuisine' ? App : ArcadeApp
 
 // Signs and textures are drawn on canvases, so wait for the font first.
 Promise.race([document.fonts.load('800 40px "Baloo 2"'), new Promise((r) => setTimeout(r, 1500))]).finally(() => {

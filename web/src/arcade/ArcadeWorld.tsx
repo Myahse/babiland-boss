@@ -37,9 +37,15 @@ export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
         <planeGeometry args={[60, 40]} />
         <Flat color="#e8894a" />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow>
+      {/* the plot: bare packed earth for a little corner, the wooden floor once it's a maquis (both kept, one shown:
+          swapping the material would leave the floor black) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow visible={stage >= 1}>
         <planeGeometry args={[11.4, 7.8]} />
-        {stage >= 1 ? <meshStandardMaterial map={wood} roughness={0.7} /> : <meshStandardMaterial color="#d6b98c" roughness={0.95} />}
+        <meshStandardMaterial map={wood} roughness={0.7} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow visible={stage < 1}>
+        <planeGeometry args={[11.4, 7.8]} />
+        <meshStandardMaterial color="#d6b98c" roughness={0.95} />
       </mesh>
       {/* low side wall with a red trim (the open side faces the camera) */}
       <mesh position={[-6.25, 0.8, 1.3]} castShadow receiveShadow>

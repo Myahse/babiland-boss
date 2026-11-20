@@ -148,7 +148,8 @@ export function Building({ name, place, stage = 2 }: { name: string; place: Plac
       {/* wide open front where the kitchen is (closed shutters while it isn't yours) */}
       <mesh position={[-0.4, 1.25, D / 2 + 0.01]}>
         <planeGeometry args={[2.2, 2.3]} />
-        {stage === 0 ? <meshStandardMaterial map={shutters} roughness={0.6} metalness={0.3} /> : <meshStandardMaterial color="#5c2d0c" roughness={0.9} />}
+        {/* a key: a new material when it changes (the same one with a map added would stay black) */}
+        {stage === 0 ? <meshStandardMaterial key="shut" map={shutters} roughness={0.6} metalness={0.3} /> : <meshStandardMaterial key="open" color="#5c2d0c" roughness={0.9} />}
       </mesh>
       {stage === 0 && (
         <mesh position={[-0.4, 1.7, D / 2 + 0.03]} rotation={[0, 0, -0.06]}>
@@ -226,7 +227,7 @@ export function Building({ name, place, stage = 2 }: { name: string; place: Plac
       <group position={[0.2, H1 + 3.0, -D / 2 + 0.95]} visible={stage >= 1} scale={stage === 1 ? 0.8 : stage >= 3 ? 1.12 : 1}>
         <mesh castShadow>
           <boxGeometry args={[5.6, 1.05, 0.12]} />
-          {stage >= 3 ? <meshStandardMaterial color="#fcc419" metalness={0.7} roughness={0.25} /> : <Flat color="#ffd43b" />}
+          {stage >= 3 ? <meshStandardMaterial key="gold" color="#fcc419" metalness={0.7} roughness={0.25} /> : <Flat key="plain" color="#ffd43b" />}
         </mesh>
         <mesh position={[0, 0, 0.07]}>
           <planeGeometry args={[5.3, 0.9]} />
