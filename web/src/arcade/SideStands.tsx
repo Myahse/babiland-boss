@@ -13,6 +13,7 @@ import { SIDE, SIDE_MAX, SIDE_PAD, SIDE_POS, sideCap, sidePerMin, sidePrice } fr
 import { ToonPerson } from './ToonPerson'
 import { useVip } from './vip'
 import { missionEvent } from './missions'
+import { others } from './profile'
 import type { PersonId } from '../three/RealPerson'
 
 // The three small businesses on the pavement of the maquis (side.ts): pads to open and improve them, the stands
@@ -141,7 +142,7 @@ function Stand({ i, level, cash, full }: { i: number; level: number; cash: numbe
   return (
     <group position={SIDE_POS[i]}>
       {/* the seller, behind the table, facing the shop (and the camera) */}
-      <ToonPerson who={SELLER[i]} moving={false} position={[0, 0, -0.45]} rotation={[0, 0, 0]} scale={1.1} />
+      <ToonPerson who={others(SELLER)[i]} moving={false} position={[0, 0, -0.45]} rotation={[0, 0, 0]} scale={1.1} />
       {/* table */}
       <RoundedBox args={[1.15, 0.08, 0.6]} radius={0.03} position={[0, 0.72, 0.05]} castShadow receiveShadow>
         <Flat color="#c08552" />

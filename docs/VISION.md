@@ -26,7 +26,8 @@ C'est la référence : chaque nouvelle étape doit nous rapprocher de ça.
 
 | Partie de la vision | État |
 |---|---|
-| S'inscrire, choisir son nom et sa commune | ✅ écran d'accueil (Yopougon ouvert, les autres affichés « bientôt ») |
+| S'inscrire, choisir son nom et sa commune | ✅ nouvelle partie : ton nom, ton **personnage** (Tantie Aya, Awa, Koffi, Yao, Fatou), **d'où tu viens** (les 8 lieux, chacun avec son plat) ; on commence là-bas |
+| Une histoire | ✅ **Mami Adjoua**, ta grand-mère, te laisse son réchaud et sa recette ; le boss du quartier prend 20 %. 7 chapitres (le petit coin, le bouche-à-oreille, une vraie équipe, le boss du quartier, plus loin, le restaurant, le boss de Babi) avec dialogues, objectifs et récompenses ; le premier est le **tutoriel**, une flèche montre où aller |
 | Le plat principal de l'endroit (Yopougon : garba) | ✅ |
 | Sessions de cuisine à la Cooking Mama (couper, frire, monter le plat) | ✅ **clients VIP** 👑 : de temps en temps un VIP vient au maquis ; à son tour tu cuisines son plat toi-même (couper au doigt sur les pointillés, frire / griller / mijoter au bon moment, monter l'assiette dans l'ordre), il paie jusqu'à ×3 avec pourboire. Une recette par plat principal |
 | Vendre le plat à des clients PNJ | ✅ jeu « arcade idle » : file de clients, comptoir, argent |

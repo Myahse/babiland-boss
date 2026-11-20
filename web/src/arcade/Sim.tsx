@@ -16,6 +16,9 @@ import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { saleBoost } from './online'
+import { others, playerWho } from './profile'
+import { StoryArrow } from './Story'
+import { useStory } from './story'
 import { DISHES, placeDishes, PLACES, type Dish, type Place } from './places'
 import { missionEvent } from './missions'
 import { FAME, fameLevel, fameSpawn, sellPrice, stagePrice, STAGES } from './growth'
@@ -160,7 +163,7 @@ export function Sim({ name }: { name: string }) {
   const redraw = useRef(0)
   useFrame((_, rawDt) => {
     // the VIP's cooking screen is open: the shop waits
-    if (useVip.getState().open) return
+    if (useVip.getState().open || useStory.getState().talking) return
     const dt = Math.min(rawDt, 0.1)
     // refresh the cooking timers on screen a few times a second
     redraw.current += dt
@@ -376,7 +379,7 @@ export function Sim({ name }: { name: string }) {
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
       const dish = menu.length === 1 || r < 0.55 ? 0 : menu[1 + Math.floor(Math.random() * (menu.length - 1))]
-      custs.current.push({ id: nextId.current, who: WHO[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0 })
+      custs.current.push({ id: nextId.current, who: others(WHO)[nextId.current % WHO.length], pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish, want: 1 + Math.floor(Math.random() * (unlocks.table ? 4 : 3)), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0 })
       nextId.current++
       bump()
     }
@@ -670,6 +673,7 @@ export function Sim({ name }: { name: string }) {
       )}
       <FX />
       <SideStands player={player} />
+      <StoryArrow />
       {s.bulk && <Crate dish={dishes[s.bulk.dish]} got={s.bulk.got} want={s.bulk.want} />}
       <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
@@ -679,9 +683,9 @@ export function Sim({ name }: { name: string }) {
         ))}
       {STAGES[s.stage + 1] && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
       {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] && padOpen(u, s.stage) && (!PADS[u].needs || s.unlocks[PADS[u].needs!]) ? <Pad key={u} label={padLabel(u, PLACES[s.current])} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
-      <Mover who="aya" obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />
-      {s.unlocks.serveur && <Mover who="yao" obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} />}
-      {s.unlocks.caisse && <Mover who="fatou" obj={cashier} />}
+      <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />
+      {s.unlocks.serveur && <Mover who={others(["yao"])[0]} obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} />}
+      {s.unlocks.caisse && <Mover who={others(["fatou"])[0]} obj={cashier} />}
       {s.unlocks.moto && <Moto obj={moto} want={s.delivery.want} got={s.delivery.got} waiting={s.delivery.state === 'wait'} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>

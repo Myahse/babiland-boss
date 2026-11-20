@@ -1,9 +1,8 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, SMAA, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { useGame } from '../store'
-import { Title } from '../ui/Hud'
 import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
 import { Building, GrandDecor, Streets } from './Shop'
@@ -17,6 +16,7 @@ import { VipLayer } from './VipCook'
 import { OfflinePanel } from './Offline'
 import { BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
 import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
+import { Intro, StoryLayer } from './Story'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -153,13 +153,6 @@ function Hud() {
   const [sound, setSound] = useState(!isMuted())
   const [map, setMap] = useState(false)
   const level = levelOf(served)
-  // the « how to play » card: only for beginners (a returning player knows)
-  const [hint, setHint] = useState(() => totalServed(useArcade.getState()) < 5)
-  const t = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => {
-    t.current = setTimeout(() => setHint(false), 9000)
-    return () => clearTimeout(t.current)
-  }, [])
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
@@ -208,6 +201,7 @@ function Hud() {
         <OnlineButton />
       </div>
       <BulkBanner />
+      <StoryLayer />
       <LiveFeed />
       <NewsLayer />
       <VipLayer />
@@ -222,13 +216,6 @@ function Hud() {
       {pop && (
         <div key={pop.id} className="float-up absolute top-[30%] left-1/2 text-3xl font-extrabold whitespace-nowrap text-[#ffe066]" style={{ textShadow: '2px 2px 0 #2b8a3e, -2px -2px 0 #2b1a12, 2px -2px 0 #2b1a12, -2px 2px 0 #2b1a12, 2px 2px 0 #2b1a12', animationDuration: '1.4s' }}>
           {pop.text}
-        </div>
-      )}
-      {hint && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
-          <div className="card pop max-w-md !p-3 text-center text-base font-bold">
-            Glisse ton doigt pour bouger. Prends les plats de {place.dishLabel.toLowerCase()} sur le plateau rouge, pose-les au comptoir, ramasse l’argent, puis marche sur les carrés pour débloquer. Plus tu sers, plus on te connaît : ton petit coin deviendra un maquis !
-          </div>
         </div>
       )}
     </div>
@@ -258,7 +245,7 @@ export default function ArcadeApp() {
         </Suspense>
       </Canvas>
       {phase === 'title' ? (
-        <Title />
+        <Intro />
       ) : (
         <>
           <Joystick />
