@@ -9,7 +9,7 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { COUNTER_BACK, ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
@@ -17,6 +17,8 @@ import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './s
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx, has } from './items'
 import { arrivals, Zones } from './Annexe'
+import { applyLayout } from './furniture'
+import { BuildEditor, DecorLayer } from './Build'
 import { TerraceTable } from './Shop'
 import { Stairs } from './Stairs'
 import { tier } from './looks'
@@ -103,7 +105,7 @@ const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
 const slot = (k: number) => SLOT0.clone().addScaledVector(SLOT_STEP, k)
 export const stationFront = (i: number) => STATIONS[i].clone().add(V(0.55, 1.0))
-export const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
+export { COUNTER_BACK } from './layout'
 const up = (v: THREE.Vector3, y: number) => v.clone().add(new THREE.Vector3(0, y, 0))
 export const TRAY = (i: number) => STATIONS[i].clone().add(new THREE.Vector3(0, 0.5, 1.0))
 export const COUNTER_TOP = (k = 0) => COUNTER.clone().add(new THREE.Vector3(-0.15 + k * 0.36, 1.15, 0))
@@ -205,7 +207,7 @@ export function Sim({ name }: { name: string }) {
   const redraw = useRef(0)
   useFrame((_, rawDt) => {
     // the VIP's cooking screen is open: the shop waits
-    if (useVip.getState().open || useStory.getState().talking) return
+    if (useVip.getState().open || useStory.getState().talking || useArcade.getState().building) return
     const dt = Math.min(rawDt, 0.1)
     // refresh the cooking timers on screen a few times a second
     redraw.current += dt
@@ -815,16 +817,18 @@ export function Sim({ name }: { name: string }) {
 
   const dishes = placeDishes(PLACES[s.current])
   const myOutfit = useProfile((p) => p.profile?.outfit ?? 1)
+  // your own design: put the pieces where you placed them (before drawing them)
+  useMemo(() => applyLayout(s.layout), [s.layout])
   return (
     <>
       {STATIONS.map((pos, i) =>
         i === 0 || s.unlocks[(['pan2', 'plat1', 'plat2'] as Unlock[])[i - 1]] ? (
-          <Station key={i} plates={s.station[i]} progress={progress.current[i]} level={s.level[i]} dish={dishes[STATION_SLOT[i]]} position={pos} />
+          <Station key={i} plates={s.station[i]} progress={progress.current[i]} level={s.level[i]} dish={dishes[STATION_SLOT[i]]} position={pos.toArray()} />
         ) : null,
       )}
       {padsShown(s).map((p) => (
         <group key={p.key}>
-          <Pad label={p.label} icon={p.icon} price={p.price} left={p.left} position={p.pos} />
+          <Pad label={p.label} icon={p.icon} price={p.price} left={p.left} position={p.pos.toArray()} />
           <PadHint at={p.pos} who={player} icon={p.icon} title={p.label} text={p.text} price={p.left} />
         </group>
       ))}
@@ -841,18 +845,20 @@ export function Sim({ name }: { name: string }) {
           ))}
         </>
       )}
-      <Bin position={BIN} />
+      <Bin position={BIN.toArray()} />
+      <DecorLayer />
+      <BuildEditor />
       <PadHint at={BIN} who={player} icon="trash" title="Poubelle" text="Reste dessus pour jeter les plats que tu portes (un plat que personne ne commande)." />
       <FX />
       <SideStands player={player} />
       <StoryArrow />
       <Staff />
       {s.bulk && <Crate dish={dishes[s.bulk.dish]} got={s.bulk.got} want={s.bulk.want} />}
-      <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} look={s.style.counter} position={COUNTER} />
-      <CashPile amount={s.cash} position={CASH} />
+      <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} look={s.style.counter} position={COUNTER.toArray()} />
+      <CashPile amount={s.cash} position={CASH.toArray()} />
       {s.unlocks.table &&
         TABLES.map((t, i) => (
-          <SquareTable key={i} position={t} look={s.style.terrace} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
+          <SquareTable key={i} position={t.toArray()} look={s.style.terrace} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
       {STAGES[s.stage + 1] && fameLevel(s.fame) >= STAGES[s.stage + 1].fame && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
       <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} outfit={myOutfit} outfitKind="boss" />
@@ -1010,6 +1016,8 @@ function Follow() {
     if (import.meta.env.DEV) Object.assign(window, { __cam: camera })
   }, [camera])
   useFrame(({ scene }, dt) => {
+    // « Construire » moves the camera itself (Build.tsx)
+    if (useArcade.getState().building) return
     const cam = useArcade.getState().cam
     const k = 1 - Math.exp(-dt * 4)
     // the haze far away: further when the camera is pulled back (« Dehors »), or it would hide everything

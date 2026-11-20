@@ -9,6 +9,8 @@ export const STATIONS = [V(-4.3, -1.55), V(-2.8, -1.55), V(-1.3, -1.55), V(0.2, 
 /** which dish each station makes: 0 = main dish, 1 / 2 = the particular dishes of the place */
 export const STATION_SLOT = [0, 0, 1, 2]
 export const COUNTER = V(2.35, -0.1)
+/** behind the counter, where the staff put the plates down */
+export const COUNTER_BACK = COUNTER.clone().add(V(0, -0.85))
 export const CASH = V(3.85, -0.6) // where customers' money piles up
 export const SLOT0 = V(2.35, 1.15) // first place in the line, in front of the counter
 export const SLOT_STEP = V(0.5, 0.62) // the line goes off diagonally, like in the shop games

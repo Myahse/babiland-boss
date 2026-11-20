@@ -36,6 +36,8 @@ export function Staff() {
   const items = useArcade((s) => s.items)
   const unlocks = useArcade((s) => s.unlocks)
   const team = useArcade((s) => s.style.team)
+  // (redrawn when you move the tables in « Construire »)
+  useArcade((s) => s.layout)
   const h = (id: ItemId) => items.includes(id)
   const cook = useRef<Walker & { at: number; wait: number }>({ pos: V(-3.5, -0.75), rot: Math.PI, moving: false, at: 0, wait: 0 })
   const server = useRef<Walker & { state: 'toStation' | 'toCounter'; carried: number[]; acc: number }>({ pos: V(0.5, -0.3), rot: 0, moving: false, state: 'toStation', carried: [], acc: 0 })

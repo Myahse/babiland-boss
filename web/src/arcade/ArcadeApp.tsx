@@ -10,6 +10,7 @@ import { StreetDecor } from './StreetDecor'
 import { StreetLife } from './StreetLife'
 import { GameClock } from './daynight'
 import { stick } from './input'
+import { BuildButton, BuildHud } from './Build'
 import { buy, goTo, popText, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
 import { isMuted, setMuted } from './sfx'
@@ -160,6 +161,10 @@ function Hud({ street }: { street: boolean }) {
   const map = useArcade((s) => s.mapOpen)
   const setMap = (v: boolean) => useArcade.setState({ mapOpen: v })
   const level = levelOf(served)
+  const building = useArcade((s) => s.building)
+  const stage0 = useArcade((s) => s.stage)
+  // « Construire »: its own screen (Build.tsx), the rest of the HUD hides
+  if (building) return <BuildHud />
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-x-0 top-0 flex items-center gap-2 p-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
@@ -210,6 +215,7 @@ function Hud({ street }: { street: boolean }) {
         <RoundButton icon={<Icon name="map" size={28} />} label="Carte" color="#1c7ed6" onClick={() => setMap(true)} />
         <TurfButton />
         <AmenagerButton />
+        {!street && stage0 >= 1 && <BuildButton />}
         <MissionsButton />
         <OnlineButton />
       </div>
@@ -253,6 +259,7 @@ export default function ArcadeApp() {
   // the place you are standing in front of, in the street
   const [spot, setSpot] = useState<Spot | null>(null)
   const street = phase !== 'title' && view === 'quartier'
+  const building = useArcade((s) => s.building)
   const [lost, setLost] = useState(false)
   return (
     <div className="relative h-full w-full">
@@ -309,7 +316,8 @@ export default function ArcadeApp() {
         <Intro />
       ) : (
         <>
-          <Joystick />
+          {/* (in « Construire » the fingers go to the 3D scene: you move the pieces, not yourself) */}
+          {!building && <Joystick />}
           <Hud street={street} />
           {street && spot && <SpotCard spot={spot} />}
           <OnlineRuntime />

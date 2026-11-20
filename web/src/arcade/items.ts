@@ -1,3 +1,4 @@
+import { decorCustomers } from './furniture'
 import { styleFx } from './styles'
 import type { IconName } from './Icons'
 import { PLACES, type PlaceId } from './places'
@@ -36,7 +37,7 @@ export const fx = (place: PlaceId) => {
   const sf = styleFx(st.style)
   return {
     cook: (h('cuisiniere') ? 1.35 : 1) * (h('cuisine') ? 1.15 : 1) * sf.cook,
-    customers: (h('tele') ? 1.15 : 1) * (h('musique') ? 1.1 : 1) * sf.customers,
+    customers: (h('tele') ? 1.15 : 1) * (h('musique') ? 1.1 : 1) * sf.customers * decorCustomers(st.decor.length),
     patience: (h('ventilo') ? 1.6 : 1) * (h('tele') ? 1.2 : 1) * sf.patience,
     tips: (h('chaises') ? 1.6 : 1) * sf.tips,
     drink: h('frigo') ? 100 : 0,

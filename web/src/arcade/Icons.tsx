@@ -245,6 +245,12 @@ export const ICONS = {
   cup: [{ d: 'M5 8h12v8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z', fill: '#ffffff' }, { d: 'M17 10h2a2 2 0 0 1 0 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4', fill: 'none' }, { d: 'M6.5 10h9v2h-9z', fill: '#6f4e37' }],
   glass: [{ d: 'M6 4h12l-2 17H8z', fill: '#ffffff' }, { d: 'M7 9h10l-1.4 11H8.4z', fill: '#a61e4d' }],
   peanut: [{ d: 'M9 3a4 4 0 0 1 4 5c0 1 1 2 2 2a4 4 0 1 1-4 5c0-1-1-2-2-2A4 4 0 0 1 9 3z', fill: '#d4a373' }],
+  hammer: [
+    { d: 'M13 4l6 6-3 3-6-6z', fill: '#868e96' },
+    { d: 'M11.5 8.5l-8 8a1.8 1.8 0 0 0 2.5 2.5l8-8z', fill: '#c68642' },
+    { d: 'M16 3l2 2', fill: 'none' },
+  ],
+  rotate: [{ d: 'M19 12a7 7 0 1 1-2.1-5', fill: 'none' }, { d: 'M14 3l4 4-4 2z', fill: '#2b1a12' }],
   car: [
     { d: 'M3 15l2-6h14l2 6v4H3z', fill: '#e8432e' },
     { d: 'M7 9l1.5-3h7L17 9z', fill: '#74c0fc' },
