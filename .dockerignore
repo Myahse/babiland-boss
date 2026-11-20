@@ -1,0 +1,6 @@
+# only backend/ goes into the image
+web
+docs
+tools
+*.md
+.git

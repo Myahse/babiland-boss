@@ -81,6 +81,17 @@ func (h *Hub) Online(user string) bool {
 	return false
 }
 
+// Count: how many players are connected now (each counted once, whatever their devices).
+func (h *Hub) Count() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	seen := map[string]bool{}
+	for c := range h.clients {
+		seen[c.user] = true
+	}
+	return len(seen)
+}
+
 // presence: who is in the place, sent to everyone there.
 func (h *Hub) presence(place string) {
 	h.mu.Lock()

@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -58,6 +59,13 @@ func main() {
 		(&auth.Handler{DB: pool, Tokens: tokens}).Routes(r)
 		sh.Hooks(r)
 		r.Get("/live", hub.Serve)
+		// for the login page: how many bosses, how many online now
+		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
+			var players int
+			_ = pool.QueryRow(r.Context(), `SELECT count(*) FROM users`).Scan(&players)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintf(w, `{"players":%d,"online":%d}`, players, hub.Count())
+		})
 		r.Group(func(r chi.Router) {
 			r.Use(tokens.Require)
 			(&player.Handler{DB: pool}).Routes(r)
