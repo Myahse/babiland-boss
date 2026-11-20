@@ -1,3 +1,4 @@
+import { Icon } from './Icons'
 import { useEffect, useState } from 'react'
 import { PLACES } from './places'
 import { sfx } from './sfx'
@@ -27,7 +28,7 @@ export function OfflinePanel() {
   return (
     <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center bg-black/45 p-4" onPointerDown={(e) => e.stopPropagation()}>
       <div className="card pop w-full max-w-sm !p-4">
-        <div className="text-center text-3xl">🌙</div>
+        <div className="flex justify-center"><Icon name="moon" size={40} /></div>
         <div className="text-center text-xl font-extrabold">Pendant ton absence…</div>
         <div className="text-center text-sm font-bold opacity-70">
           Tu es parti {time(rep.away)}
@@ -46,7 +47,7 @@ export function OfflinePanel() {
           ))}
           {rep.rent > 0 && (
             <div className="flex items-center gap-2 rounded-xl border-2 border-[var(--color-ink)] bg-white px-2.5 py-1.5">
-              <span className="grid h-7 w-7 shrink-0 place-items-center text-lg">🏙️</span>
+              <span className="grid h-7 w-7 shrink-0 place-items-center text-lg"><Icon name="city" size={22} /></span>
               <div className="min-w-0 flex-1 text-sm leading-tight font-extrabold">Loyers de tes quartiers</div>
               <div className="shrink-0 text-base font-extrabold text-[#2b8a3e]">+{fcfa(rep.rent)} F</div>
             </div>

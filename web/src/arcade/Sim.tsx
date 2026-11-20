@@ -422,7 +422,7 @@ export function Sim({ name }: { name: string }) {
       const vip = VIPS[Math.floor(Math.random() * VIPS.length)]
       custs.current.push({ id: nextId.current, who: 'koffi', pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish: 0, want: 2 + Math.floor(Math.random() * 2), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0, vip })
       nextId.current++
-      popText(`👑 Un client VIP arrive : ${vip} !`)
+      popText(`Un client VIP arrive : ${vip} !`)
       sfx.unlock()
       bump()
     }
@@ -461,7 +461,7 @@ export function Sim({ name }: { name: string }) {
         addFame(FAME.vip + FAME.vipStar * (vd.score >= 0.85 ? 3 : vd.score >= 0.55 ? 2 : 1))
         c.got = c.want
         for (let k = 0; k < 8; k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.35)
-        popText(`👑 ${c.vip} : +${pay} FCFA`)
+        popText(`${c.vip} : +${pay} FCFA`)
         sparks(c.pos.clone().add(new THREE.Vector3(0, 1.6, 0)), 24)
         floatText(c.pos.clone().add(new THREE.Vector3(0.5, -0.4, 0)), `+${pay}`, '#f08c00')
         sfx.cash()
@@ -492,7 +492,7 @@ export function Sim({ name }: { name: string }) {
           c.moving = true
           c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
           useVip.setState({ ready: null })
-          popText(`👑 ${c.vip} en a eu marre d’attendre…`)
+          popText(`${c.vip} en a eu marre d’attendre…`)
           bump()
         }
         return
@@ -504,7 +504,7 @@ export function Sim({ name }: { name: string }) {
           c.state = 'out'
           c.moving = true
           c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
-          popText(`${DISHES[placeDishes(place)[c.dish]].icon} Trop long… le client est parti`)
+          popText(`Trop long… le client est parti`)
           bump()
           return
         }
@@ -589,7 +589,7 @@ export function Sim({ name }: { name: string }) {
         motoWait.current -= dt
         if (motoWait.current <= 0) {
           delivery = { want: 3 + Math.floor(Math.random() * 4), got: 0, state: 'wait' }
-          popText('📱 Nouvelle commande à livrer !')
+          popText('Nouvelle commande à livrer !')
           sfx.pay()
           changed = true
         }
@@ -618,7 +618,7 @@ export function Sim({ name }: { name: string }) {
             motoT.current = 0
             cash += Math.round(delivery.want * sellPrice(st.current, 0, st.stage) * 1.4 * (1 - cutFor(st.current)))
             for (let k = 0; k < 4; k++) fly('cash', MOTO_BOX(), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.4)
-            popText(`🛵 Livraison : +${delivery.want * Math.round(sellPrice(st.current, 0, st.stage) * 1.4)} FCFA`)
+            popText(`Livraison : +${delivery.want * Math.round(sellPrice(st.current, 0, st.stage) * 1.4)} FCFA`)
             sfx.unlock()
           }
         }
@@ -646,7 +646,7 @@ export function Sim({ name }: { name: string }) {
       const want = 8 + 2 * Math.floor(Math.random() * 4) + (unlocks.plateau ? 4 : 0)
       const name = BULK_CLIENTS[Math.floor(Math.random() * BULK_CLIENTS.length)]
       bulk = { name, dish, want, got: 0, left: BULK_TIME, time: BULK_TIME }
-      popText(`📞 ${name} : ${want} ${DISHES[placeDishes(place)[dish]].label.toLowerCase()} !`)
+      popText(`${name} : ${want} ${DISHES[placeDishes(place)[dish]].label.toLowerCase()} !`)
       sfx.unlock()
     } else if (bulk) {
       let { got } = bulk
@@ -669,7 +669,7 @@ export function Sim({ name }: { name: string }) {
         payCut(st.current, gross)
         cash += pay
         for (let k = 0; k < 10; k++) fly('cash', up(CRATE, 1.0), up(CASH, 0.3 + k * 0.08), k * 0.05, 0.45)
-        popText(`📦 ${bulk.name} : +${pay} FCFA`)
+        popText(`${bulk.name} : +${pay} FCFA`)
         floatText(CRATE, `+${pay}`, '#f08c00')
         burst(CRATE)
         sfx.unlock()
@@ -678,7 +678,7 @@ export function Sim({ name }: { name: string }) {
         bulk = null
         changed = true
       } else if (left <= 0) {
-        popText(`📦 Trop tard… ${bulk.name} a annulé`)
+        popText(`Trop tard… ${bulk.name} a annulé`)
         sfx.wrong()
         bulk = null
       } else if (got !== bulk.got || Math.ceil(left) !== Math.ceil(bulk.left)) bulk = { ...bulk, got, left }
@@ -690,7 +690,7 @@ export function Sim({ name }: { name: string }) {
     const rent = tickTurf(st.current, served, dt)
     if (rent > 0) {
       money += rent
-      popText(`🏙️ Loyer des quartiers : +${rent} FCFA`)
+      popText(`Loyer des quartiers : +${rent} FCFA`)
       sfx.cash()
       changed = true
     }

@@ -1,3 +1,4 @@
+import { Icon, type IconName } from './Icons'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Bounds } from '@react-three/drei'
@@ -53,9 +54,9 @@ const SLIDES = (home: PlaceId, name: string) => {
   const p = PLACES[home]
   const boss = DISTRICTS[home][0].boss
   return [
-    { icon: '🌅', bg: 'from-[#ffd8a8] to-[#ff922b]', text: `${p.name}, 6 h du matin. Ici, tout le monde se souvient du ${p.dishLabel.toLowerCase()} de Mami Adjoua, ta grand-mère.` },
-    { icon: '👵🏾', bg: 'from-[#d3f9d8] to-[#69db7c]', text: `« ${name}, je rentre au village. Je te laisse mon réchaud et ma recette. Fais-en quelque chose de grand. »` },
-    { icon: '😎', bg: 'from-[#e5dbff] to-[#9775fa]', text: `Mais ton quartier a un boss : ${boss}. Sur tout ce qui se vend chez lui, il prend 20 %.` },
+    { icon: 'sun' as IconName, bg: 'from-[#ffd8a8] to-[#ff922b]', text: `${p.name}, 6 h du matin. Ici, tout le monde se souvient du ${p.dishLabel.toLowerCase()} de Mami Adjoua, ta grand-mère.` },
+    { icon: 'grandma' as IconName, bg: 'from-[#d3f9d8] to-[#69db7c]', text: `« ${name}, je rentre au village. Je te laisse mon réchaud et ma recette. Fais-en quelque chose de grand. »` },
+    { icon: 'boss' as IconName, bg: 'from-[#e5dbff] to-[#9775fa]', text: `Mais ton quartier a un boss : ${boss}. Sur tout ce qui se vend chez lui, il prend 20 %.` },
     { icon: DISHES[p.dish].icon, bg: 'from-[#fff3bf] to-[#fcc419]', text: `Un petit coin sur le trottoir pour commencer. Fais connaître ton ${p.dishLabel.toLowerCase()} dans ta rue, puis dans tout ${p.name}… et un jour, tout Babi.` },
   ]
 }
@@ -114,7 +115,7 @@ export function Intro() {
           </button>
           {ONLINE_ON && !signedIn && (
             <button className="btn mt-2 w-full !py-2 !text-base" onClick={() => setStep('login')}>
-              🔐 Me connecter · sauvegarder en ligne
+              Me connecter · sauvegarder en ligne
             </button>
           )}
           <button className="mt-3 w-full text-center text-xs font-bold underline opacity-60" onClick={newGame}>
@@ -187,7 +188,7 @@ export function Intro() {
               <div className="mt-1 grid grid-cols-2 gap-1.5">
                 {PLACE_IDS.filter((id) => PLACES[id].city === city).map((id) => (
                   <button key={id} className={`flex items-center gap-2 rounded-xl border-[3px] px-2 py-1.5 text-left ${home === id ? 'border-[var(--color-ink)] bg-[#ffe8cc]' : 'border-transparent bg-white'}`} onClick={() => setHome(id)}>
-                    <span className="text-2xl">{DISHES[PLACES[id].dish].icon}</span>
+                    <Icon name={DISHES[PLACES[id].dish].icon} size={30} />
                     <span className="leading-tight">
                       <span className="block text-sm font-extrabold">{PLACES[id].name}</span>
                       <span className="block text-[11px] font-semibold opacity-75">{PLACES[id].dishLabel}</span>
@@ -222,7 +223,7 @@ function StorySlides({ slides, slide, setSlide, onDone }: { slides: ReturnType<t
   const last = slide === slides.length - 1
   return (
     <div key={slide} className={`pop w-full max-w-md overflow-hidden rounded-[28px] border-4 border-[var(--color-ink)] bg-gradient-to-b ${s.bg} shadow-2xl`}>
-      <div className="grid h-52 place-items-center text-[110px] leading-none drop-shadow-[0_6px_0_rgba(0,0,0,.15)]">{s.icon}</div>
+      <div className="grid h-52 place-items-center text-[110px] leading-none drop-shadow-[0_6px_0_rgba(0,0,0,.15)]"><Icon name={s.icon} size={150} /></div>
       <div className="bg-[var(--color-cream)] p-5">
         <p className="min-h-[5.5rem] text-lg leading-snug font-bold">{s.text}</p>
         <div className="mt-3 flex items-center justify-between">
@@ -247,11 +248,11 @@ function StorySlides({ slides, slide, setSlide, onDone }: { slides: ReturnType<t
   )
 }
 
-const FACE: Record<Speaker, { icon: string; name: (c: ReturnType<typeof storyCtx>) => string; color: string }> = {
-  mami: { icon: '👵🏾', name: () => 'Mami Adjoua', color: '#2f9e44' },
-  boss: { icon: '😎', name: (c) => c.boss, color: '#7048e8' },
-  me: { icon: '🙂', name: (c) => c.name, color: '#e8590c' },
-  voice: { icon: '📖', name: () => 'L’histoire', color: '#495057' },
+const FACE: Record<Speaker, { icon: IconName; name: (c: ReturnType<typeof storyCtx>) => string; color: string }> = {
+  mami: { icon: 'grandma' as IconName, name: () => 'Mami Adjoua', color: '#2f9e44' },
+  boss: { icon: 'boss' as IconName, name: (c) => c.boss, color: '#7048e8' },
+  me: { icon: 'me' as IconName, name: (c) => c.name, color: '#e8590c' },
+  voice: { icon: 'book' as IconName, name: () => 'L’histoire', color: '#495057' },
 }
 
 /** The dialogue of a chapter (the game waits), and the goal on screen. */
@@ -263,7 +264,11 @@ export function StoryLayer() {
   const [k, setK] = useState(0)
   const [open, setOpen] = useState(false)
   // the bottom of the screen is taken: a VIP waiting, a duel
-  const busy = useVip((s) => !!s.ready) || useTurf((s) => !!s.duel || !!s.incoming)
+  // both hooks always run (a `||` between them skipped the second when a VIP came: React lost track of its hooks
+  // and the whole game went blank)
+  const vipBusy = useVip((s) => !!s.ready)
+  const turfBusy = useTurf((s) => !!s.duel || !!s.incoming)
+  const busy = vipBusy || turfBusy
   useEffect(() => {
     const t = setInterval(tickStory, 400)
     return () => clearInterval(t)
@@ -278,7 +283,7 @@ export function StoryLayer() {
       <div className="pointer-events-auto absolute inset-0 z-40 flex items-end bg-black/35 p-3" onPointerDown={stop} onClick={next}>
         <div key={`${chapter}-${k}`} className="pop mx-auto flex w-full max-w-md items-end gap-2" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-4 border-white text-5xl shadow-lg" style={{ background: f.color }}>
-            {f.icon}
+            <Icon name={f.icon} size={56} />
           </div>
           <div className="card min-w-0 flex-1 !p-3">
             <div className="text-xs font-extrabold tracking-wide uppercase" style={{ color: f.color }}>
@@ -305,7 +310,7 @@ export function StoryLayer() {
         onPointerDown={stop}
         onClick={() => setOpen(true)}
       >
-        <span className="text-xl">📖</span>
+        <Icon name="book" size={24} />
         <span className="min-w-0 leading-tight">
           <span className="block text-[10px] font-extrabold tracking-wide text-[var(--color-orange)] uppercase">
             Chapitre {chapter + 1} · {ch.title} · {stepIdx + 1}/{steps.length}
@@ -317,11 +322,11 @@ export function StoryLayer() {
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={() => setOpen(false)}>
           <div className="card pop w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="text-xs font-extrabold tracking-wide text-[var(--color-orange)] uppercase">Chapitre {chapter + 1} / {CHAPTERS.length}</div>
-            <h2 className="text-2xl font-extrabold">📖 {ch.title}</h2>
+            <h2 className="text-2xl font-extrabold"><Icon name="book" size={26} className="mr-1.5 align-[-4px]" />{ch.title}</h2>
             <ul className="mt-2 space-y-1.5">
               {steps.map((s, i) => (
                 <li key={i} className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm font-bold ${i < stepIdx ? 'bg-[#d3f9d8]' : i === stepIdx ? 'bg-[#fff3bf]' : 'bg-white opacity-60'}`}>
-                  <span>{i < stepIdx ? '✅' : i === stepIdx ? '👉' : '⬜'}</span>
+                  {i < stepIdx ? <Icon name="check" size={20} /> : <span className={`inline-block h-5 w-5 shrink-0 rounded-full border-[3px] ${i === stepIdx ? 'border-[#f59f00] bg-[#fff3bf]' : 'border-[#ced4da] bg-white'}`} />}
                   {s.text}
                 </li>
               ))}

@@ -158,7 +158,7 @@ export function addFame(n: number) {
   useArcade.setState({ fame })
   const after = fameLevel(fame)
   if (after > before) {
-    popText(`📣 ${fameNews(s.current, after)}`)
+    popText(`${fameNews(s.current, after)}`)
     celebrate('fame', after)
   }
 }

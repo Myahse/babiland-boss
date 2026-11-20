@@ -48,7 +48,7 @@ function MissionsPanel({ onClose }: { onClose: () => void }) {
     if (m) {
       sfx.cash()
       sfx.unlock()
-      popText(`🎯 +${fcfa(m)} FCFA`)
+      popText(`+${fcfa(m)} FCFA`)
     }
   }
   const all = s.list.length > 0 && s.list.every((m) => m.claimed)
@@ -56,9 +56,9 @@ function MissionsPanel({ onClose }: { onClose: () => void }) {
     <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={onClose}>
       <div className="card pop w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">🎯 Missions du jour</h2>
+          <h2 className="text-2xl font-extrabold"><Icon name="target" size={26} className="mr-1.5 align-[-4px]" />Missions du jour</h2>
           <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
-            ✕
+            <Icon name="cross" size={22} />
           </button>
         </div>
         <p className="text-sm font-semibold opacity-75">Trois missions par jour. Fais-les toutes pour ouvrir le coffre !</p>
@@ -67,7 +67,7 @@ function MissionsPanel({ onClose }: { onClose: () => void }) {
             const done = m.n >= m.goal
             return (
               <div key={i} className={`flex items-center gap-2 rounded-xl border-2 border-[var(--color-ink)] px-2.5 py-2 ${m.claimed ? 'bg-[#d3f9d8]' : 'bg-white'}`}>
-                <span className="text-2xl">{MISSION_ICON[m.kind]}</span>
+                <Icon name={MISSION_ICON[m.kind]} size={30} />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm leading-tight font-extrabold">{missionText(m)}</div>
                   <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[#e9ecef]">
@@ -78,7 +78,7 @@ function MissionsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 {m.claimed ? (
-                  <span className="text-xl">✅</span>
+                  <Icon name="check" size={24} />
                 ) : (
                   <button className="btn btn-green !px-3 !py-1.5 !text-sm" disabled={!done} onClick={() => take(i)}>
                     {done ? 'Prendre' : '…'}
@@ -89,7 +89,7 @@ function MissionsPanel({ onClose }: { onClose: () => void }) {
           })}
         </div>
         <div className={`mt-3 flex items-center gap-3 rounded-2xl border-[3px] p-3 ${all && !s.chest ? 'vip-glow border-[#f59f00] bg-[#fff3bf]' : 'border-dashed border-[#c9b79c]'}`}>
-          <span className="text-4xl">{s.chest ? '📭' : '🎁'}</span>
+          <Icon name={s.chest ? 'chestOpen' : 'gift'} size={44} />
           <div className="min-w-0 flex-1 leading-tight">
             <div className="text-base font-extrabold">Coffre du jour</div>
             <div className="text-xs font-bold opacity-75">{s.chest ? 'Ouvert ! Nouvelles missions demain.' : `Les 3 missions faites : +${fcfa(CHEST(s))} F en plus`}</div>
@@ -115,10 +115,10 @@ export function BulkBanner() {
   const hurry = left <= 20
   return (
     <div className="absolute top-[6.4rem] right-3 w-44 rounded-2xl border-[3px] border-white bg-[#fff3bf] px-2.5 py-1.5 shadow-md" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-      <div className="truncate text-[11px] font-extrabold opacity-80">📦 {bulk.name}</div>
+      <div className="truncate text-[11px] font-extrabold opacity-80"><Icon name="box" size={14} className="mr-1 align-[-2px]" />{bulk.name}</div>
       <div className="flex items-center justify-between text-base font-extrabold">
         <span>
-          {d.icon} {bulk.got}/{bulk.want}
+          <Icon name={d.icon} size={20} className="mr-1 align-[-4px]" />{bulk.got}/{bulk.want}
         </span>
         <span className={hurry ? 'animate-pulse text-[#e03131]' : ''}>
           ⏱ {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
@@ -183,10 +183,10 @@ export function NewsLayer() {
     return (
       <div key={news.id} className="pop pointer-events-none absolute inset-x-0 top-[22%] z-30 flex justify-center px-4">
         <div className="max-w-sm rounded-3xl border-4 border-white bg-gradient-to-b from-[#ffa94d] to-[#f76707] px-5 py-3 text-center text-white shadow-xl" style={{ textShadow: '1px 1px 0 #a33a00' }}>
-          <div className="text-3xl">📣</div>
+          <div className="flex justify-center"><Icon name="megaphone" size={36} /></div>
           <div className="text-lg leading-tight font-extrabold">{fameText(place, news.level)} !</div>
           <div className="text-sm font-bold">{fameNews(place, news.level)}</div>
-          {st && <div className="mt-1 rounded-xl bg-white/25 px-2 py-0.5 text-xs font-extrabold">{st.icon} Tu peux devenir un {st.name.toLowerCase()} : va sur le carré doré</div>}
+          {st && <div className="mt-1 rounded-xl bg-white/25 px-2 py-0.5 text-xs font-extrabold"><Icon name={st.icon} size={16} className="mr-1 align-[-3px]" />Tu peux devenir un {st.name.toLowerCase()} : va sur le carré doré</div>}
         </div>
       </div>
     )
@@ -195,13 +195,13 @@ export function NewsLayer() {
   return createPortal(
     <div className="pointer-events-auto fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onPointerDown={stop}>
       <div className="card pop w-full max-w-sm !p-5 text-center">
-        <div className="text-6xl">{st.icon}</div>
+        <div className="flex justify-center"><Icon name={st.icon} size={72} /></div>
         <div className="mt-1 text-xs font-extrabold tracking-wide text-[#e8590c] uppercase">{PLACES[place].name} · ça grandit !</div>
         <div className="text-2xl leading-tight font-extrabold">{news.level === 1 ? 'Ton petit coin devient un maquis !' : `Ton maquis devient un ${st.name.toLowerCase()} !`}</div>
         <ul className="mt-3 space-y-1 text-left text-sm font-bold">
           {st.news.map((n) => (
             <li key={n} className="flex gap-2 rounded-xl bg-white px-2.5 py-1.5">
-              <span>✨</span>
+              <Icon name="sparkle" size={18} />
               <span>{n}</span>
             </li>
           ))}
@@ -240,21 +240,21 @@ function AmenagerPanel({ onClose }: { onClose: () => void }) {
     useArcade.setState({ money: s.money - price, items: [...s.items, it.id] })
     missionEvent('unlock')
     sfx.unlock()
-    popText(`${it.icon} ${it.label} !`)
+    popText(`${it.label} !`)
   }
   return (
     <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={onClose}>
       <div className="card pop max-h-[88%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">🛠️ Aménager</h2>
+          <h2 className="text-2xl font-extrabold"><Icon name="tools" size={26} className="mr-1.5 align-[-4px]" />Aménager</h2>
           <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
-            ✕
+            <Icon name="cross" size={22} />
           </button>
         </div>
         <p className="text-sm font-semibold opacity-75">{PLACES[place].name} : prends du monde avec toi et équipe ta salle.</p>
         {(['staff', 'room'] as const).map((kind) => (
           <div key={kind}>
-            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'staff' ? '👥 Assistants' : '🪑 La salle'}</div>
+            <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'staff' ? 'Assistants' : 'La salle'}</div>
             <div className="mt-1 space-y-1.5">
               {ITEMS.filter((it) => it.kind === kind).map((it) => {
                 const owned = items.includes(it.id)
@@ -262,13 +262,13 @@ function AmenagerPanel({ onClose }: { onClose: () => void }) {
                 const price = itemPrice(place, it)
                 return (
                   <div key={it.id} className={`flex items-center gap-2 rounded-xl border-2 px-2.5 py-1.5 ${owned ? 'border-[#2f9e44] bg-[#d3f9d8]' : 'border-[var(--color-ink)] bg-white'}`}>
-                    <span className="text-3xl">{it.icon}</span>
+                    <Icon name={it.icon} size={36} />
                     <div className="min-w-0 flex-1 leading-tight">
                       <div className="text-sm font-extrabold">{it.label}</div>
-                      <div className="text-[11px] font-semibold opacity-75">{blocked && !owned ? `🔒 ${blocked}` : it.text}</div>
+                      <div className="text-[11px] font-semibold opacity-75">{blocked && !owned ? blocked : it.text}</div>
                     </div>
                     {owned ? (
-                      <span className="text-xl">✅</span>
+                      <Icon name="check" size={24} />
                     ) : (
                       <button className="btn !px-2.5 !py-1.5 !text-sm" disabled={!!blocked || money < price} onClick={() => buy(it)}>
                         {fcfa(price)} F

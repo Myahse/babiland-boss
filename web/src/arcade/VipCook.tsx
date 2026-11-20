@@ -1,3 +1,4 @@
+import { Icon } from './Icons'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DISHES, PLACES } from './places'
 import { sfx } from './sfx'
@@ -26,7 +27,7 @@ export function VipLayer() {
         onClick={() => useVip.setState({ open: true })}
       >
         <div className="flex items-center gap-3">
-          <span className="text-4xl">👑</span>
+          <Icon name="crown" size={44} />
           <div className="min-w-0 flex-1 leading-tight">
             <div className="text-xs font-extrabold tracking-wide text-[#7a3d00] uppercase">Client VIP · {ready.name}</div>
             <div className="text-lg font-extrabold text-[#2b1a12]">
@@ -58,11 +59,11 @@ function VipCook({ recipe, name, want }: { recipe: Recipe; name: string; want: n
     <div className="pointer-events-auto absolute inset-0 z-40 flex flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_40%,#fff4d6,#f5c97b)] select-none" onPointerDown={stop} style={{ touchAction: 'none' }}>
       {/* header: who it is for, the steps */}
       <div className="flex items-center gap-2 px-3 pt-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
-        <span className="text-3xl">👑</span>
+        <Icon name="crown" size={36} />
         <div className="min-w-0 flex-1 leading-tight">
           <div className="text-[11px] font-extrabold tracking-wide text-[#a05a00] uppercase">Commande spéciale · {name}</div>
           <div className="text-lg font-extrabold">
-            {DISHES[PLACES[place].dish].icon} {PLACES[place].dishLabel} × {want}
+            <Icon name={DISHES[PLACES[place].dish].icon} size={20} className="mr-1 align-[-4px]" />{PLACES[place].dishLabel} × {want}
           </div>
         </div>
       </div>
@@ -194,7 +195,7 @@ function CutStep({ items, onDone }: { items: Ing[]; onDone: (s: number) => void 
               className="absolute inset-0 grid place-items-center transition-transform duration-200"
               style={{ clipPath: `inset(0 ${((BOX / 2 - r) / BOX) * 100}% 0 ${((l + BOX / 2) / BOX) * 100}%)`, transform: `translateX(${spread}px) rotate(${spread * 0.15}deg)`, fontSize: BOX * 0.8, lineHeight: 1 }}
             >
-              <span className="drop-shadow-[0_6px_0_rgba(0,0,0,.18)]">{item.icon}</span>
+              <span className="drop-shadow-[0_6px_0_rgba(0,0,0,.18)]"><Icon name={item.icon} size={BOX * 0.8} /></span>
             </div>
           )
         })}
@@ -204,10 +205,10 @@ function CutStep({ items, onDone }: { items: Ing[]; onDone: (s: number) => void 
         ))}
       </div>
       {/* how to: a hand showing the gesture, on the first vegetable */}
-      {idx === 0 && cuts.length === 0 && !knife && <div className="swipe-hint pointer-events-none absolute top-1/2 left-1/2 text-5xl">👆</div>}
+      {idx === 0 && cuts.length === 0 && !knife && <div className="swipe-hint pointer-events-none absolute top-1/2 left-1/2"><Icon name="hand" size={56} /></div>}
       {knife && (
         <div className="pointer-events-none absolute top-1/2 left-1/2 text-6xl" style={{ transform: `translate(${knife.x - 20}px, ${knife.y - 50}px) rotate(-45deg)` }}>
-          🔪
+          <Icon name="knife" size={56} />
         </div>
       )}
     </div>
@@ -313,7 +314,7 @@ function CookStep({ cook, onDone }: { cook: Recipe['cook']; onDone: (s: number) 
           className="pointer-events-none absolute top-1/2 left-1/2 text-[150px] leading-none"
           style={{ transform: `translate(-50%, ${-50 - Math.sin(f * Math.PI) * 60}%) rotateX(${side.current && cook.on !== 'pot' ? (1 - f) * 180 - 180 : 0}deg) rotate(${cook.on === 'pot' ? Math.sin(c.current[side.current] * 40) * 6 : 0}deg)`, filter }}
         >
-          {cook.food.icon}
+          <Icon name={cook.food.icon} size={150} />
         </div>
         {/* smoke when it burns */}
         {shown > 0.9 && <div className="smoke absolute -top-24 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-[#495057]/40 blur-xl" />}
@@ -327,7 +328,7 @@ function CookStep({ cook, onDone }: { cook: Recipe['cook']; onDone: (s: number) 
         </div>
         <div className="mt-1 flex justify-between text-[11px] font-extrabold opacity-70">
           <span>cru</span>
-          <span>doré ⭐</span>
+          <span>doré</span>
           <span>brûlé</span>
         </div>
       </div>
@@ -389,7 +390,7 @@ function PlateStep({ plate, decoy, onDone }: { plate: Ing[]; decoy: Ing[]; onDon
       <div className="absolute top-16 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-2xl border-[3px] border-[#2b1a12] bg-white px-3 py-2 shadow-md">
         {plate.map((p, i) => (
           <div key={i} className={`grid h-11 w-11 place-items-center rounded-xl text-2xl ${i < n ? 'bg-[#d3f9d8] opacity-50' : i === n ? 'bg-[#fff3bf] ring-[3px] ring-[#f59f00]' : 'bg-[#f1f3f5]'}`}>
-            {p.icon}
+            <Icon name={p.icon} size={30} />
           </div>
         ))}
       </div>
@@ -400,7 +401,7 @@ function PlateStep({ plate, decoy, onDone }: { plate: Ing[]; decoy: Ing[]; onDon
           const r = i === 0 ? 0 : 58
           return (
             <div key={i} className="pop absolute text-5xl" style={{ transform: `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r}px)` }}>
-              {p.icon}
+              <Icon name={p.icon} size={52} />
             </div>
           )
         })}
@@ -415,7 +416,7 @@ function PlateStep({ plate, decoy, onDone }: { plate: Ing[]; decoy: Ing[]; onDon
               className={`flex flex-col items-center rounded-2xl border-[3px] border-[#2b1a12] bg-white py-2 shadow-[0_4px_0_#2b1a12] active:translate-y-1 active:shadow-none disabled:opacity-30 ${shake === b ? 'shake' : ''}`}
               onPointerDown={() => pick(c.i, b)}
             >
-              <span className="text-3xl leading-none">{c.icon}</span>
+              <Icon name={c.icon} size={36} />
               <span className="mt-1 text-[11px] font-extrabold leading-tight">{c.name}</span>
             </button>
           )
@@ -446,7 +447,7 @@ function Result({ score, pay, name }: { score: number; pay: number; name: string
       <div className="flex gap-2">
         {[0, 1, 2].map((k) => (
           <span key={k} className={`text-6xl transition-all duration-300 ${k < shown ? 'scale-110' : 'scale-75 opacity-25 grayscale'}`}>
-            ⭐
+            <Icon name="star" size={64} />
           </span>
         ))}
       </div>

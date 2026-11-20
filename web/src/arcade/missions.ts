@@ -1,3 +1,4 @@
+import type { IconName } from './Icons'
 import { create } from 'zustand'
 import { levelOf } from './places'
 import { totalServed, useArcade } from './store'
@@ -12,14 +13,14 @@ type State = { day: string; list: Mission[]; chest: boolean }
 const TEXT: Record<MissionKind, (g: number) => string> = {
   serve: (g) => `Sers ${g} clients`,
   vip: (g) => (g > 1 ? `Cuisine pour ${g} clients VIP` : 'Cuisine pour un client VIP'),
-  vip3: () => 'Fais un plat VIP parfait ⭐⭐⭐',
+  vip3: () => 'Fais un plat VIP parfait (3 étoiles)',
   bulk: (g) => (g > 1 ? `Livre ${g} commandes en gros` : 'Livre une commande en gros'),
   stand: (g) => `Ramasse ${g.toLocaleString('fr-FR')} F à tes petits business`,
   unlock: (g) => `Débloque ou améliore ${g} choses`,
   district: () => 'Gagne un duel de quartier',
 }
 export const missionText = (m: Mission) => TEXT[m.kind](m.goal)
-export const MISSION_ICON: Record<MissionKind, string> = { serve: '🍛', vip: '👑', vip3: '⭐', bulk: '📦', stand: '🍵', unlock: '🔓', district: '⚔️' }
+export const MISSION_ICON: Record<MissionKind, IconName> = { serve: 'plate', vip: 'crown', vip3: 'star', bulk: 'box', stand: 'tea', unlock: 'lock', district: 'swords' }
 
 const today = () => {
   const d = new Date()

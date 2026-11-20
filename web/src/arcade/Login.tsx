@@ -1,3 +1,4 @@
+import { Icon as GameIcon } from './Icons'
 import { Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Bounds } from '@react-three/drei'
@@ -150,7 +151,7 @@ export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created:
           <Crew />
         </div>
         <div className="flex items-center gap-2 rounded-full bg-[#2b1a12]/80 px-3 py-1 text-xs font-extrabold text-white shadow">
-          <span>🍛 {stats ? fmt(stats.players) : '…'} boss</span>
+          <span className="flex items-center gap-1"><GameIcon name="plate" size={16} />{stats ? fmt(stats.players) : '…'} boss</span>
           <span className="opacity-40">•</span>
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 animate-pulse rounded-full bg-[#69db7c]" /> {stats ? fmt(stats.online) : '…'} en ligne

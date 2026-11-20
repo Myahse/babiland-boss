@@ -1,3 +1,4 @@
+import type { IconName } from './Icons'
 import { createContext } from 'react'
 
 // The places you can own, each with its own dish (see docs/VISION.md): you start in Yopougon with garba,
@@ -8,27 +9,27 @@ export type Dish =
   | 'porc' | 'the' | 'poulet' | 'bissap' | 'gnamakoudji' | 'claclo' | 'foutou' | 'rizgras' | 'degue' | 'foutoubanane' | 'cafe' | 'rizarachide'
 
 /** Every dish of the game: its name, its icon in the bubbles, and how it looks on the plate. */
-export const DISHES: Record<Dish, { label: string; icon: string; look: 'garba' | 'alloco' | 'choukouya' | 'poisson' | 'kedjenou' | 'to' | 'kplala' | 'feuille' | 'meat' | 'drink' | 'balls' | 'mound'; color?: string; sauce?: string }> = {
-  garba: { label: 'Garba', icon: '🐟', look: 'garba' },
-  alloco: { label: 'Alloco', icon: '🍌', look: 'alloco' },
-  choukouya: { label: 'Choukouya', icon: '🍖', look: 'choukouya' },
-  poisson: { label: 'Poisson braisé', icon: '🐠', look: 'poisson' },
-  kedjenou: { label: 'Kedjenou', icon: '🍗', look: 'kedjenou' },
-  to: { label: 'Tô', icon: '🥣', look: 'to' },
-  kplala: { label: 'Sauce kplala', icon: '🍲', look: 'kplala' },
-  feuille: { label: 'Sauce feuille', icon: '🥬', look: 'feuille' },
-  porc: { label: 'Porc au four', icon: '🥓', look: 'meat', color: '#b5562a' },
-  the: { label: 'Thé', icon: '🍵', look: 'drink', color: '#8a4b1c' },
-  poulet: { label: 'Poulet braisé', icon: '🍗', look: 'meat', color: '#c8641c' },
-  bissap: { label: 'Bissap', icon: '🥤', look: 'drink', color: '#a61e4d' },
-  gnamakoudji: { label: 'Gnamakoudji', icon: '🧃', look: 'drink', color: '#f2c94c' },
-  claclo: { label: 'Claclo', icon: '🟠', look: 'balls', color: '#d9822b' },
-  foutou: { label: 'Foutou igname', icon: '⚪', look: 'mound', color: '#fff9db', sauce: '#c2410c' },
-  rizgras: { label: 'Riz gras', icon: '🍛', look: 'mound', color: '#e8590c', sauce: '#c92a2a' },
-  degue: { label: 'Dêguê', icon: '🥛', look: 'drink', color: '#f8f9fa' },
-  foutoubanane: { label: 'Foutou banane', icon: '🟡', look: 'mound', color: '#ffd43b', sauce: '#4a2a12' },
-  cafe: { label: 'Café', icon: '☕', look: 'drink', color: '#3b2314' },
-  rizarachide: { label: 'Riz sauce arachide', icon: '🥜', look: 'mound', color: '#ffffff', sauce: '#b8621b' },
+export const DISHES: Record<Dish, { label: string; icon: IconName; look: 'garba' | 'alloco' | 'choukouya' | 'poisson' | 'kedjenou' | 'to' | 'kplala' | 'feuille' | 'meat' | 'drink' | 'balls' | 'mound'; color?: string; sauce?: string }> = {
+  garba: { label: 'Garba', icon: 'fish', look: 'garba' },
+  alloco: { label: 'Alloco', icon: 'plantain', look: 'alloco' },
+  choukouya: { label: 'Choukouya', icon: 'meat', look: 'choukouya' },
+  poisson: { label: 'Poisson braisé', icon: 'fish', look: 'poisson' },
+  kedjenou: { label: 'Kedjenou', icon: 'chicken', look: 'kedjenou' },
+  to: { label: 'Tô', icon: 'bowl', look: 'to' },
+  kplala: { label: 'Sauce kplala', icon: 'stew', look: 'kplala' },
+  feuille: { label: 'Sauce feuille', icon: 'leaves', look: 'feuille' },
+  porc: { label: 'Porc au four', icon: 'meat', look: 'meat', color: '#b5562a' },
+  the: { label: 'Thé', icon: 'tea', look: 'drink', color: '#8a4b1c' },
+  poulet: { label: 'Poulet braisé', icon: 'chicken', look: 'meat', color: '#c8641c' },
+  bissap: { label: 'Bissap', icon: 'glass', look: 'drink', color: '#a61e4d' },
+  gnamakoudji: { label: 'Gnamakoudji', icon: 'bottle', look: 'drink', color: '#f2c94c' },
+  claclo: { label: 'Claclo', icon: 'ball', look: 'balls', color: '#d9822b' },
+  foutou: { label: 'Foutou igname', icon: 'mound', look: 'mound', color: '#fff9db', sauce: '#c2410c' },
+  rizgras: { label: 'Riz gras', icon: 'rice', look: 'mound', color: '#e8590c', sauce: '#c92a2a' },
+  degue: { label: 'Dêguê', icon: 'cup', look: 'drink', color: '#f8f9fa' },
+  foutoubanane: { label: 'Foutou banane', icon: 'mound', look: 'mound', color: '#ffd43b', sauce: '#4a2a12' },
+  cafe: { label: 'Café', icon: 'cup', look: 'drink', color: '#3b2314' },
+  rizarachide: { label: 'Riz sauce arachide', icon: 'peanut', look: 'mound', color: '#ffffff', sauce: '#b8621b' },
 }
 export type PlaceId = 'yopougon' | 'cocody' | 'abobo' | 'treichville' | 'bouake' | 'korhogo' | 'gagnoa' | 'man'
 

@@ -1,3 +1,4 @@
+import type { IconName } from './Icons'
 import { dishPrice, PLACES, type PlaceId } from './places'
 
 // You start small (docs/VISION.md: « tu commences dans un petit coin »): a table and a stove on the pavement.
@@ -7,7 +8,7 @@ import { dishPrice, PLACES, type PlaceId } from './places'
 
 export type Stage = {
   name: string
-  icon: string
+  icon: IconName
   /** fame level needed to grow into it */
   fame: number
   /** price to grow into it (x the price of a plate there) */
@@ -23,10 +24,10 @@ export type Stage = {
 }
 
 export const STAGES: Stage[] = [
-  { name: 'Petit coin', icon: '🪑', fame: 0, price: 0, priceMul: 1, queue: 4, spawn: 0.7, news: [] },
+  { name: 'Petit coin', icon: 'stool', fame: 0, price: 0, priceMul: 1, queue: 4, spawn: 0.7, news: [] },
   {
     name: 'Maquis',
-    icon: '🏠',
+    icon: 'house',
     fame: 1,
     price: 4,
     priceMul: 1,
@@ -34,8 +35,8 @@ export const STAGES: Stage[] = [
     spawn: 1,
     news: ['Le local est à toi : cuisine, comptoir, auvent', 'Embauche ton équipe : serveur, caissière, livreur', 'La terrasse, les plats particuliers, les clients VIP et les commandes en gros', 'Les petits business sur le trottoir'],
   },
-  { name: 'Restaurant', icon: '🍽️', fame: 3, price: 30, priceMul: 1.25, queue: 10, spawn: 1.2, news: ['L’étage ouvre : terrasse avec vue, guirlandes, grande enseigne', 'Les plats se vendent 25 % plus cher', 'Plus de clients et une file plus longue'] },
-  { name: 'Grand restaurant', icon: '👑', fame: 5, price: 120, priceMul: 1.5, queue: 12, spawn: 1.4, news: ['Enseigne dorée et tapis rouge', 'Les plats se vendent 50 % plus cher', 'Les clients VIP viennent plus souvent'] },
+  { name: 'Restaurant', icon: 'cloche', fame: 3, price: 30, priceMul: 1.25, queue: 10, spawn: 1.2, news: ['L’étage ouvre : terrasse avec vue, guirlandes, grande enseigne', 'Les plats se vendent 25 % plus cher', 'Plus de clients et une file plus longue'] },
+  { name: 'Grand restaurant', icon: 'crown', fame: 5, price: 120, priceMul: 1.5, queue: 12, spawn: 1.4, news: ['Enseigne dorée et tapis rouge', 'Les plats se vendent 50 % plus cher', 'Les clients VIP viennent plus souvent'] },
 ]
 export const stagePrice = (id: PlaceId, stage: number) => STAGES[stage].price * PLACES[id].plate
 

@@ -107,7 +107,7 @@ export function Staff() {
       if (r.fast) c.rot = turn(c.rot, r.dir, Math.min(1, dt * 10))
       if (st.cash > 0 && c.pos.distanceTo(CASH) < 0.7) {
         for (let k = 0; k < Math.min(8, Math.ceil(st.cash / 200)); k++) fly('cash', CASH.clone().setY(0.3), c.pos.clone().setY(1), k * 0.04, 0.3)
-        popText(`🧑🏾 Le commis ramasse : +${st.cash} FCFA`)
+        popText(`Le commis ramasse : +${st.cash} FCFA`)
         sfx.cash()
         useArcade.setState({ money: st.money + st.cash, cash: 0 })
       } else if (tip >= 0 && c.pos.distanceTo(TABLES[tip].clone().add(V(0, -0.75))) < 0.6) {

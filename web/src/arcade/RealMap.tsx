@@ -1,3 +1,4 @@
+import { iconSvg } from './Icons'
 import { useEffect, useRef, useState } from 'react'
 import type { PlaceId } from './places'
 import { DISTRICTS, canAttack } from './turf'
@@ -130,11 +131,11 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
       const el = document.createElement('div')
       el.className = 'pointer-events-auto cursor-pointer text-center leading-tight select-none'
       // kept short so labels don't pile up in the dense centre: the boss's name is on the card when you tap
-      const tag = mine ? '👑' : open ? (i === 0 ? '🗡️' : '⚔️') : ''
+      const tag = mine ? iconSvg('crown', 15) : open ? iconSvg(i === 0 ? 'sword' : 'swords', 15) : ''
       el.innerHTML = `
-        ${i === 0 ? '<div style="font-size:20px;line-height:1">📍</div>' : ''}
-        ${d.bonus ? `<span style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#ffd43b;border:2px solid #2b1a12;font-size:12px">${d.bonus.icon}</span>` : ''}
-        <div style="font:800 11.5px 'Baloo 2',sans-serif;color:#2b1a12;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff">${tag} ${d.name}</div>`
+        ${i === 0 ? `<div style="display:flex;justify-content:center">${iconSvg('pin', 22)}</div>` : ''}
+        ${d.bonus ? `<span style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#ffd43b;border:2px solid #2b1a12;">${iconSvg(d.bonus.icon, 14)}</span>` : ''}
+        <div style="font:800 11.5px 'Baloo 2',sans-serif;color:#2b1a12;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;display:flex;align-items:center;justify-content:center;gap:2px">${tag}<span>${d.name}</span></div>`
       el.addEventListener('click', (e) => {
         e.stopPropagation()
         pick.current(i)

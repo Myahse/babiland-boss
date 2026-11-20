@@ -1,3 +1,4 @@
+import { Icon } from './Icons'
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, RoundedBox } from '@react-three/drei'
@@ -78,7 +79,7 @@ export function Moto({ obj, want, got, waiting }: { obj: MotoObj; want: number; 
       {waiting && (
         <Html position={[0, 2.1, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
           <div className="pop flex items-center gap-1 rounded-full border-[3px] border-[var(--color-ink)] bg-white px-3 py-1 text-lg font-extrabold whitespace-nowrap shadow-lg">
-            📱 Livraison 🍛 {got}/{want}
+            <Icon name="phone" size={16} className="mr-1 align-[-3px]" />Livraison {got}/{want}
           </div>
         </Html>
       )}

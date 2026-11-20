@@ -154,7 +154,7 @@ export function tickStory() {
   if (k !== s.step) useStory.setState({ step: k })
   if (k >= steps.length) {
     useArcade.setState((a) => ({ money: a.money + ch.reward }))
-    popText(`📖 Chapitre terminé : +${ch.reward} FCFA`)
+    popText(`Chapitre terminé : +${ch.reward} FCFA`)
     const next = s.chapter + 1
     useStory.setState({ talking: ch.outro(ctx), chapter: next, step: 0, done: next >= CHAPTERS.length })
   }

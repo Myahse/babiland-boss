@@ -191,7 +191,7 @@ export function connect(at: PlaceId) {
 export function liveSend(m: object) {
   if (sock?.readyState === 1) sock.send(JSON.stringify(m))
 }
-export const SHOUTS = ['🔥 Mon garba est le meilleur !', '😎 Je suis le boss ici', '⚔️ Je viens pour ton quartier', '🛡️ Viens si tu es fort', '🤝 Bien joué', '😂 Doucement !', '👑 Respect au boss', '🍛 Venez manger chez moi']
+export const SHOUTS = ['Mon garba est le meilleur !', 'Je suis le boss ici', 'Je viens pour ton quartier', 'Viens si tu es fort', 'Bien joué', 'Doucement !', 'Respect au boss', 'Venez manger chez moi']
 
 // ------------------------------------------------------------------ the districts
 /** What the server says of a place's districts; the callback (turf.ts) applies it. */

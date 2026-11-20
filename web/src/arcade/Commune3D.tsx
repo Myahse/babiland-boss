@@ -1,3 +1,4 @@
+import { drawIcon, type IconName } from './Icons'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { MapControls, RoundedBox } from '@react-three/drei'
@@ -58,24 +59,36 @@ function rng(seed: number) {
 
 /** A name label drawn on a canvas, shown as a sprite that always faces the camera. */
 const labels = new Map<string, THREE.CanvasTexture>()
-function labelTexture(text: string, w = 640) {
-  if (labels.has(text)) return labels.get(text)!
+/** A label over the map: drawn icons, then the text (outlined in white so it reads on any ground). */
+function labelTexture(text: string, w = 640, icons: IconName[] = []) {
+  const key = `${icons.join(',')}|${text}|${w}`
+  if (labels.has(key)) return labels.get(key)!
   const c = document.createElement('canvas')
   c.width = w
   c.height = 128
   const g = c.getContext('2d')!
   g.font = '800 56px "Baloo 2", sans-serif'
-  g.textAlign = 'center'
   g.textBaseline = 'middle'
   g.lineJoin = 'round'
-  g.lineWidth = 14
-  g.strokeStyle = '#ffffff'
-  g.strokeText(text, w / 2, 68)
-  g.fillStyle = '#2b1a12'
-  g.fillText(text, w / 2, 68)
+  const ic = 64
+  const tw = text ? g.measureText(text).width : 0
+  const total = icons.length * (ic + 6) + tw
+  let x = (w - total) / 2
+  for (const n of icons) {
+    drawIcon(g, n, x + ic / 2, 64, ic)
+    x += ic + 6
+  }
+  if (text) {
+    g.textAlign = 'left'
+    g.lineWidth = 14
+    g.strokeStyle = '#ffffff'
+    g.strokeText(text, x, 68)
+    g.fillStyle = '#2b1a12'
+    g.fillText(text, x, 68)
+  }
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
-  labels.set(text, t)
+  labels.set(key, t)
   return t
 }
 
@@ -246,8 +259,8 @@ function Maquis({ name, mine, home, color, oldColor, cq }: { name: string; mine:
 }
 
 /** The landmark of a key zone. */
-function Landmark({ kind }: { kind: string }) {
-  if (kind === '🏭')
+function Landmark({ kind }: { kind: IconName }) {
+  if (kind === 'factory')
     return (
       <group position={[-9, 1.2, -4]}>
         <RoundedBox args={[10, 4, 6]} radius={0.2} position={[0, 2, 0]} castShadow>
@@ -267,7 +280,7 @@ function Landmark({ kind }: { kind: string }) {
         ))}
       </group>
     )
-  if (kind === '🚌')
+  if (kind === 'bus')
     return (
       <group position={[-9, 1.2, 3]}>
         {[0, 1, 2].map((k) => (
@@ -277,7 +290,7 @@ function Landmark({ kind }: { kind: string }) {
         ))}
       </group>
     )
-  if (kind === '🧺')
+  if (kind === 'basket')
     return (
       <group position={[-9, 1.2, 3]}>
         {[0, 1, 2, 3].map((k) => (
@@ -298,7 +311,7 @@ function Landmark({ kind }: { kind: string }) {
         ))}
       </group>
     )
-  if (kind === '🌙')
+  if (kind === 'moon')
     return (
       <group position={[-8, 1.2, 3]}>
         {Array.from({ length: 14 }, (_, k) => (
@@ -378,11 +391,11 @@ function DistrictBlock({ d, place, owner, owners, selected, onPick, cq }: { d: D
         </group>
         {(open || mine) && (
           <sprite ref={marker} position={[0, 34, 0]} scale={[7, 7, 1]}>
-            <spriteMaterial map={labelTexture(mine ? '👑' : '⚔️', 128)} depthTest={false} transparent />
+            <spriteMaterial map={labelTexture('', 128, [mine ? 'crown' : 'swords'])} depthTest={false} transparent />
           </sprite>
         )}
         <sprite position={[0, 24, 0]} scale={[46, 9.2, 1]}>
-          <spriteMaterial map={labelTexture(`${shielded ? '🛡️ ' : ''}${d.i === 0 ? '📍 ' : ''}${info.bonus ? `${info.bonus.icon} ` : ''}${mine ? '👑 ' : open ? (d.i === 0 ? '🗡️ ' : '⚔️ ') : ''}${info.name}`)} depthTest={false} transparent />
+          <spriteMaterial map={labelTexture(info.name, 640, [...(shielded ? ['shield' as const] : []), ...(d.i === 0 ? ['pin' as const] : []), ...(info.bonus ? [info.bonus.icon] : []), ...(mine ? ['crown' as const] : open ? [d.i === 0 ? ('sword' as const) : ('swords' as const)] : [])])} depthTest={false} transparent />
         </sprite>
       </group>
     </group>

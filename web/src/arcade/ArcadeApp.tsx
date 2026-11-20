@@ -85,13 +85,13 @@ function PlaceRow({ id, level, onDone }: { id: PlaceId; level: number; onDone: (
         </div>
       </div>
       {here ? (
-        <span className="text-xs font-extrabold text-[var(--color-green)]">📍 Tu es ici</span>
+        <span className="text-xs font-extrabold text-[var(--color-green)]">Tu es ici</span>
       ) : owned ? (
         <button className="btn btn-green !px-3 !py-1.5 !text-sm" onClick={() => (goTo(id), onDone())}>
           Y aller
         </button>
       ) : level < p.level ? (
-        <span className="text-xs font-extrabold opacity-70">🔒 niveau {p.level}</span>
+        <span className="text-xs font-extrabold opacity-70">niveau {p.level}</span>
       ) : (
         <button className="btn !px-3 !py-1.5 !text-sm" disabled={money < p.price} onClick={() => (buy(id), onDone())}>
           Acheter {p.price.toLocaleString('fr-FR')} F
@@ -107,10 +107,10 @@ function SideRow({ i, level }: { i: number; level: number }) {
   const lv = useArcade((s) => s.side[i])
   return (
     <div className={`flex items-center justify-between rounded-xl border-2 px-2.5 py-1.5 text-sm font-bold ${lv ? 'border-[var(--color-ink)] bg-white' : 'border-dashed border-[#c9b79c]'}`}>
-      <span>
-        {b.icon} {b.name}
+      <span className="flex items-center gap-1">
+        <Icon name={b.art} size={20} /> {b.name}
       </span>
-      <span className="text-xs">{lv ? `${'⭐'.repeat(lv)}${lv < SIDE_MAX ? ' · améliore-le sur son carré' : ' · MAX'}` : level >= b.level ? `${b.price} F · son carré est devant la terrasse` : `🔒 niveau ${b.level}`}</span>
+      <span className="text-xs">{lv ? `niveau ${lv}${lv < SIDE_MAX ? ' · améliore-le sur son carré' : ' · MAX'}` : level >= b.level ? `${b.price} F · son carré est devant la terrasse` : `niveau ${b.level}`}</span>
     </div>
   )
 }
@@ -120,9 +120,9 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
       <div className="card pop max-h-[85%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">🗺️ Deviens le boss de Babi</h2>
+          <h2 className="text-2xl font-extrabold"><Icon name="map" size={26} className="mr-1.5 align-[-4px]" />Deviens le boss de Babi</h2>
           <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
-            ✕
+            <Icon name="cross" size={22} />
           </button>
         </div>
         <p className="mt-1 text-sm font-semibold">Monte de niveau (clients servis partout), ouvre un petit coin dans une autre commune, puis dans d’autres villes. Chaque coin commence petit et grandit quand les gens te connaissent : maquis, restaurant, grand restaurant. Chacun garde son matériel et son équipe.</p>
@@ -143,7 +143,7 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
           ))}
         </div>
         <div className="mt-3 rounded-xl bg-[#2b1a12] p-3 text-sm font-bold text-white">
-          ⚔️ Clash des boss — bientôt en ligne : prends un quartier au boss d’à côté et défends le tien.
+          Clash des boss — bientôt en ligne : prends un quartier au boss d’à côté et défends le tien.
         </div>
       </div>
     </div>

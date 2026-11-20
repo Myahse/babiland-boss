@@ -262,7 +262,7 @@ export function Building({ name, place, stage = 2 }: { name: string; place: Plac
       {/* menu boards beside the kitchen */}
       {[
         [`${place.dishLabel.toUpperCase()} ${place.plate}`, -1.9],
-        ['LIVRAISON 🛵', 1.1],
+        ['LIVRAISON', 1.1],
       ]
         .filter((_, k) => stage >= 1 || k === 0)
         .map(([t, x]) => (

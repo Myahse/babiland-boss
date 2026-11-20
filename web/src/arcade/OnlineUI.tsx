@@ -52,7 +52,7 @@ export function OnlineRuntime() {
         const p = await checkPurchase(id)
         if (p.credited) {
           sfx.unlock()
-          popText(p.item === 'pass' ? '👑 Pass Boss activé !' : `💎 +${p.diamonds} diamants !`)
+          popText(p.item === 'pass' ? 'Pass Boss activé !' : `+${p.diamonds} diamants !`)
           void refreshMe()
           return
         }
@@ -81,7 +81,7 @@ export function LiveFeed() {
   if (!last || shown !== last.id) return null
   return (
     <div key={last.id} className="pop pointer-events-none absolute inset-x-0 top-[8.5rem] z-20 flex justify-center px-6">
-      <div className="max-w-xs truncate rounded-full bg-[#2b1a12]/85 px-3 py-1 text-xs font-extrabold text-white shadow">📡 {last.text}</div>
+      <div className="max-w-xs truncate rounded-full bg-[#2b1a12]/85 px-3 py-1 text-xs font-extrabold text-white shadow">{last.text}</div>
     </div>
   )
 }
@@ -102,14 +102,14 @@ export function OnlineButton() {
   )
 }
 
-function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Sheet({ title, onClose, children }: { title: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center" onPointerDown={stop} onClick={onClose}>
       <div className="card pop max-h-[88%] w-full max-w-md overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-extrabold">{title}</h2>
           <button className="text-2xl font-extrabold" onClick={onClose} aria-label="Fermer">
-            ✕
+            <Icon name="cross" size={22} />
           </button>
         </div>
         {children}
@@ -143,7 +143,7 @@ function AccountPanel({ onClose }: { onClose: () => void }) {
     setBusy(false)
   }
   return (
-    <Sheet title="🌐 Jouer en ligne" onClose={onClose}>
+    <Sheet title={<><Icon name="globe" size={26} className="mr-1.5 align-[-4px]" />Jouer en ligne</>} onClose={onClose}>
       <p className="mt-1 text-sm font-semibold">Les quartiers appartiennent à de vrais joueurs. Le premier qui trahit le boss d’un quartier devient le boss pour tout le monde : les nouveaux travaillent pour lui… jusqu’à ce qu’ils le trahissent. Les duels se jouent en direct.</p>
       <div className="mt-3 flex gap-1 rounded-xl bg-[#f1e4cc] p-1 text-sm font-extrabold">
         {[true, false].map((c) => (
@@ -178,16 +178,16 @@ function LivePanel({ onClose }: { onClose: () => void }) {
     const r = await api<{ amount: number }>('POST', '/me/tribute')
     if (r.amount > 0) {
       useArcade.setState((s) => ({ money: s.money + r.amount }))
-      popText(`💰 La part de tes employés : +${fcfa(r.amount)} F`)
+      popText(`La part de tes employés : +${fcfa(r.amount)} F`)
       sfx.cash()
     }
     void refreshMe()
   }
   return (
-    <Sheet title={`${live ? '🟢' : '🟠'} ${name}`} onClose={onClose}>
+    <Sheet title={<><span className={`mr-2 inline-block h-3 w-3 rounded-full align-middle ${live ? 'bg-[#40c057]' : 'bg-[#fd7e14]'}`} />{name}</>} onClose={onClose}>
       {(me?.tribute ?? 0) > 0 && (
         <div className="vip-glow mt-2 flex items-center gap-2 rounded-2xl border-[3px] border-[#2f9e44] bg-[#d3f9d8] p-2.5">
-          <span className="text-3xl">💰</span>
+          <Icon name="moneybag" size={36} />
           <div className="min-w-0 flex-1 text-sm leading-tight font-extrabold">Tes employés t’ont envoyé ta part : {fcfa(me!.tribute)} F</div>
           <button className="btn btn-green !px-3 !py-1.5 !text-sm" onClick={collect}>
             Prendre
@@ -198,7 +198,7 @@ function LivePanel({ onClose }: { onClose: () => void }) {
       <div className="mt-1 flex flex-wrap gap-1.5">
         {presence.map((n) => (
           <span key={n} className={`rounded-full border-2 px-2 py-0.5 text-xs font-extrabold ${n === name ? 'border-[#2f9e44] bg-[#d3f9d8]' : 'border-[var(--color-ink)] bg-white'}`}>
-            {n === name ? '😎 toi' : `👤 ${n}`}
+            {n === name ? 'toi' : n}
           </span>
         ))}
         {!presence.length && <span className="text-sm font-semibold opacity-60">{live ? 'Personne' : 'Connexion…'}</span>}
@@ -223,16 +223,16 @@ function LivePanel({ onClose }: { onClose: () => void }) {
           </div>
         </>
       )}
-      <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">🏆 Les plus grands boss</div>
+      <div className="mt-3 text-xs font-extrabold tracking-wide uppercase"><Icon name="trophy" size={16} className="mr-1 align-[-3px]" />Les plus grands boss</div>
       <div className="mt-1 space-y-1">
         {(ranking ?? []).slice(0, 10).map((r, i) => (
           <div key={r.name} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold ${r.name === name ? 'bg-[#fff3bf]' : 'bg-white'}`}>
-            <span className="w-6 text-center font-extrabold">{['🥇', '🥈', '🥉'][i] ?? i + 1}</span>
+            <span className="flex w-6 justify-center font-extrabold">{i < 3 ? <Icon name={(['medal1', 'medal2', 'medal3'] as const)[i]} size={20} /> : i + 1}</span>
             <span className="min-w-0 flex-1 truncate">
               {r.name} {r.pass && <Icon name="crown" size={14} className="inline align-[-2px]" />}
             </span>
-            <span className="text-xs">🏙️ {r.districts}</span>
-            <span className="text-xs">📣 {r.fame}</span>
+            <span className="flex items-center gap-0.5 text-xs"><Icon name="city" size={14} />{r.districts}</span>
+            <span className="flex items-center gap-0.5 text-xs"><Icon name="megaphone" size={14} />{r.fame}</span>
           </div>
         ))}
         {!ranking && <div className="text-sm font-semibold opacity-60">…</div>}
@@ -303,12 +303,12 @@ function ShopPanel({ onClose }: { onClose: () => void }) {
       sfx.unlock()
       if (r.money) {
         useArcade.setState((s) => ({ money: s.money + r.money! }))
-        popText(`💰 +${fcfa(r.money)} F`)
+        popText(`+${fcfa(r.money)} F`)
       }
-      if (boost === 'x2') popText('🔥 Ventes ×2 pendant 30 minutes !')
+      if (boost === 'x2') popText('Ventes ×2 pendant 30 minutes !')
       if (boost === 'vip') {
         vipCall.now()
-        popText('👑 Un VIP arrive !')
+        popText('Un VIP arrive !')
       }
       if (at) void syncTurf(current)
       void refreshMe()
@@ -322,11 +322,11 @@ function ShopPanel({ onClose }: { onClose: () => void }) {
     .map((o, i) => ({ o, i }))
     .filter((x) => x.o === 'me')
   return (
-    <Sheet title="💎 La boutique" onClose={onClose}>
+    <Sheet title={<><Icon name="gem" size={26} className="mr-1.5 align-[-4px]" />La boutique</>} onClose={onClose}>
       <div className="mt-1 flex items-center gap-2 text-sm font-bold">
-        <span className="rounded-full bg-white px-2.5 py-0.5 font-extrabold">💎 {me?.diamonds ?? 0}</span>
-        {hasPass() && <span className="rounded-full bg-[#fff3bf] px-2.5 py-0.5 font-extrabold">👑 Pass Boss</span>}
-        {me?.boostUntil && Date.parse(me.boostUntil) > Date.now() && <span className="rounded-full bg-[#ffe3e3] px-2.5 py-0.5 font-extrabold">🔥 ×2</span>}
+        <span className="rounded-full bg-white px-2.5 py-0.5 font-extrabold"><Icon name="gem" size={16} className="mr-1 align-[-3px]" />{me?.diamonds ?? 0}</span>
+        {hasPass() && <span className="rounded-full bg-[#fff3bf] px-2.5 py-0.5 font-extrabold"><Icon name="crown" size={16} className="mr-1 align-[-3px]" />Pass Boss</span>}
+        {me?.boostUntil && Date.parse(me.boostUntil) > Date.now() && <span className="rounded-full bg-[#ffe3e3] px-2.5 py-0.5 font-extrabold"><Icon name="fire" size={16} className="mr-0.5 align-[-3px]" />×2</span>}
       </div>
       {err && <div className="mt-2 rounded-lg bg-[#ffe3e3] px-2 py-1 text-sm font-extrabold text-[#c92a2a]">{err}</div>}
       {!v ? (
@@ -343,14 +343,14 @@ function ShopPanel({ onClose }: { onClose: () => void }) {
                   <div className="text-[11px] font-semibold opacity-75">{b.text}</div>
                 </div>
                 <button className="btn !px-2.5 !py-1.5 !text-sm" disabled={(me?.diamonds ?? 0) < b.diamonds || (b.district && !myDistricts.length)} onClick={() => (b.district ? setTarget({ boost: b.id, label: b.label }) : use(b.id))}>
-                  💎 {b.diamonds}
+                  <Icon name="gem" size={16} className="mr-1 align-[-3px]" />{b.diamonds}
                 </button>
               </div>
             ))}
           </div>
           <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Acheter</div>
           <div className="mt-1 flex items-center gap-2 rounded-2xl border-[3px] border-[#f59f00] bg-[#fff3bf] px-2.5 py-2">
-            <span className="text-3xl">👑</span>
+            <Icon name="crown" size={36} />
             <div className="min-w-0 flex-1 leading-tight">
               <div className="text-sm font-extrabold">Pass Boss · 30 jours</div>
               <div className="text-[11px] font-semibold">+25 % sur chaque vente, dans tous tes maquis, et la couronne à ton nom dans le classement</div>
@@ -363,7 +363,7 @@ function ShopPanel({ onClose }: { onClose: () => void }) {
             {v.packs.map((p) => (
               <button key={p.id} className="relative rounded-xl border-2 border-[var(--color-ink)] bg-white px-2 py-2 text-center active:translate-y-0.5" onClick={() => setPay({ pack: p.id, label: `${p.diamonds} diamants`, price: p.price })}>
                 {p.bonus && <span className="absolute -top-2 right-1 rounded-full bg-[#e03131] px-1.5 text-[10px] font-extrabold text-white">{p.bonus}</span>}
-                <div className="text-lg font-extrabold">💎 {p.diamonds}</div>
+                <div className="text-lg font-extrabold"><Icon name="gem" size={18} className="mr-1 align-[-3px]" />{p.diamonds}</div>
                 <div className="text-[11px] font-bold opacity-70">{p.label}</div>
                 <div className="mt-0.5 text-sm font-extrabold text-[#2b8a3e]">{fcfa(p.price)} F</div>
               </button>
@@ -395,7 +395,7 @@ function ShopPanel({ onClose }: { onClose: () => void }) {
             )}
             {v.card && (
               <button className="btn mt-3 w-full !py-2.5" onClick={() => open('carte')}>
-                💳 Payer par carte
+                <Icon name="card" size={18} className="mr-1 align-[-4px]" />Payer par carte
               </button>
             )}
             {err && <div className="mt-2 text-sm font-extrabold text-[#c92a2a]">{err}</div>}

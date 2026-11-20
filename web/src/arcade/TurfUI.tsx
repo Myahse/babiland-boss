@@ -62,9 +62,7 @@ function BigMap({ place, owners, selected, onPick }: { place: PlaceId; owners: (
             {d.bonus && (
               <>
                 <circle cx={cx} cy={cy - 30} r="17" fill="#ffd43b" stroke="#2b1a12" strokeWidth="2.5" />
-                <text x={cx} y={cy - 24} textAnchor="middle" fontSize="17">
-                  {d.bonus.icon}
-                </text>
+                <Icon name={d.bonus.icon} size={22} x={cx - 11} y={cy - 41} />
               </>
             )}
             <text x={cx} y={cy + 4} textAnchor="middle" fontSize="15" fontWeight="800" fill={d.forest ? '#fff' : '#2b1a12'} stroke="#fff" strokeWidth={d.forest ? 0 : 3} paintOrder="stroke">
@@ -72,12 +70,12 @@ function BigMap({ place, owners, selected, onPick }: { place: PlaceId; owners: (
             </text>
             {!d.forest && (
               <text x={cx} y={cy + 22} textAnchor="middle" fontSize="11.5" fontWeight="700" fill="#2b1a12">
-                {mine ? '👑 À toi' : rivalOf(place, i) ? `👤 ${bossName(place, i)} (joueur)` : `😎 ${d.boss}`}
+                {mine ? 'À toi' : rivalOf(place, i) ? `${bossName(place, i)} (joueur)` : d.boss}
               </text>
             )}
             {open && (
               <text x={cx} y={cy + 40} textAnchor="middle" fontSize="11" fontWeight="800" fill="#c92a2a">
-                {i === 0 ? '🗡️ à trahir' : '⚔️ attaquable'}
+                {i === 0 ? 'à trahir' : 'attaquable'}
               </text>
             )}
           </g>
@@ -133,19 +131,19 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
     <div className="pointer-events-auto absolute inset-0 z-40 flex flex-col bg-[#e9d8a6]" onPointerDown={stop}>
       <div className="flex items-center justify-between bg-[var(--color-cream)] px-3 py-2 shadow" style={{ paddingTop: 'max(8px, env(safe-area-inset-top))' }}>
         <div>
-          <h2 className="text-xl leading-tight font-extrabold">🏙️ {PLACES[place].name}</h2>
+          <h2 className="text-xl leading-tight font-extrabold"><Icon name="city" size={22} className="mr-1 -mt-1 align-middle" />{PLACES[place].name}</h2>
           <div className="text-xs font-bold">
             {owners.filter((o, i) => o === 'me' && !ds[i].forest).length}/{ds.filter((x) => !x.forest).length} quartiers
-            {keys.length > 0 && ` · ⭐ ${ownedKeys}/${keys.length} zones clés`}
+            {keys.length > 0 && ` · ${ownedKeys}/${keys.length} zones clés`}
           </div>
         </div>
         {REAL_MAP.includes(place) && (
           <button className="ml-auto mr-2 rounded-xl bg-white px-3 py-2 text-sm font-extrabold shadow" onClick={() => setView(view === '3d' ? 'map' : '3d')}>
-            {view === '3d' ? '🗺️ Vraie carte' : '🏙️ Vue 3D'}
+            {view === '3d' ? 'Vraie carte' : 'Vue 3D'}
           </button>
         )}
         <button className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xl font-extrabold shadow" onClick={onClose} aria-label="Fermer">
-          ✕
+          <Icon name="cross" size={22} />
         </button>
       </div>
       <div className="min-h-0 flex-1">
@@ -160,26 +158,26 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
       <div className="bg-[var(--color-cream)] p-3 shadow-[0_-4px_12px_rgba(0,0,0,.15)]" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {!d ? (
           <p className="text-sm font-bold">
-            {free ? 'Touche un quartier voisin des tiens pour l’attaquer. Les zones clés ⭐ donnent un bonus.' : `Tu travailles pour ${bossName(place, 0)} : il garde ${CUT * 100} % de tes gains. Touche ton quartier pour le trahir.`}
+            {free ? 'Touche un quartier voisin des tiens pour l’attaquer. Les zones clés (en jaune) donnent un bonus.' : `Tu travailles pour ${bossName(place, 0)} : il garde ${CUT * 100} % de tes gains. Touche ton quartier pour le trahir.`}
           </p>
         ) : (
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1 leading-tight">
               <div className="text-lg font-extrabold">
-                {sel === 0 && '📍 '}
+                {sel === 0 && <Icon name="pin" size={20} className="mr-1 -mt-1 align-middle" />}
                 {d.name}
               </div>
-              <div className="text-sm font-bold">{mine ? '👑 À toi' : rivalOf(place, sel) ? `👤 ${bossName(place, sel)} · un vrai joueur${rivalOf(place, sel)!.online ? ' · 🟢 en ligne' : ''}` : `😎 ${d.boss}`}</div>
+              <div className="text-sm font-bold">{mine ? 'À toi' : rivalOf(place, sel) ? `${bossName(place, sel)} · un vrai joueur${rivalOf(place, sel)!.online ? ' · en ligne' : ''}` : d.boss}</div>
               {d.bonus && (
                 <div className="text-xs font-bold text-[#e8590c]">
-                  ⭐ {d.bonus.icon} {d.bonus.label}
+                  <Icon name={d.bonus.icon} size={18} className="mr-1 -mt-0.5 align-middle" />{d.bonus.label}
                 </div>
               )}
               {mine && sel > 0 && <div className="text-xs font-semibold">Loyer : +{RENT} F toutes les {RENT_EVERY} s</div>}
-              {mine && sel > 0 && shield > 0 && <div className="text-xs font-bold text-[#1c7ed6]">🛡️ Protégé encore {Math.ceil(shield)} s</div>}
-              {mine && sel > 0 && <div className="text-xs font-semibold">💪 Gros bras : niveau {guards}/{GUARD_MAX} (attaquants ralentis de {guards * GUARD_SLOW * 100} %)</div>}
+              {mine && sel > 0 && shield > 0 && <div className="text-xs font-bold text-[#1c7ed6]">Protégé encore {Math.ceil(shield)} s</div>}
+              {mine && sel > 0 && <div className="text-xs font-semibold">Gros bras : niveau {guards}/{GUARD_MAX} (attaquants ralentis de {guards * GUARD_SLOW * 100} %)</div>}
               {sel === 0 && !mine && <div className="text-xs font-semibold">Respect : {Math.min(served, RESPECT_FOR_BETRAYAL)}/{RESPECT_FOR_BETRAYAL} clients servis</div>}
-              {sel > 0 && !mine && !canGo && <div className="text-xs font-semibold opacity-75">{free ? '🔒 Prends d’abord un quartier voisin' : '🔒 Libère d’abord ton quartier'}</div>}
+              {sel > 0 && !mine && !canGo && <div className="text-xs font-semibold opacity-75">{free ? 'Prends d’abord un quartier voisin' : 'Libère d’abord ton quartier'}</div>}
             </div>
             {mine && sel > 0 && guards < GUARD_MAX && (
               <button
@@ -190,19 +188,19 @@ function TurfPanel({ onClose }: { onClose: () => void }) {
                   if (price) useArcade.setState({ money: money - price })
                 }}
               >
-                💪 Gros bras · {GUARD_PRICE(guards)} F
+                Gros bras · {GUARD_PRICE(guards)} F
               </button>
             )}
             {!mine && (
               <button className="btn shrink-0 !px-3 !py-2 !text-sm" disabled={!!duel || cooldown > 0 || money < price || !canGo} onClick={act}>
-                {cooldown > 0 ? `Attends ${Math.ceil(cooldown)} s` : `${sel === 0 ? '🗡️ Trahir' : '⚔️ Attaquer'} · ${price} F`}
+                {cooldown > 0 ? `Attends ${Math.ceil(cooldown)} s` : `${sel === 0 ? 'Trahir' : 'Attaquer'} · ${price} F`}
               </button>
             )}
           </div>
         )}
         {REAL_MAP.includes(place) && <div className="mt-1 text-[10px] opacity-60">Carte et quartiers : © OpenStreetMap (contributeurs){import.meta.env.VITE_MAPBOX_TOKEN ? ' · © Mapbox' : ''}</div>}
         <div className="mt-2 text-[11px] font-semibold opacity-80">
-          ⚔️ Duel : sers {DUEL_TARGET} clients avant les gens du boss, en 60 s. Défaite : attends {COOLDOWN} s.
+          Duel : sers {DUEL_TARGET} clients avant les gens du boss, en 60 s. Défaite : attends {COOLDOWN} s.
         </div>
       </div>
     </div>
@@ -221,7 +219,7 @@ function DuelHud() {
     return (
       <div className="pointer-events-none absolute inset-x-3 top-1/3 z-30 flex justify-center">
         <div className="pop w-full max-w-sm animate-pulse rounded-3xl border-[3px] border-white bg-[#e03131] p-4 text-center text-white shadow-2xl">
-          <div className="text-3xl">⚠️</div>
+          <div className="flex justify-center"><Icon name="warning" size={40} /></div>
           <div className="text-xl leading-tight font-extrabold">
             {boss} attaque {d.name} !
           </div>
@@ -248,13 +246,13 @@ function DuelHud() {
       <div className="absolute inset-x-3 bottom-4 z-30 flex justify-center" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
         <div className={`card !p-3 w-full max-w-sm space-y-1.5 ${duel.defend ? '!border-[#e03131]' : ''}`}>
           <div className="flex items-center justify-between text-sm font-extrabold">
-            <span>{duel.defend ? `🛡️ Défends ${d.name}` : `⚔️ Duel pour ${d.name}`}</span>
+            <span>{duel.defend ? `Défends ${d.name}` : `Duel pour ${d.name}`}</span>
             <span className={duel.left < 10 ? 'text-[#e03131]' : ''}>⏱️ {Math.ceil(duel.left)} s</span>
           </div>
           {/* online: the target the server set (more with his gros bras); against a player serving live, serve more than him */}
           {bar(duel.mine, duel.online ? (duel.defend ? Math.max(duel.online.target, Math.ceil(duel.rival) + 1) : duel.online.target) : duel.defend ? DEFEND_TARGET : DUEL_TARGET, 'var(--color-green)', 'Toi')}
           {bar(duel.rival, duel.online?.target ?? DUEL_TARGET, '#e03131', enemy)}
-          {duel.online?.live && <div className="text-center text-[11px] font-extrabold text-[#e03131]">🔴 En direct contre {enemy} : sers plus que lui !</div>}
+          {duel.online?.live && <div className="text-center text-[11px] font-extrabold text-[#e03131]">En direct contre {enemy} : sers plus que lui !</div>}
         </div>
       </div>
     )
@@ -272,7 +270,7 @@ function DuelHud() {
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onPointerDown={stop} onClick={() => useTurf.setState({ result: null })}>
       <div className="card pop w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
-        <div className="text-5xl">{result.won ? (result.defend ? '🛡️' : '👑') : '😤'}</div>
+        <div className="flex justify-center"><Icon name={result.won ? (result.defend ? 'shield' : 'crown') : 'angry'} size={60} /></div>
         <h2 className="mt-1 text-2xl font-extrabold">{title}</h2>
         <p className="mt-1 text-sm font-semibold">{text}</p>
         <button className="btn btn-green mt-3 w-full" onClick={() => useTurf.setState({ result: null })}>
@@ -302,7 +300,7 @@ function ConquestScreen({ place, idx }: { place: PlaceId; idx: number }) {
     <div className="pointer-events-auto absolute inset-0 z-40 bg-[#bfe6ff]" onPointerDown={stop}>
       <Commune3D place={place} owners={owners} selected={idx} onPick={() => {}} conquer={idx} onConquestDone={() => useTurf.setState({ conquest: null })} />
       <div className="pointer-events-none absolute inset-x-0 top-10 flex justify-center" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-        <div className="pop rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-4 py-2 text-xl font-extrabold shadow-lg">⚔️ {d.name} tombe…</div>
+        <div className="pop rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-4 py-2 text-xl font-extrabold shadow-lg">{d.name} tombe…</div>
       </div>
       <button className="absolute right-3 bottom-4 rounded-xl bg-white/90 px-3 py-1.5 text-xs font-extrabold shadow" onClick={() => useTurf.setState({ conquest: null })}>
         Passer ⏭

@@ -1,3 +1,4 @@
+import type { IconName } from './Icons'
 import { create } from 'zustand'
 import type { Dish, PlaceId } from './places'
 import { sellPrice } from './growth'
@@ -9,7 +10,7 @@ import { bonusOf, cutFor } from './turf'
 // yourself in three little games (cut, cook, plate), and he pays up to 3 times the price, plus a tip.
 
 /** One ingredient: icon + name. */
-export type Ing = { icon: string; name: string }
+export type Ing = { icon: IconName; name: string }
 export type Recipe = {
   /** cut these, one after the other (three cuts each, on the dotted lines) */
   cut: Ing[]
@@ -20,23 +21,23 @@ export type Recipe = {
   decoy: Ing[]
 }
 
-const I = (icon: string, name: string): Ing => ({ icon, name })
-const oignon = I('🧅', 'Oignon')
-const tomate = I('🍅', 'Tomate')
-const piment = I('🌶️', 'Piment')
-const attieke = I('🍚', 'Attiéké')
-const oeuf = I('🥚', 'Œuf')
+const I = (icon: IconName, name: string): Ing => ({ icon, name })
+const oignon = I('onion', 'Oignon')
+const tomate = I('tomato', 'Tomate')
+const piment = I('chili', 'Piment')
+const attieke = I('rice', 'Attiéké')
+const oeuf = I('egg', 'Œuf')
 
 /** The recipe of each main dish (the VIP always wants the dish the place is known for). */
 export const RECIPES: Partial<Record<Dish, Recipe>> = {
-  garba: { cut: [oignon, tomate, piment], cook: { verb: 'Frire le thon', food: I('🐟', 'Thon'), on: 'pan' }, plate: [attieke, I('🐟', 'Thon frit'), oignon, tomate, piment], decoy: [oeuf] },
-  alloco: { cut: [I('🍌', 'Banane plantain'), I('🍌', 'Banane plantain')], cook: { verb: 'Frire l’alloco', food: I('🍌', 'Alloco'), on: 'pan' }, plate: [I('🍌', 'Alloco'), oeuf, oignon, piment], decoy: [attieke] },
-  choukouya: { cut: [oignon, I('🫑', 'Poivron'), tomate], cook: { verb: 'Griller la viande', food: I('🥩', 'Mouton'), on: 'grill' }, plate: [attieke, I('🥩', 'Choukouya'), oignon, piment], decoy: [I('🍌', 'Alloco')] },
-  poisson: { cut: [tomate, oignon], cook: { verb: 'Braiser le poisson', food: I('🐟', 'Carpe'), on: 'grill' }, plate: [attieke, I('🐟', 'Poisson braisé'), I('🥗', 'Sauce crudités'), piment], decoy: [oeuf] },
-  kedjenou: { cut: [tomate, oignon, I('🍆', 'Aubergine')], cook: { verb: 'Mijoter le poulet', food: I('🍗', 'Poulet'), on: 'pot' }, plate: [I('🍚', 'Riz'), I('🍗', 'Poulet'), I('🥘', 'Sauce kedjenou'), piment], decoy: [I('🍌', 'Alloco')] },
-  to: { cut: [I('🥬', 'Feuilles de baobab'), oignon], cook: { verb: 'Tourner le tô', food: I('🥣', 'Pâte de maïs'), on: 'pot' }, plate: [I('🥣', 'Tô'), I('🥬', 'Sauce feuilles'), I('🐟', 'Poisson fumé'), piment], decoy: [attieke] },
-  kplala: { cut: [I('🥬', 'Feuilles de kplala'), oignon, tomate], cook: { verb: 'Mijoter la sauce', food: I('🍲', 'Sauce kplala'), on: 'pot' }, plate: [I('🟡', 'Foutou banane'), I('🍲', 'Sauce kplala'), I('🐟', 'Poisson fumé'), piment], decoy: [oeuf] },
-  feuille: { cut: [I('🥬', 'Feuilles de manioc'), oignon], cook: { verb: 'Mijoter la sauce', food: I('🥬', 'Sauce feuille'), on: 'pot' }, plate: [I('🍚', 'Riz'), I('🥬', 'Sauce feuille'), I('🍖', 'Viande'), piment], decoy: [I('🍌', 'Alloco')] },
+  garba: { cut: [oignon, tomate, piment], cook: { verb: 'Frire le thon', food: I('fish', 'Thon'), on: 'pan' }, plate: [attieke, I('fish', 'Thon frit'), oignon, tomate, piment], decoy: [oeuf] },
+  alloco: { cut: [I('plantain', 'Banane plantain'), I('plantain', 'Banane plantain')], cook: { verb: 'Frire l’alloco', food: I('plantain', 'Alloco'), on: 'pan' }, plate: [I('plantain', 'Alloco'), oeuf, oignon, piment], decoy: [attieke] },
+  choukouya: { cut: [oignon, I('pepper', 'Poivron'), tomate], cook: { verb: 'Griller la viande', food: I('meat', 'Mouton'), on: 'grill' }, plate: [attieke, I('meat', 'Choukouya'), oignon, piment], decoy: [I('plantain', 'Alloco')] },
+  poisson: { cut: [tomate, oignon], cook: { verb: 'Braiser le poisson', food: I('fish', 'Carpe'), on: 'grill' }, plate: [attieke, I('fish', 'Poisson braisé'), I('salad', 'Sauce crudités'), piment], decoy: [oeuf] },
+  kedjenou: { cut: [tomate, oignon, I('aubergine', 'Aubergine')], cook: { verb: 'Mijoter le poulet', food: I('chicken', 'Poulet'), on: 'pot' }, plate: [I('rice', 'Riz'), I('chicken', 'Poulet'), I('stew', 'Sauce kedjenou'), piment], decoy: [I('plantain', 'Alloco')] },
+  to: { cut: [I('leaves', 'Feuilles de baobab'), oignon], cook: { verb: 'Tourner le tô', food: I('bowl', 'Pâte de maïs'), on: 'pot' }, plate: [I('bowl', 'Tô'), I('leaves', 'Sauce feuilles'), I('fish', 'Poisson fumé'), piment], decoy: [attieke] },
+  kplala: { cut: [I('leaves', 'Feuilles de kplala'), oignon, tomate], cook: { verb: 'Mijoter la sauce', food: I('stew', 'Sauce kplala'), on: 'pot' }, plate: [I('mound', 'Foutou banane'), I('stew', 'Sauce kplala'), I('fish', 'Poisson fumé'), piment], decoy: [oeuf] },
+  feuille: { cut: [I('leaves', 'Feuilles de manioc'), oignon], cook: { verb: 'Mijoter la sauce', food: I('leaves', 'Sauce feuille'), on: 'pot' }, plate: [I('rice', 'Riz'), I('leaves', 'Sauce feuille'), I('meat', 'Viande'), piment], decoy: [I('plantain', 'Alloco')] },
 }
 
 /** Who the VIP is (made-up people, the kind who come with a driver). */

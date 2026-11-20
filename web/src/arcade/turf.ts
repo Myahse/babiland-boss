@@ -1,3 +1,4 @@
+import type { IconName } from './Icons'
 import { create } from 'zustand'
 import type { PlaceId } from './places'
 import { missionEvent } from './missions'
@@ -13,15 +14,15 @@ import { REAL_DISTRICTS, type RealDistrict } from './realDistricts'
 // which pay you rent. For now the other bosses are played by the computer; online they will be real players.
 
 /** A bonus given by a key zone while you own it. */
-export type Bonus = { icon: string; label: string; kind: 'sales' | 'customers' | 'cook'; value: number }
+export type Bonus = { icon: IconName; label: string; kind: 'sales' | 'customers' | 'cook'; value: number }
 /** `cell`: where the district sits on the map grid of its place (column, row). */
 export type District = { name: string; boss: string; cell: [number, number]; bonus?: Bonus; forest?: boolean; n?: number[] }
 
 const B = {
-  industry: { icon: '🏭', label: '+30 % de clients (les ouvriers viennent manger)', kind: 'customers', value: 0.3 },
-  market: { icon: '🧺', label: 'Postes 25 % plus rapides (le marché La Paix)', kind: 'cook', value: 0.25 },
-  night: { icon: '🌙', label: '+20 % sur chaque vente (le marché de nuit La Référence)', kind: 'sales', value: 0.2 },
-  gare: { icon: '🚌', label: '+20 % de clients (la gare des gbaka)', kind: 'customers', value: 0.2 },
+  industry: { icon: 'factory', label: '+30 % de clients (les ouvriers viennent manger)', kind: 'customers', value: 0.3 },
+  market: { icon: 'basket', label: 'Postes 25 % plus rapides (le marché La Paix)', kind: 'cook', value: 0.25 },
+  night: { icon: 'moon', label: '+20 % sur chaque vente (le marché de nuit La Référence)', kind: 'sales', value: 0.2 },
+  gare: { icon: 'bus', label: '+20 % de clients (la gare des gbaka)', kind: 'customers', value: 0.2 },
 } satisfies Record<string, Bonus>
 
 /** The bonus of a key zone of another place, named after the real place it stands for. */
@@ -30,7 +31,7 @@ const bonus = ([kind, where]: NonNullable<RealDistrict['bonus']>): Bonus => {
   if (kind === 'market') return { ...B.market, label: `Postes 25 % plus rapides (${where})` }
   if (kind === 'night') return { ...B.night, label: `+20 % sur chaque vente (${where})` }
   if (kind === 'gare') return { ...B.gare, label: `+20 % de clients (${where})` }
-  return { icon: '🛍️', label: `+15 % sur chaque vente (${where})`, kind: 'sales', value: 0.15 }
+  return { icon: 'bag', label: `+15 % sur chaque vente (${where})`, kind: 'sales', value: 0.15 }
 }
 /** The real districts of a place (tools/cities.py, from OpenStreetMap). */
 const real = (p: string): District[] => REAL_DISTRICTS[p].map((d) => ({ name: d.name, boss: d.boss, cell: [0, 0], n: d.n, ...(d.bonus ? { bonus: bonus(d.bonus) } : {}) }))
@@ -209,10 +210,10 @@ export function startDuel(place: PlaceId, idx: number, served: number, price = 0
       .then((r) => {
         const rate = r.defender ? 0 : DUEL_TARGET / (DUEL_TIME * 0.85)
         useTurf.setState({ duel: { place, idx, left: DUEL_TIME, mine: 0, rival: 0, startServed: useArcade.getState().served, rate, online: { id: r.duel, target: r.target, live: false, by: r.defender } }, result: null })
-        if (r.defender) popText(r.online ? `⚔️ ${r.defender} est en ligne : il va défendre !` : `⚔️ ${r.defender} n'est pas là : sers ${r.target} clients !`)
+        if (r.defender) popText(r.online ? `${r.defender} est en ligne : il va défendre !` : `${r.defender} n'est pas là : sers ${r.target} clients !`)
       })
       .catch((e: ApiError) => {
-        popText(`⚠️ ${e.message}`)
+        popText(e.message)
         if (price) useArcade.setState((a) => ({ money: a.money + price }))
       })
     return
@@ -364,11 +365,11 @@ onLive({
   attack: (m) => {
     const s = useTurf.getState()
     if (s.duel) {
-      popText(`⚔️ ${m.by} attaque ${m.district} !`)
+      popText(`${m.by} attaque ${m.district} !`)
       return
     }
     useTurf.setState({ panel: false, incoming: null, duel: { place: m.place, idx: m.idx, left: m.seconds, mine: 0, rival: 0, startServed: useArcade.getState().served, rate: 0, defend: true, online: { id: m.duel, target: m.target, live: true, by: m.by } } })
-    popText(`⚔️ ${m.by} attaque ${m.district} ! Sers vite pour défendre !`)
+    popText(`${m.by} attaque ${m.district} ! Sers vite pour défendre !`)
   },
   duel: (m) => {
     const d = useTurf.getState().duel
