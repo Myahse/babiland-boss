@@ -14,6 +14,7 @@ import { COUNTER_BACK, COUNTER_TOP, hands, Mover, stationFront, step, TRAY, turn
 import { popText, useArcade } from './store'
 import { useStory } from './story'
 import { useVip } from './vip'
+import { night } from './daynight'
 
 // The assistants bought in « Aménager » (items.ts) at work, and the things in the room: the cook going from
 // stove to stove, the second server carrying plates to the counter, the commis picking up the money, the extra
@@ -261,7 +262,7 @@ function Music() {
   const bulbs = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     bulbs.current?.children.forEach((c, i) => {
-      ;((c as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 0.6 + Math.max(0, Math.sin(clock.elapsedTime * 6 + i)) * 1.6
+      ;((c as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = (0.6 + Math.max(0, Math.sin(clock.elapsedTime * 6 + i)) * 1.6) * (0.6 + night() * 1.3)
     })
   })
   const colors = ['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#da77f2']

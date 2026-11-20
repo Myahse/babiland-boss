@@ -7,6 +7,7 @@ import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
 import { Building, GrandDecor, Streets } from './Shop'
 import { StreetDecor } from './StreetDecor'
+import { GameClock } from './daynight'
 import { stick } from './input'
 import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
@@ -194,6 +195,9 @@ function Hud() {
         <AmenagerButton />
         <MissionsButton />
         <OnlineButton />
+      </div>
+      <div className="pointer-events-none absolute top-[4.4rem] right-3 flex justify-end" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        <GameClock />
       </div>
       <BulkBanner />
       <StoryLayer />

@@ -16,6 +16,7 @@ import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx } from './items'
+import { nightCustomers } from './daynight'
 import { saleBoost } from './online'
 import { others, playerWho } from './profile'
 import { StoryArrow } from './Story'
@@ -403,7 +404,7 @@ export function Sim({ name }: { name: string }) {
     if (spawn.current <= 0 && line.length < maxQueue()) {
       // key zone « zone industrielle »: more customers
       // more customers when the place is bigger and more people know you
-      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame) * F.customers)
+      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame) * F.customers * nightCustomers())
       // what they want: mostly the main dish, sometimes a particular dish that is already on the menu
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()

@@ -9,6 +9,7 @@ import type { PersonId } from '../three/RealPerson'
 import type { Place } from './places'
 import { SLOT0, SLOT_STEP } from './layout'
 import { asphalt, kerb } from './StreetDecor'
+import { glowing, night } from './daynight'
 
 // The maquis building, its terraces, and the street corner around it — like a busy restaurant
 // in the shop games: two floors, a big sign on the roof, people eating on the terraces, taxis going by.
@@ -68,6 +69,9 @@ export function TerraceTable({ parasol = '#e03131', plates = 0, ...props }: { pa
   )
 }
 
+const WINDOW_GLASS = new THREE.MeshStandardMaterial({ color: '#ffd8a8', emissive: '#ffb347', emissiveIntensity: 0.55, roughness: 0.2 })
+glowing.lamps.push(WINDOW_GLASS)
+
 function Window({ x, y, w = 1.3, h = 1.2, z = D / 2 + 0.01 }: { x: number; y: number; w?: number; h?: number; z?: number }) {
   return (
     <group position={[x, y, z]}>
@@ -77,8 +81,8 @@ function Window({ x, y, w = 1.3, h = 1.2, z = D / 2 + 0.01 }: { x: number; y: nu
       </mesh>
       <mesh position={[0, 0, 0.035]}>
         <planeGeometry args={[w, h]} />
-        {/* warm light inside the maquis */}
-        <meshStandardMaterial color="#ffd8a8" emissive="#ffb347" emissiveIntensity={0.55} roughness={0.2} />
+        {/* warm light inside the maquis (brighter at night) */}
+        <primitive object={WINDOW_GLASS} attach="material" />
       </mesh>
       <mesh position={[0, 0, 0.04]}>
         <boxGeometry args={[0.05, h, 0.02]} />
@@ -130,7 +134,7 @@ export function Building({ name, place, stage = 2 }: { name: string; place: Plac
     // the bulbs of the sign twinkle a little
     lights.current?.children.forEach((c, i) => {
       const m = (c as THREE.Mesh).material as THREE.MeshStandardMaterial
-      m.emissiveIntensity = 1.2 + Math.sin(clock.elapsedTime * 4 + i) * 0.6
+      m.emissiveIntensity = (1.2 + Math.sin(clock.elapsedTime * 4 + i) * 0.6) * (0.5 + night() * 1.4)
     })
   })
   return (

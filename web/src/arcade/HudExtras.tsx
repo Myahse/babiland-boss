@@ -113,7 +113,7 @@ export function BulkBanner() {
   const left = Math.ceil(bulk.left)
   const hurry = left <= 20
   return (
-    <div className="absolute top-[4.6rem] right-3 w-44 rounded-2xl border-[3px] border-white bg-[#fff3bf] px-2.5 py-1.5 shadow-md" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+    <div className="absolute top-[6.4rem] right-3 w-44 rounded-2xl border-[3px] border-white bg-[#fff3bf] px-2.5 py-1.5 shadow-md" style={{ marginTop: 'env(safe-area-inset-top)' }}>
       <div className="truncate text-[11px] font-extrabold opacity-80">📦 {bulk.name}</div>
       <div className="flex items-center justify-between text-base font-extrabold">
         <span>

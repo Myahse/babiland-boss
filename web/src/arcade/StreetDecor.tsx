@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import type { ThreeElements } from '@react-three/fiber'
+import { glowing } from './daynight'
 
 // What makes the street look like a street of Abidjan: asphalt with its patches, the red laterite, the kerbs
 // painted red and white, street lamps, wooden electricity poles with their sagging wires, plants in clay pots.
@@ -91,6 +92,8 @@ export const kerb = (n: number) =>
 
 const pole = new THREE.MeshStandardMaterial({ color: '#2f3e46', roughness: 0.5, metalness: 0.4 })
 const lampGlow = new THREE.MeshStandardMaterial({ color: '#fff3bf', emissive: '#ffd43b', emissiveIntensity: 2.2 })
+// lit at night (daynight.tsx)
+glowing.lamps.push(lampGlow)
 const wood = new THREE.MeshStandardMaterial({ color: '#7a5230', roughness: 0.9 })
 const wire = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.8 })
 const insulator = new THREE.MeshStandardMaterial({ color: '#dee2e6', roughness: 0.4 })
