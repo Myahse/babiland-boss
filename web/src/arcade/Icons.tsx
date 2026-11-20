@@ -245,6 +245,10 @@ export const ICONS = {
   cup: [{ d: 'M5 8h12v8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z', fill: '#ffffff' }, { d: 'M17 10h2a2 2 0 0 1 0 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4', fill: 'none' }, { d: 'M6.5 10h9v2h-9z', fill: '#6f4e37' }],
   glass: [{ d: 'M6 4h12l-2 17H8z', fill: '#ffffff' }, { d: 'M7 9h10l-1.4 11H8.4z', fill: '#a61e4d' }],
   peanut: [{ d: 'M9 3a4 4 0 0 1 4 5c0 1 1 2 2 2a4 4 0 1 1-4 5c0-1-1-2-2-2A4 4 0 0 1 9 3z', fill: '#d4a373' }],
+  trash: [
+    { d: 'M5 7h14l-1.5 14h-11z', fill: '#4dabf7' },
+    { d: 'M3 7h18M9 7V4h6v3M9.5 11v7M14.5 11v7', fill: 'none' },
+  ],
   knife: [{ d: 'M3 21l11-11 2 2L5 21z', fill: '#343a40' }, { d: 'M14 10l6-6c1 3 0 6-4 8z', fill: '#dee2e6' }],
 } satisfies Record<string, Part[]>
 export type IconName = keyof typeof ICONS

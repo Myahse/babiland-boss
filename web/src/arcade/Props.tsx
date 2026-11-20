@@ -456,3 +456,44 @@ export function PadHint({ at, who, icon, title, text, price }: { at: THREE.Vecto
     </Html>
   )
 }
+
+let binTex: THREE.Texture | null = null
+/** The bin: a blue plastic barrel with its lid, and a marked square on the floor in front of it. */
+export function Bin(props: ThreeElements['group']) {
+  const tex = useMemo(() => {
+    if (binTex) return binTex
+    const c = document.createElement('canvas')
+    c.width = c.height = 128
+    const g = c.getContext('2d')!
+    g.strokeStyle = '#ffffff'
+    g.lineWidth = 8
+    g.setLineDash([14, 10])
+    g.strokeRect(8, 8, 112, 112)
+    drawIcon(g, 'trash', 64, 64, 64)
+    binTex = new THREE.CanvasTexture(c)
+    binTex.colorSpace = THREE.SRGBColorSpace
+    return binTex
+  }, [])
+  return (
+    <group {...props}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[0.95, 0.95]} />
+        <meshBasicMaterial map={tex} transparent />
+      </mesh>
+      <group position={[0.5, 0, -0.45]}>
+        <mesh position={[0, 0.36, 0]} castShadow>
+          <cylinderGeometry args={[0.24, 0.2, 0.72, 16]} />
+          <Flat color="#1c7ed6" />
+        </mesh>
+        <mesh position={[0, 0.75, 0]} castShadow>
+          <cylinderGeometry args={[0.27, 0.27, 0.07, 16]} />
+          <Flat color="#1864ab" />
+        </mesh>
+        <mesh position={[0, 0.81, 0]}>
+          <boxGeometry args={[0.2, 0.05, 0.05]} />
+          <Flat color="#1864ab" />
+        </mesh>
+      </group>
+    </group>
+  )
+}

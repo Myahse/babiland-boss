@@ -9,8 +9,8 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
-import { CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
+import { BIN, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
@@ -169,6 +169,8 @@ export function Sim({ name }: { name: string }) {
   useEffect(() => () => useVip.setState({ ready: null, open: false, done: null }), [])
   const [, rerender] = useState(0)
   const bump = () => rerender((n) => n + 1)
+  const fullHint = useRef(0)
+  const binT = useRef(0)
   const worker = useRef({ pos: V(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
   // arriving in this maquis: start at the entrance, the moto parked
   useEffect(() => {
@@ -260,6 +262,7 @@ export function Sim({ name }: { name: string }) {
     const w = worker.current
     const wCarried = [...w.carried]
     const wMax = st.unlocks.rapide ? 10 : 5
+    binT.current = player.pos.distanceTo(BIN) < 0.6 ? binT.current + dt : 0
     while (acc.current >= TICK) {
       acc.current -= TICK
       for (const i of active) {
@@ -271,6 +274,15 @@ export function Sim({ name }: { name: string }) {
           sfx.pick()
           break
         }
+      }
+      // the bin: the plates you carry go in, one by one
+      // (only after half a second standing on it: walking across it never throws anything away)
+      if (carried.length > 0 && binT.current > 0.5) {
+        carried.pop()
+        changed = true
+        fly('plate', hands(player, () => carried.length)(), BIN.clone().add(new THREE.Vector3(0.5, 0.85, -0.45)))
+        sfx.drop()
+        if (!carried.length) popText('Jeté à la poubelle')
       }
       // at the counter, the plates go down one by one, each in the column of its dish
       if (carried.length > 0 && player.pos.distanceTo(COUNTER) < 1.6) {
@@ -284,6 +296,10 @@ export function Sim({ name }: { name: string }) {
           changed = true
           fly('plate', hands(player, () => carried.length)(), COUNTER_TOP(k))
           sfx.drop()
+        } else if (performance.now() - fullHint.current > 8000) {
+          // nothing of what you carry fits: say where it can go
+          fullHint.current = performance.now()
+          popText('Le comptoir est plein pour ce plat : sers les clients, ou jette-le à la poubelle')
         }
       }
       // the server works the same way
@@ -711,6 +727,8 @@ export function Sim({ name }: { name: string }) {
           <PadHint at={p.pos} who={player} icon={p.icon} title={p.label} text={p.text} price={p.left} />
         </group>
       ))}
+      <Bin position={BIN} />
+      <PadHint at={BIN} who={player} icon="trash" title="Poubelle" text="Reste dessus pour jeter les plats que tu portes (un plat que personne ne commande)." />
       <FX />
       <SideStands player={player} />
       <StoryArrow />

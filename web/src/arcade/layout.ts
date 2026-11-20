@@ -94,5 +94,8 @@ export const BULK_PAY = 1.6 // x the price of a plate
 
 /** the pad to grow the place (little corner -> maquis -> restaurant -> grand restaurant) */
 export const GROW_PAD = V(-4.9, 1.75)
+/** The bin, between the counter and the terrace, in plain view: stand on it half a second to throw away the
+ *  plates you carry (a dish nobody orders any more, a counter full for that dish). */
+export const BIN = V(1.25, 1.2)
 /** what you can unlock while the place is still a little corner on the pavement */
 export const CORNER_PADS: Unlock[] = ['pan2', 'plateau']
