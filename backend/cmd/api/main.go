@@ -49,10 +49,15 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP, middleware.Recoverer, middleware.Timeout(30*time.Second))
-	origins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-	if os.Getenv("ALLOWED_ORIGINS") == "" {
-		origins = []string{"http://localhost:5173", "http://127.0.0.1:5173"}
+	// who may call the API from a browser: the game on Vercel (and its preview deployments) always, the local dev
+	// server, and whatever ALLOWED_ORIGINS adds (comma-separated; spaces and a final « / » are forgiven)
+	origins := []string{"https://babiland-boss.vercel.app", "https://babiland-boss-*.vercel.app", "http://localhost:5173", "http://127.0.0.1:5173"}
+	for _, o := range strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
+			origins = append(origins, o)
+		}
 	}
+	log.Printf("CORS: allowed origins %v", origins)
 	r.Use(cors.Handler(cors.Options{AllowedOrigins: origins, AllowedMethods: []string{"GET", "POST", "PUT", "OPTIONS"}, AllowedHeaders: []string{"Authorization", "Content-Type"}, MaxAge: 600}))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
 	r.Route("/api/v1", func(r chi.Router) {
