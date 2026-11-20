@@ -43,6 +43,12 @@ type Arcade = PlaceState & {
   pop: { id: number; text: string } | null
   /** a moment to celebrate (not saved): the place just grew, or more people know you */
   news: { id: number; kind: 'grow' | 'fame'; level: number } | null
+  /** where you are: walking in the street of your quarter, or inside your maquis (not saved) */
+  view: 'quartier' | 'maquis'
+  /** fresh produce from the market: the stoves cook faster until then (ms, not saved) */
+  marketUntil: number
+  /** the map of the places is open (from the HUD, or the gbaka station) */
+  mapOpen: boolean
   /** a bulk order from a restaurant (not saved): plates of one dish to put in the crate before the time runs out */
   bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
@@ -87,6 +93,9 @@ export const useArcade = create<Arcade>(() => ({
   pop: null,
   news: null,
   bulk: null,
+  view: 'maquis',
+  marketUntil: 0,
+  mapOpen: false,
   ...load(),
 }))
 

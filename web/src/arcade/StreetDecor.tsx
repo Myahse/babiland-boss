@@ -99,7 +99,7 @@ const wire = new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.8 }
 const insulator = new THREE.MeshStandardMaterial({ color: '#dee2e6', roughness: 0.4 })
 
 /** A street lamp: a dark post, an arm over the road, a warm lamp (it glows). */
-function Lamp({ facing = 0, ...props }: { facing?: number } & ThreeElements['group']) {
+export function Lamp({ facing = 0, ...props }: { facing?: number } & ThreeElements['group']) {
   return (
     <group {...props} rotation={[0, facing, 0]}>
       <mesh material={pole} position={[0, 1.6, 0]} castShadow>

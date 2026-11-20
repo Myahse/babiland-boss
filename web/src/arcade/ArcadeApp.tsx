@@ -20,6 +20,8 @@ import { OfflinePanel } from './Offline'
 import { AmenagerButton, BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
 import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
 import { Intro, StoryLayer } from './Story'
+import { Quartier, walker, type Spot } from './Quartier'
+import { SpotCard } from './SpotCard'
 import { RoundButton } from './HudButton'
 import { Icon } from './Icons'
 
@@ -148,14 +150,15 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
   )
 }
 
-function Hud() {
+function Hud({ street }: { street: boolean }) {
   const money = useArcade((s) => s.money)
   const carried = useArcade((s) => s.carried.length)
   const served = useArcade((s) => totalServed(s))
   const pop = useArcade((s) => s.pop)
   const goal = PER_LEVEL
   const [sound, setSound] = useState(!isMuted())
-  const [map, setMap] = useState(false)
+  const map = useArcade((s) => s.mapOpen)
+  const setMap = (v: boolean) => useArcade.setState({ mapOpen: v })
   const level = levelOf(served)
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -192,6 +195,18 @@ function Hud() {
       </div>
       <div className="absolute top-[72px] left-3 flex flex-col items-start gap-1.5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
         <FameChip level={level} />
+        {!street && (
+          <RoundButton
+            icon={<Icon name="door" size={28} />}
+            label="Rue"
+            color="#495057"
+            onClick={() => {
+              // out of the maquis, on the pavement in front of its door
+              walker.pos.set(-0.9, 0, -4.6)
+              useArcade.setState({ view: 'quartier' })
+            }}
+          />
+        )}
         <RoundButton icon={<Icon name="map" size={28} />} label="Carte" color="#1c7ed6" onClick={() => setMap(true)} />
         <TurfButton />
         <AmenagerButton />
@@ -228,18 +243,28 @@ export default function ArcadeApp() {
   const name = useGame((s) => s.name)
   const current = useArcade((s) => s.current)
   const stage = useArcade((s) => s.stage)
+  const view = useArcade((s) => s.view)
+  // the place you are standing in front of, in the street
+  const [spot, setSpot] = useState<Spot | null>(null)
+  const street = phase !== 'title' && view === 'quartier'
   return (
     <div className="relative h-full w-full">
       <Canvas shadows dpr={[1, 2]} camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}>
         <Suspense fallback={null}>
           <DishCtx.Provider value={PLACES[current].dish}>
-            <ArcadeWorld stage={stage} />
-            <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} />
-            {stage >= 3 && <GrandDecor />}
-            <Streets />
-            <StreetDecor />
-            <StreetLife />
-            {phase !== 'title' && <Sim key={current} name={name} />}
+            {street ? (
+              <Quartier key={`q-${current}`} onSpot={setSpot} />
+            ) : (
+              <>
+                <ArcadeWorld stage={stage} />
+                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} />
+                {stage >= 3 && <GrandDecor />}
+                <Streets />
+                <StreetDecor />
+                <StreetLife />
+                {phase !== 'title' && <Sim key={current} name={name} />}
+              </>
+            )}
           </DishCtx.Provider>
           {/* the look: lights that glow (bulbs, signs), colours a little warmer and livelier, the edges a little darker */}
           <EffectComposer multisampling={0}>
@@ -257,7 +282,8 @@ export default function ArcadeApp() {
       ) : (
         <>
           <Joystick />
-          <Hud />
+          <Hud street={street} />
+          {street && spot && <SpotCard spot={spot} />}
           <OnlineRuntime />
         </>
       )}

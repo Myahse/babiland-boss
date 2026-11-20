@@ -10,6 +10,18 @@ import { drawIcon, Icon, type IconName } from './Icons'
 // The arcade-idle look: chunky simple shapes, flat-shaded facets, bright saturated colours,
 // a slightly glossy "plastic toy" finish.
 
+// Flat shading takes the normal from the screen-space slope of the surface. On a sliver of a triangle (the tiny
+// rounded corners of a RoundedBox, seen from far) that slope is zero and normalize() gives NaN: the pixel is NaN,
+// and the bloom spreads it over the whole screen (a grey picture). Fall back to facing the camera instead.
+const SAFE_FLAT = `vec3 fdx = dFdx( vViewPosition );
+	vec3 fdy = dFdy( vViewPosition );
+	vec3 flatN = cross( fdx, fdy );
+	vec3 normal = dot( flatN, flatN ) > 1e-24 ? normalize( flatN ) : vec3( 0.0, 0.0, 1.0 );`
+THREE.ShaderChunk.normal_fragment_begin = THREE.ShaderChunk.normal_fragment_begin.replace(
+  /vec3 fdx = dFdx\( vViewPosition \);\s*vec3 fdy = dFdy\( vViewPosition \);\s*vec3 normal = normalize\( cross\( fdx, fdy \) \);/,
+  SAFE_FLAT,
+)
+
 export function Flat({ color, ...rest }: { color: THREE.ColorRepresentation } & ThreeElements['meshStandardMaterial']) {
   return <meshStandardMaterial color={color} flatShading roughness={0.45} metalness={0} {...rest} />
 }

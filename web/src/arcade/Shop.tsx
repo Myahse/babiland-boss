@@ -274,7 +274,7 @@ export function Building({ name, place, stage = 2 }: { name: string; place: Plac
 }
 
 /** A little yellow-orange taxi driving round the block. */
-function Taxi({ path, speed, offset = 0 }: { path: (t: number) => { x: number; z: number; r: number }; speed: number; offset?: number }) {
+export function Taxi({ path, speed, offset = 0 }: { path: (t: number) => { x: number; z: number; r: number }; speed: number; offset?: number }) {
   const ref = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
     const p = path((clock.elapsedTime * speed + offset) % 1)

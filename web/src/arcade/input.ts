@@ -28,10 +28,14 @@ export function moveInput() {
   const l = Math.hypot(x, z)
   const sx = l > 1 ? x / l : x
   const sz = l > 1 ? z / l : z
-  // what you push is on the screen; the camera looks at the shop from a corner (45°): turn it onto the ground,
-  // so « up » walks up the screen, not off to one side
-  return { x: (sx + sz) * Math.SQRT1_2, z: (sz - sx) * Math.SQRT1_2 }
+  // what you push is on the screen; the camera looks at the ground from an angle (45° in the maquis, almost
+  // straight down the street outside): turn it onto the ground, so « up » walks up the screen
+  const c = Math.cos(camYaw.v)
+  const s = Math.sin(camYaw.v)
+  return { x: sx * c + sz * s, z: -sx * s + sz * c }
 }
+/** which way the camera looks from (its angle around the vertical), set by the scene's camera */
+export const camYaw = { v: Math.PI / 4 }
 const DEAD = 0.12
 
 if (import.meta.env.DEV) Object.assign(window, { arcadeStick: stick })

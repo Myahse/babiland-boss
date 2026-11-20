@@ -14,8 +14,8 @@ import { ToonPerson } from './ToonPerson'
 // in the queue.
 
 /** A straight lane: from `a` to `b`, then again from `a` (the ends are out of sight). */
-type Lane = { a: THREE.Vector3; b: THREE.Vector3 }
-const lane = (ax: number, az: number, bx: number, bz: number): Lane => ({ a: new THREE.Vector3(ax, 0, az), b: new THREE.Vector3(bx, 0, bz) })
+export type Lane = { a: THREE.Vector3; b: THREE.Vector3 }
+export const lane = (ax: number, az: number, bx: number, bz: number): Lane => ({ a: new THREE.Vector3(ax, 0, az), b: new THREE.Vector3(bx, 0, bz) })
 
 // the front road runs along x (z 5.2..8.0, the taxis at z 6.2 going +x); the side road along z (x 6.4..9.2, taxis at x 7.6)
 const MOTO_LANES = [lane(18, 7.15, -18, 7.15), lane(-18, 7.65, 18, 7.65), lane(8.45, -16, 8.45, 16), lane(9.0, 16, 9.0, -16)]
@@ -54,7 +54,7 @@ function Wheel({ z }: { z: number }) {
 }
 
 /** A moto riding by: its colour, its rider, maybe a passenger. */
-function PassingMoto({ l, speed, offset, color, rider, passenger }: { l: Lane; speed: number; offset: number; color: string; rider: PersonId; passenger?: PersonId }) {
+export function PassingMoto({ l, speed, offset, color, rider, passenger }: { l: Lane; speed: number; offset: number; color: string; rider: PersonId; passenger?: PersonId }) {
   const { g } = useLane(l, speed, offset)
   const body = useRef<THREE.Group>(null)
   useFrame(({ clock }) => {
@@ -89,7 +89,7 @@ function PassingMoto({ l, speed, offset, color, rider, passenger }: { l: Lane; s
 }
 
 /** Someone walking by; `basin`: a basin of goods on the head. */
-function Walker({ l, speed, offset, who, basin }: { l: Lane; speed: number; offset: number; who: PersonId; basin?: string }) {
+export function Walker({ l, speed, offset, who, basin }: { l: Lane; speed: number; offset: number; who: PersonId; basin?: string }) {
   const { g, track } = useLane(l, speed, offset)
   return (
     <group ref={g}>

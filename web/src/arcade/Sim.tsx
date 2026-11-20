@@ -8,7 +8,7 @@ import { sfx } from './sfx'
 import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
-import { moveInput } from './input'
+import { camYaw, moveInput } from './input'
 import { PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
@@ -218,7 +218,7 @@ export function Sim({ name }: { name: string }) {
         continue
       }
       // key zone « marché »: stations cook faster
-      progress.current[i] += (dt * (1 + bonusOf(st.current, 'cook')) * F.cook) / L.cook
+      progress.current[i] += (dt * (1 + bonusOf(st.current, 'cook')) * F.cook * (Date.now() < st.marketUntil ? 1.25 : 1)) / L.cook
       if (progress.current[i] >= 1) {
         progress.current[i] = 0
         plates[i]++
@@ -874,6 +874,7 @@ function Follow() {
   const look = useMemo(() => new THREE.Vector3(), [])
   useEffect(() => {
     camera.position.set(player.pos.x, 9, player.pos.z + 7)
+    camYaw.v = Math.PI / 4
     if (import.meta.env.DEV) Object.assign(window, { __cam: camera })
   }, [camera])
   useFrame((_, dt) => {

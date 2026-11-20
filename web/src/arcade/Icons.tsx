@@ -130,6 +130,12 @@ export const ICONS = {
     { d: 'M10 2h4v4l2 3v12H8V9l2-3z', fill: '#c2255c' },
     { d: 'M8 12h8v5H8z', fill: '#ffd43b' },
   ],
+  door: [
+    { d: 'M5 21V4h11v17z', fill: '#a0612a' },
+    { d: 'M16 6l3 1v14l-3-1', fill: '#ffd43b' },
+    { d: 'M13 12h.01', fill: 'none' },
+    { d: 'M3 21h18', fill: 'none' },
+  ],
   phone: [
     { d: 'M7 2h10v20H7z', fill: '#343a40' },
     { d: 'M9 5h6v12H9z', fill: '#74c0fc' },

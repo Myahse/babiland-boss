@@ -77,6 +77,8 @@ export function Intro() {
     useProfile.setState({ profile: p })
     if (fresh) useArcade.setState({ current: p.home, owned: [p.home] })
     start(p.name)
+    // back in the game: you arrive in the street of your quarter; a new player starts in his little corner (the tutorial)
+    useArcade.setState({ view: useStory.getState().chapter >= 1 ? 'quartier' : 'maquis' })
     sfx.unlock()
     setTimeout(() => void pushSave(useArcade.getState().fame), 1500)
   }
