@@ -21,7 +21,7 @@ import { Icon, type IconName } from './Icons'
 import { STAGE_ICONS } from './HudExtras'
 import { nightCustomers } from './daynight'
 import { saleBoost } from './online'
-import { others, playerWho } from './profile'
+import { others, playerWho, useProfile } from './profile'
 import { StoryArrow } from './Story'
 import { Staff } from './Staff'
 import { currentStep, useStory } from './story'
@@ -715,6 +715,7 @@ export function Sim({ name }: { name: string }) {
   })
 
   const dishes = placeDishes(PLACES[s.current])
+  const myOutfit = useProfile((p) => p.profile?.outfit ?? 1)
   return (
     <>
       {STATIONS.map((pos, i) =>
@@ -742,9 +743,9 @@ export function Sim({ name }: { name: string }) {
           <SquareTable key={i} position={t} look={s.style.terrace} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
       {STAGES[s.stage + 1] && fameLevel(s.fame) >= STAGES[s.stage + 1].fame && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
-      <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />
-      {s.unlocks.serveur && <Mover who={others(["yao"])[0]} obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} />}
-      {s.unlocks.caisse && <Mover who={others(["fatou"])[0]} obj={cashier} />}
+      <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} outfit={myOutfit} outfitKind="boss" />
+      {s.unlocks.serveur && <Mover who={others(["yao"])[0]} obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} outfit={s.style.team} />}
+      {s.unlocks.caisse && <Mover who={others(["fatou"])[0]} obj={cashier} outfit={s.style.team} />}
       {s.unlocks.moto && <Moto obj={moto} want={s.delivery.want} got={s.delivery.got} waiting={s.delivery.state === 'wait'} />}
       {custs.current.map((c, k) => (
         <Mover key={c.id} who={c.who} obj={c} sitting={c.state === 'eat' && !c.moving}>
@@ -757,7 +758,7 @@ export function Sim({ name }: { name: string }) {
 }
 
 /** A person whose position/rotation is driven by the simulation (player, server or customer). */
-export function Mover({ who, obj, carried = [], sitting = false, full = false, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: Dish[]; sitting?: boolean; full?: boolean; children?: React.ReactNode }) {
+export function Mover({ who, obj, carried = [], sitting = false, full = false, outfit = 1, outfitKind, children }: { who: PersonId; obj: { pos: THREE.Vector3; rot: number; moving: boolean }; carried?: Dish[]; sitting?: boolean; full?: boolean; outfit?: number; outfitKind?: 'cook' | 'boss' | 'staff'; children?: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null)
   const [moving, setMoving] = useState(obj.moving)
   useFrame(() => {
@@ -769,7 +770,7 @@ export function Mover({ who, obj, carried = [], sitting = false, full = false, c
   })
   return (
     <group ref={ref}>
-      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried.length > 0} sitting={sitting} track={obj} scale={1.2} /> : <Avatar who={who} moving={moving} carrying={carried.length > 0} />}
+      {TOON_READY.includes(who) ? <ToonPerson who={who} moving={moving} carrying={carried.length > 0} sitting={sitting} track={obj} scale={1.2} outfit={outfit} outfitKind={outfitKind} /> : <Avatar who={who} moving={moving} carrying={carried.length > 0} />}
       {carried.length > 0 && <PlateStack count={carried.length} dishes={carried} wobble position={[0, 1.0, 0.45]} />}
       {full && (
         <Html position={[0, 1.15 + carried.length * 0.075, 0.45]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>

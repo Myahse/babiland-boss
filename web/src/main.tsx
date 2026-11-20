@@ -10,7 +10,8 @@ import ArcadeApp from './arcade/ArcadeApp'
 const mode = new URLSearchParams(location.search).get('mode')
 // ?mode=plats: every dish up close (development only)
 const Gallery = import.meta.env.DEV && mode === 'plats' ? lazy(() => import('./arcade/DishGallery')) : null
-const Root = Gallery ? () => <Suspense fallback={null}><Gallery /></Suspense> : mode === 'cuisine' ? App : ArcadeApp
+const Tenues = import.meta.env.DEV && mode === 'tenues' ? lazy(() => import('./arcade/OutfitGallery')) : null
+const Root = Tenues ? () => <Suspense fallback={null}><Tenues /></Suspense> : Gallery ? () => <Suspense fallback={null}><Gallery /></Suspense> : mode === 'cuisine' ? App : ArcadeApp
 
 // Signs and textures are drawn on canvases, so wait for the font first.
 Promise.race([document.fonts.load('800 40px "Baloo 2"'), new Promise((r) => setTimeout(r, 1500))]).finally(() => {

@@ -5,7 +5,8 @@ import type { PlaceId } from './places'
 // Who you are (docs/VISION.md: « au début tu t'inscris, et tu viens d'un endroit du pays ») : your name, the
 // character you play, and the place you come from — where your story starts, with the dish of your family.
 
-export type Profile = { name: string; who: PersonId; home: PlaceId }
+/** `outfit`: what your character wears, 1..10 (Outfit.tsx), bought in « Aménager », the same in every place */
+export type Profile = { name: string; who: PersonId; home: PlaceId; outfit?: number }
 
 export const CHARACTERS: { who: PersonId; label: string; text: string }[] = [
   { who: 'aya', label: 'Tantie Aya', text: 'Le pagne, le sourire et la main la plus rapide du quartier.' },
@@ -40,3 +41,6 @@ export function others(list: PersonId[]): PersonId[] {
   const me = playerWho()
   return list.map((w) => (w === me ? 'aya' : w))
 }
+
+/** What your character wears (1 to 10). */
+export const playerOutfit = () => Math.max(1, Math.min(10, useProfile.getState().profile?.outfit ?? 1))

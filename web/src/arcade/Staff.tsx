@@ -35,6 +35,7 @@ export function Staff() {
   const place = useArcade((s) => s.current)
   const items = useArcade((s) => s.items)
   const unlocks = useArcade((s) => s.unlocks)
+  const team = useArcade((s) => s.style.team)
   const h = (id: ItemId) => items.includes(id)
   const cook = useRef<Walker & { at: number; wait: number }>({ pos: V(-3.5, -0.75), rot: Math.PI, moving: false, at: 0, wait: 0 })
   const server = useRef<Walker & { state: 'toStation' | 'toCounter'; carried: number[]; acc: number }>({ pos: V(0.5, -0.3), rot: 0, moving: false, state: 'toStation', carried: [], acc: 0 })
@@ -124,9 +125,9 @@ export function Staff() {
   const dishes = placeDishes(PLACES[place])
   return (
     <>
-      {h('cuisiniere') && <Mover who={others(['awa'])[0]} obj={cook.current} />}
-      {h('serveur2') && unlocks.serveur && <Mover who={others(['koffi'])[0]} obj={server.current} carried={carried.map((k) => dishes[k])} />}
-      {h('ramasseur') && <Mover who={others(['yao'])[0]} obj={commis.current} />}
+      {h('cuisiniere') && <Mover who={others(['awa'])[0]} obj={cook.current} outfit={team} outfitKind="cook" />}
+      {h('serveur2') && unlocks.serveur && <Mover who={others(['koffi'])[0]} obj={server.current} carried={carried.map((k) => dishes[k])} outfit={team} />}
+      {h('ramasseur') && <Mover who={others(['yao'])[0]} obj={commis.current} outfit={team} />}
       {h('chaises') && unlocks.table && <ExtraChairs />}
       {h('tele') && <Tele />}
       {h('ventilo') && FANS.map((p, i) => <Fan key={i} position={p} />)}

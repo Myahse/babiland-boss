@@ -4,6 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { SkeletonUtils } from 'three-stdlib'
 import * as THREE from 'three'
 import type { PersonId } from '../three/RealPerson'
+import { useOutfit } from './Outfit'
 
 // Cartoon "animated film" people (Meshy, stylised prompt), in public/assets/toon/<who>.glb with their own
 // walk and run. Every Meshy skeleton uses the same bone names, so the recorded idle animation made for the
@@ -71,7 +72,7 @@ function aim(b: THREE.Bone | null, c: THREE.Bone | null, dir: THREE.Vector3, w: 
  * picks the animation from that: standing, walking or running, played at the matching pace so the feet
  * don't slide. Without `track`, `moving` just switches walk / idle.
  */
-export function ToonPerson({ who, moving, carrying = false, sitting = false, track, ...props }: { who: PersonId; moving: boolean; carrying?: boolean; sitting?: boolean; track?: { pos: THREE.Vector3 } } & ThreeElements['group']) {
+export function ToonPerson({ who, moving, carrying = false, sitting = false, track, outfit = 1, outfitKind = 'staff', ...props }: { who: PersonId; moving: boolean; carrying?: boolean; sitting?: boolean; outfit?: number; outfitKind?: 'cook' | 'boss' | 'staff'; track?: { pos: THREE.Vector3 } } & ThreeElements['group']) {
   const { scene } = useGLTF(`${base}toon/${who}.glb`)
   const walkFile = useGLTF(`${base}toon/${who}-walk.glb`)
   const runFile = useGLTF(`${base}toon/${who}-run.glb`)
@@ -87,6 +88,8 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
     return m
   }, [scene])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
+  // what the person wears at their style level (Outfit.tsx)
+  const clothes = useOutfit(model, outfit, outfitKind)
   // Each copy of a person has its own skeleton, whose bone matrices live in a texture on the graphics card. Nothing
   // frees it when the person leaves the screen (a customer goes, you walk out of the maquis), so it piled up until
   // the phone ran out of memory and reloaded the page. Free it, and the animations, when the person goes.
@@ -256,6 +259,7 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
           <primitive object={model} />
         </group>
       </group>
+      {clothes}
     </group>
   )
 }
