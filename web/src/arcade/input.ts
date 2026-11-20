@@ -8,7 +8,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('blur', () => keys.clear())
 }
 
-/** Wanted direction on the ground: x = right, z = toward the street. Length 0..1. */
+/** Wanted direction on the ground (x, z), from the direction pushed on the screen. Length 0..1. */
 export function moveInput() {
   let x = 0
   let z = 0
@@ -17,11 +17,21 @@ export function moveInput() {
   if (keys.has('arrowup') || keys.has('w') || keys.has('z')) z -= 1
   if (keys.has('arrowdown') || keys.has('s')) z += 1
   if (stick.active) {
-    x += stick.x
-    z += stick.y
+    // a small dead zone in the middle, then a smooth curve: little moves for fine steps, full push to run
+    const l = Math.hypot(stick.x, stick.y)
+    if (l > DEAD) {
+      const k = Math.min(1, (l - DEAD) / (1 - DEAD)) ** 0.8 / l
+      x += stick.x * k
+      z += stick.y * k
+    }
   }
   const l = Math.hypot(x, z)
-  return l > 1 ? { x: x / l, z: z / l } : { x, z }
+  const sx = l > 1 ? x / l : x
+  const sz = l > 1 ? z / l : z
+  // what you push is on the screen; the camera looks at the shop from a corner (45°): turn it onto the ground,
+  // so « up » walks up the screen, not off to one side
+  return { x: (sx + sz) * Math.SQRT1_2, z: (sz - sx) * Math.SQRT1_2 }
 }
+const DEAD = 0.12
 
 if (import.meta.env.DEV) Object.assign(window, { arcadeStick: stick })

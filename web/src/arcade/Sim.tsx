@@ -36,7 +36,7 @@ const padLabel = (u: Unlock, p: Place) => (u === 'plat1' ? DISHES[p.extras[0]].l
 //  - walking over the money collects it; standing on a pad spends it to unlock things,
 //  - the server (once hired) carries plates from the stations to the counter on his own.
 
-const SPEED = 2.5 // a brisk walk (faster looks like sliding)
+const SPEED = 2.9 // a brisk walk (faster looks like sliding)
 const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
 const COUNTER_MAX = 8 // per dish
 const TICK = 0.13 // one plate moves every TICK seconds
@@ -229,7 +229,7 @@ export function Sim({ name }: { name: string }) {
     while (acc.current >= TICK) {
       acc.current -= TICK
       for (const i of active) {
-        if (carried.length < carryMax() && plates[i] > 0 && (player.pos.distanceTo(STATIONS[i]) < 1.15 || player.pos.distanceTo(STATIONS[i].clone().add(V(0, 1.0))) < 0.9)) {
+        if (carried.length < carryMax() && plates[i] > 0 && (player.pos.distanceTo(STATIONS[i]) < 1.35 || player.pos.distanceTo(STATIONS[i].clone().add(V(0, 1.0))) < 1.1)) {
           plates[i]--
           carried.push(STATION_SLOT[i])
           changed = true
@@ -239,7 +239,7 @@ export function Sim({ name }: { name: string }) {
         }
       }
       // at the counter, the plates go down one by one, each in the column of its dish
-      if (carried.length > 0 && player.pos.distanceTo(COUNTER) < 1.35) {
+      if (carried.length > 0 && player.pos.distanceTo(COUNTER) < 1.6) {
         // the highest plate in the stack whose dish still has room on the counter (a full column must not block the rest)
         let idx = -1
         for (let j = carried.length - 1; j >= 0; j--) if (counter[carried[j]] < COUNTER_MAX) { idx = j; break }
@@ -287,7 +287,7 @@ export function Sim({ name }: { name: string }) {
         changed = true
       }
     })
-    if (cash > 0 && player.pos.distanceTo(CASH) < 0.9) {
+    if (cash > 0 && player.pos.distanceTo(CASH) < 1.2) {
       for (let k = 0; k < Math.min(14, Math.ceil(cash / 200)); k++) fly('cash', up(CASH, 0.2 + (k % 5) * 0.15), hands(player, () => 0), k * 0.04, 0.35)
       sfx.cash()
       money += cash
@@ -613,7 +613,7 @@ export function Sim({ name }: { name: string }) {
       while (bulkAcc.current >= TICK) {
         bulkAcc.current -= TICK
         const idx = carried.lastIndexOf(bulk.dish)
-        if (idx >= 0 && got < bulk.want && player.pos.distanceTo(CRATE) < 1.0) {
+        if (idx >= 0 && got < bulk.want && player.pos.distanceTo(CRATE) < 1.3) {
           carried.splice(idx, 1)
           got++
           fly('plate', hands(player, () => carried.length)(), up(CRATE, 0.5 + Math.min(got, 12) * 0.04))
@@ -829,6 +829,7 @@ function Follow() {
   const look = useMemo(() => new THREE.Vector3(), [])
   useEffect(() => {
     camera.position.set(player.pos.x, 9, player.pos.z + 7)
+    if (import.meta.env.DEV) Object.assign(window, { __cam: camera })
   }, [camera])
   useFrame((_, dt) => {
     // seen from a corner, high up: the shop looks like a diamond, like in the shop games
