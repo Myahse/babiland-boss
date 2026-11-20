@@ -45,7 +45,7 @@ func main() {
 	tf := turf.New(pool, hub)
 	sh := &shop.Handler{DB: pool, Pay: shop.FromEnv(), Card: shop.StripeFromEnv(), Site: strings.TrimRight(os.Getenv("SITE_URL"), "/"), API: strings.TrimRight(os.Getenv("API_URL"), "/"),
 		Changed: func(user string) { hub.ToUser(user, live.Msg{"t": "me"}) }}
-	log.Printf("shop: Mobile Money %v, card %v", sh.Pay != nil, sh.Card != nil)
+	log.Printf("shop: Mobile Money %v, card %v · Google sign-in %v", sh.Pay != nil, sh.Card != nil, os.Getenv("GOOGLE_CLIENT_ID") != "")
 
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP, middleware.Recoverer, middleware.Timeout(30*time.Second))
@@ -56,7 +56,12 @@ func main() {
 	r.Use(cors.Handler(cors.Options{AllowedOrigins: origins, AllowedMethods: []string{"GET", "POST", "PUT", "OPTIONS"}, AllowedHeaders: []string{"Authorization", "Content-Type"}, MaxAge: 600}))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
 	r.Route("/api/v1", func(r chi.Router) {
-		(&auth.Handler{DB: pool, Tokens: tokens}).Routes(r)
+		ah := &auth.Handler{DB: pool, Tokens: tokens}
+		// Sign in with Google: the same OAuth client as the game's button (VITE_GOOGLE_CLIENT_ID)
+		if id := os.Getenv("GOOGLE_CLIENT_ID"); id != "" {
+			ah.Google = auth.NewGoogleVerifier(strings.Split(id, ",")...)
+		}
+		ah.Routes(r)
 		sh.Hooks(r)
 		r.Get("/live", hub.Serve)
 		// for the login page: how many bosses, how many online now

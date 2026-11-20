@@ -81,6 +81,17 @@ export async function signIn(name: string, password: string, create: boolean) {
   useOnline.setState({ token: s.token, name: s.name })
   return s
 }
+/** Signed in with Google's button: the boss of that Google account, or `needName` (a new one: his boss name first). */
+export async function googleSignIn(credential: string, name?: string): Promise<{ name: string; created: boolean } | { needName: true; suggestion?: string; error?: string }> {
+  const r = await fetch(`${API}/api/v1/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, ...(name ? { name } : {}) }) })
+  const j = await r.json().catch(() => ({}))
+  if (j.needName) return { needName: true, suggestion: j.suggestion, error: name ? j.error : undefined }
+  if (!r.ok) throw new ApiError(r.status, j.error ?? 'Google ne répond pas')
+  useOnline.setState({ token: j.token, name: j.name })
+  return { name: j.name, created: !!name }
+}
+export const GOOGLE_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? ''
+
 export function signOut() {
   sock?.close()
   sock = null

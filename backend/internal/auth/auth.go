@@ -66,12 +66,15 @@ func UserID(ctx context.Context) string {
 type Handler struct {
 	DB     *pgxpool.Pool
 	Tokens Tokens
+	// Google: nil while GOOGLE_CLIENT_ID isn't set (no Google button)
+	Google *GoogleVerifier
 }
 
 // Routes: not signed in.
 func (h *Handler) Routes(r chi.Router) {
 	r.Post("/auth/register", h.register)
 	r.Post("/auth/login", h.login)
+	r.Post("/auth/google", h.google)
 }
 
 var nameOK = regexp.MustCompile(`^[\p{L}\p{N}][\p{L}\p{N} '_.-]{1,18}[\p{L}\p{N}]$`)
@@ -128,8 +131,8 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var id, name, hash string
-	err := h.DB.QueryRow(r.Context(), `SELECT id, name, password FROM users WHERE name_key = $1`, strings.ToLower(strings.Join(strings.Fields(c.Name), " "))).Scan(&id, &name, &hash)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && bcrypt.CompareHashAndPassword([]byte(hash), []byte(c.Password)) != nil) {
+	err := h.DB.QueryRow(r.Context(), `SELECT id, name, coalesce(password, '') FROM users WHERE name_key = $1`, strings.ToLower(strings.Join(strings.Fields(c.Name), " "))).Scan(&id, &name, &hash)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (hash == "" || bcrypt.CompareHashAndPassword([]byte(hash), []byte(c.Password)) != nil)) {
 		httpx.Error(w, http.StatusUnauthorized, "nom ou mot de passe faux")
 		return
 	}
@@ -147,4 +150,70 @@ func (h *Handler) issue(w http.ResponseWriter, id, name string) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, session{Token: tok, ID: id, Name: name})
+}
+
+// google: signed in with Google's button (its ID token checked against Google's keys). A Google account
+// already tied to a boss: that boss. A new one: it needs a boss name (the phone asks, then sends it).
+func (h *Handler) google(w http.ResponseWriter, r *http.Request) {
+	if h.Google == nil {
+		httpx.Error(w, http.StatusServiceUnavailable, "la connexion Google n'est pas encore ouverte")
+		return
+	}
+	var req struct {
+		Credential string `json:"credential"`
+		Name       string `json:"name,omitempty"`
+	}
+	if err := httpx.Decode(r, &req); err != nil || req.Credential == "" {
+		httpx.Error(w, http.StatusBadRequest, "requête invalide")
+		return
+	}
+	ctx := r.Context()
+	g, err := h.Google.Verify(ctx, req.Credential)
+	if err != nil {
+		httpx.Error(w, http.StatusUnauthorized, "Google n'a pas confirmé ce compte : réessaie")
+		return
+	}
+	var id, name string
+	err = h.DB.QueryRow(ctx, `SELECT id, name FROM users WHERE google_sub = $1`, g.Sub).Scan(&id, &name)
+	if err == nil {
+		h.issue(w, id, name)
+		return
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		httpx.Error(w, http.StatusInternalServerError, "base de données indisponible")
+		return
+	}
+	// a new boss: his name first
+	req.Name = strings.Join(strings.Fields(req.Name), " ")
+	if req.Name == "" {
+		httpx.JSON(w, http.StatusConflict, map[string]any{"error": "choisis ton nom de boss", "needName": true, "suggestion": suggest(g)})
+		return
+	}
+	if !nameOK.MatchString(req.Name) {
+		httpx.JSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "ton nom de boss : 3 à 20 lettres ou chiffres", "needName": true})
+		return
+	}
+	err = h.DB.QueryRow(ctx, `INSERT INTO users (name, name_key, google_sub, email) VALUES ($1, $2, $3, $4) RETURNING id`, req.Name, strings.ToLower(req.Name), g.Sub, g.Email).Scan(&id)
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) && pg.Code == "23505" {
+		httpx.JSON(w, http.StatusConflict, map[string]any{"error": "ce nom de boss est déjà pris", "needName": true})
+		return
+	}
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "base de données indisponible")
+		return
+	}
+	h.issue(w, id, req.Name)
+}
+
+// suggest: a boss name from the Google account (its first name), for the phone to offer.
+func suggest(g GoogleIdentity) string {
+	n := strings.TrimSpace(g.FirstName)
+	if n == "" {
+		n, _, _ = strings.Cut(strings.TrimSpace(g.Name), " ")
+	}
+	if len([]rune(n)) > 20 {
+		n = string([]rune(n)[:20])
+	}
+	return n
 }
