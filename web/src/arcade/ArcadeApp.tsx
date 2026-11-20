@@ -7,6 +7,7 @@ import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
 import { Building, GrandDecor, Streets } from './Shop'
 import { StreetDecor } from './StreetDecor'
+import { StreetLife } from './StreetLife'
 import { GameClock } from './daynight'
 import { stick } from './input'
 import { buy, goTo, totalServed, useArcade } from './store'
@@ -236,6 +237,7 @@ export default function ArcadeApp() {
             {stage >= 3 && <GrandDecor />}
             <Streets />
             <StreetDecor />
+            <StreetLife />
             {phase !== 'title' && <Sim key={current} name={name} />}
           </DishCtx.Provider>
           {/* the look: lights that glow (bulbs, signs), colours a little warmer and livelier, the edges a little darker */}
