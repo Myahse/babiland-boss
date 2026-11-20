@@ -2,6 +2,7 @@ import { RoundedBox } from '@react-three/drei'
 import { signTexture } from '../three/textures'
 import { useMemo } from 'react'
 import { Flat, Palm, woodTexture } from './Props'
+import { laterite } from './StreetDecor'
 
 // The street around the shop, kept simple and bright so the gameplay reads at a glance.
 
@@ -15,15 +16,18 @@ const SHOPS = [
 /** `stage` 0 (a little corner on the pavement): bare packed earth instead of the maquis' wooden floor. */
 export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
   const wood = useMemo(() => woodTexture(), [])
+  const ground = useMemo(() => laterite([10, 7]), [])
   return (
     <>
-      <color attach="background" args={['#8fd3ff']} />
-      <fog attach="fog" args={['#bfe6ff', 18, 40]} />
-      <hemisphereLight args={['#e3f4ff', '#ffcf9e', 1.5]} />
+      {/* late afternoon in Babi: a warm sun low in the sky, a blue sky, the warm light bounced off the laterite */}
+      <color attach="background" args={['#9fd8ff']} />
+      <fog attach="fog" args={['#ffe2c4', 20, 44]} />
+      <hemisphereLight args={['#d6ecff', '#ffb27a', 1.25]} />
       <directionalLight
         castShadow
-        position={[5, 10, 6]}
-        intensity={2.2}
+        position={[7, 9, 3]}
+        intensity={2.7}
+        color="#fff0d6"
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-10}
         shadow-camera-right={10}
@@ -35,7 +39,7 @@ export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
       {/* laterite all around, the shop's own paved plot, the street behind */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[60, 40]} />
-        <Flat color="#e8894a" />
+        <meshStandardMaterial map={ground} roughness={0.95} />
       </mesh>
       {/* the plot: bare packed earth for a little corner, the wooden floor once it's a maquis (both kept, one shown:
           swapping the material would leave the floor black) */}

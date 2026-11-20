@@ -1,11 +1,12 @@
 import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { EffectComposer, SMAA, ToneMapping } from '@react-three/postprocessing'
+import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { useGame } from '../store'
 import { ArcadeWorld } from './ArcadeWorld'
 import { Sim } from './Sim'
 import { Building, GrandDecor, Streets } from './Shop'
+import { StreetDecor } from './StreetDecor'
 import { stick } from './input'
 import { buy, goTo, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
@@ -17,6 +18,7 @@ import { OfflinePanel } from './Offline'
 import { AmenagerButton, BulkBanner, FameChip, MissionsButton, NewsLayer } from './HudExtras'
 import { DiamondButton, LiveFeed, OnlineButton, OnlineRuntime } from './OnlineUI'
 import { Intro, StoryLayer } from './Story'
+import { RoundButton } from './HudButton'
 
 
 /** Drag anywhere to move: the stick appears where the finger lands. */
@@ -147,7 +149,6 @@ function Hud() {
   const money = useArcade((s) => s.money)
   const carried = useArcade((s) => s.carried.length)
   const served = useArcade((s) => totalServed(s))
-  const place = useArcade((s) => PLACES[s.current])
   const pop = useArcade((s) => s.pop)
   const goal = PER_LEVEL
   const [sound, setSound] = useState(!isMuted())
@@ -186,16 +187,9 @@ function Hud() {
           <span className="text-2xl font-extrabold text-[#343a40]">{money >= 10000 ? `${(money / 1000).toFixed(1)}K` : money}</span>
         </div>
       </div>
-      <div className="absolute top-20 left-3 flex flex-col items-start gap-2" style={{ marginTop: 'env(safe-area-inset-top)' }}>
-        <div className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold shadow">{place.name} · Niveau {level}</div>
-        <FameChip />
-        <button
-          className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#1c7ed6] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => setMap(true)}
-        >
-          🗺️ Carte
-        </button>
+      <div className="absolute top-[72px] left-3 flex flex-col items-start gap-1.5" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        <FameChip level={level} />
+        <RoundButton icon="🗺️" label="Carte" color="#1c7ed6" onClick={() => setMap(true)} />
         <TurfButton />
         <AmenagerButton />
         <MissionsButton />
@@ -237,10 +231,16 @@ export default function ArcadeApp() {
             <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} />
             {stage >= 3 && <GrandDecor />}
             <Streets />
+            <StreetDecor />
             {phase !== 'title' && <Sim key={current} name={name} />}
           </DishCtx.Provider>
+          {/* the look: lights that glow (bulbs, signs), colours a little warmer and livelier, the edges a little darker */}
           <EffectComposer multisampling={0}>
+            <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.55} radius={0.6} />
+            <HueSaturation saturation={0.12} />
+            <BrightnessContrast contrast={0.06} />
             <ToneMapping mode={ToneMappingMode.NEUTRAL} />
+            <Vignette offset={0.32} darkness={0.42} />
             <SMAA />
           </EffectComposer>
         </Suspense>

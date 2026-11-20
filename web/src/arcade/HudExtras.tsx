@@ -1,7 +1,9 @@
+import { RoundButton } from './HudButton'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DISHES, placeDishes, PLACES } from './places'
 import { FAME_AT, fameLevel, fameNews, fameText, STAGES } from './growth'
+import { bossName, useTurf } from './turf'
 import { sfx } from './sfx'
 import { popText, useArcade } from './store'
 import { ITEMS, itemPrice, type Item } from './items'
@@ -22,17 +24,17 @@ export function MissionsButton() {
   }, [])
   return (
     <>
-      <button
-        className={`pointer-events-auto relative flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#7048e8] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5 ${ready ? 'vip-glow' : ''}`}
-        onPointerDown={stop}
+      <RoundButton
+        icon="🎯"
+        label="Missions"
+        color="#7048e8"
+        badge={ready || null}
+        glow={ready > 0}
         onClick={() => {
           freshMissions()
           setOpen(true)
         }}
-      >
-        🎯 Missions
-        {ready > 0 && <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-[#e03131] text-xs">{ready}</span>}
-      </button>
+      />
       {open && createPortal(<MissionsPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   )
@@ -130,22 +132,28 @@ export function BulkBanner() {
 }
 
 /** Who knows you here, and how far to the next level (under the place's name). */
-export function FameChip() {
+export function FameChip({ level }: { level: number }) {
   const place = useArcade((s) => s.current)
   const fame = useArcade((s) => s.fame)
   const stage = useArcade((s) => s.stage)
+  const owners = useTurf((s) => s.owners[place])
+  const boss = owners?.[0] !== 'me' ? bossName(place, 0) : null
   const lv = fameLevel(fame)
   const next = FAME_AT[lv + 1]
   const k = next ? (fame - FAME_AT[lv]) / (next - FAME_AT[lv]) : 1
   return (
-    <div className="w-52 rounded-2xl bg-white/90 px-2.5 py-1 shadow">
-      <div className="text-[11px] leading-tight font-extrabold">
-        {STAGES[stage].icon} {STAGES[stage].name}
+    <div className="w-48 rounded-2xl bg-white/85 px-2.5 py-1.5 shadow backdrop-blur-sm">
+      <div className="flex items-baseline justify-between gap-1 text-[12px] leading-tight font-extrabold">
+        <span className="truncate">
+          {STAGES[stage].icon} {PLACES[place].name}
+        </span>
+        <span className="shrink-0 rounded-full bg-[#e8432e] px-1.5 text-[10px] text-white">niv {level}</span>
       </div>
-      <div className="text-[11px] leading-tight font-bold">📣 {fameText(place, lv)}</div>
-      <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
+      <div className="mt-0.5 truncate text-[10.5px] leading-tight font-bold opacity-80">📣 {fameText(place, lv)}</div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
         <div className="h-full rounded-full bg-gradient-to-r from-[#ffa94d] to-[#f76707] transition-all" style={{ width: `${k * 100}%` }} />
       </div>
+      {boss && <div className="mt-1 truncate text-[10px] leading-tight font-extrabold text-[#7048e8]">😎 {boss} prend 20 %</div>}
     </div>
   )
 }
@@ -204,13 +212,7 @@ export function AmenagerButton() {
   if (stage < 1) return null
   return (
     <>
-      <button
-        className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#e8590c] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
-        onPointerDown={stop}
-        onClick={() => setOpen(true)}
-      >
-        🛠️ Aménager
-      </button>
+      <RoundButton icon="🛠️" label="Aménager" color="#e8590c" onClick={() => setOpen(true)} />
       {open && createPortal(<AmenagerPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   )

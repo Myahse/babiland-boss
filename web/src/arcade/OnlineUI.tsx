@@ -1,3 +1,4 @@
+import { RoundButton } from './HudButton'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { levelOf, PLACES } from './places'
@@ -94,14 +95,7 @@ export function OnlineButton() {
   if (!ONLINE_ON) return null
   return (
     <>
-      <button
-        className="pointer-events-auto relative flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#0b7285] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
-        onPointerDown={stop}
-        onClick={() => setOpen(true)}
-      >
-        {token ? (live ? '🟢' : '🟠') : '🌐'} {token ? `En ligne · ${presence.length}` : 'Jouer en ligne'}
-        {tribute > 0 && <span className="absolute -top-2 -right-2 rounded-full border-2 border-white bg-[#40c057] px-1.5 text-[10px]">💰</span>}
-      </button>
+      <RoundButton icon={token ? (live ? '🟢' : '🟠') : '🌐'} label={token ? `En ligne · ${presence.length}` : 'En ligne'} color="#0b7285" badge={tribute > 0 ? '💰' : null} onClick={() => setOpen(true)} />
       {open && createPortal(token ? <LivePanel onClose={() => setOpen(false)} /> : <AccountPanel onClose={() => setOpen(false)} />, document.body)}
     </>
   )

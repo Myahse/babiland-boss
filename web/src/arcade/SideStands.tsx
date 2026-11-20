@@ -9,6 +9,7 @@ import { levelOf } from './places'
 import { CashPile, Flat, Pad, PadHint } from './Props'
 import { sfx } from './sfx'
 import { popText, totalServed, useArcade } from './store'
+import { PottedPlant } from './StreetDecor'
 import { SIDE, SIDE_MAX, SIDE_PAD, SIDE_POS, sideCap, sidePerMin, sidePrice } from './side'
 import { ToonPerson } from './ToonPerson'
 import { useVip } from './vip'
@@ -93,7 +94,7 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
           {side[i] ? (
             <Stand i={i} level={side[i]} cash={sideCash[i]} full={sideCash[i] >= sideCap(place, i, side[i]) - 1} />
           ) : (
-            <Planter position={SIDE_POS[i]} />
+            <PottedPlant position={SIDE_POS[i]} />
           )}
           {/* a stand's pad shows once your level opens it (a locked price on the floor only confuses) */}
           {side[i] < SIDE_MAX && stage >= 1 && level >= b.level && (
@@ -115,19 +116,6 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
   )
 }
 
-function Planter(props: { position: THREE.Vector3 }) {
-  return (
-    <group {...props}>
-      <RoundedBox args={[0.6, 0.4, 0.6]} radius={0.05} position={[0, 0.2, 0]} castShadow>
-        <Flat color="#868e96" />
-      </RoundedBox>
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <icosahedronGeometry args={[0.38, 0]} />
-        <Flat color="#40c057" />
-      </mesh>
-    </group>
-  )
-}
 
 /** One stand: a table under a parasol, the sign, what it sells, the seller behind, the money on the counter. */
 function Stand({ i, level, cash, full }: { i: number; level: number; cash: number; full: boolean }) {

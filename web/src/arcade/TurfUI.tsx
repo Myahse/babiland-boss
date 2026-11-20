@@ -3,6 +3,7 @@ import type { PlaceId } from './places'
 import { PLACES } from './places'
 import { useArcade } from './store'
 import { RealMap } from './RealMap'
+import { RoundButton } from './HudButton'
 import { Commune3D } from './Commune3D'
 import { ATTACK_PRICE, BETRAY_PRICE, canAttack, REAL_MAP, COOLDOWN, CUT, DISTRICTS, DUEL_TARGET, gridOf, ownersOf, RENT, RENT_EVERY, RESPECT_FOR_BETRAYAL, startDuel, useTurf, DEFEND_TARGET, SHIELD, GUARD_MAX, GUARD_PRICE, GUARD_SLOW, hireGuards, keyOf, bossName, rivalOf } from './turf'
 
@@ -283,19 +284,9 @@ function DuelHud() {
 
 /** The button and the boss badge (in the left column of the HUD). */
 export function TurfButton() {
-  const place = useArcade((s) => s.current)
-  const owners = useTurf((s) => s.owners[place])
-  const boss = owners?.[0] !== 'me' ? bossName(place, 0) : null
   return (
     <>
-      <button
-        className="pointer-events-auto flex items-center gap-1 rounded-2xl border-[3px] border-white bg-[#c92a2a] px-3 py-1.5 text-sm font-extrabold text-white shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
-        onPointerDown={stop}
-        onClick={() => useTurf.setState({ panel: true })}
-      >
-        🏙️ Quartiers
-      </button>
-      {boss && <div className="rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-extrabold text-white">😎 {boss} prend {CUT * 100} %</div>}
+      <RoundButton icon="🏙️" label="Quartiers" color="#c92a2a" onClick={() => useTurf.setState({ panel: true })} />
     </>
   )
 }

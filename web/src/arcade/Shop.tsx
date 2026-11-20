@@ -8,6 +8,7 @@ import { ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import type { Place } from './places'
 import { SLOT0, SLOT_STEP } from './layout'
+import { asphalt, kerb } from './StreetDecor'
 
 // The maquis building, its terraces, and the street corner around it — like a busy restaurant
 // in the shop games: two floors, a big sign on the roof, people eating on the terraces, taxis going by.
@@ -308,15 +309,16 @@ function Taxi({ path, speed, offset = 0 }: { path: (t: number) => { x: number; z
 export function Streets() {
   const front = useMemo(() => (t: number) => ({ x: -16 + t * 32, z: 6.2, r: Math.PI / 2 }), [])
   const side = useMemo(() => (t: number) => ({ x: 7.6, z: 14 - t * 28, r: Math.PI }), [])
+  const road = useMemo(() => ({ front: asphalt([20, 1]), side: asphalt([1, 20]), kerbX: kerb(120), kerbZ: kerb(120) }), [])
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 6.6]} receiveShadow>
         <planeGeometry args={[60, 2.8]} />
-        <Flat color="#495057" />
+        <meshStandardMaterial map={road.front} roughness={0.9} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[7.8, 0.012, 0]} receiveShadow>
         <planeGeometry args={[2.8, 60]} />
-        <Flat color="#495057" />
+        <meshStandardMaterial map={road.side} roughness={0.9} />
       </mesh>
       {[-14, -10, -6, -2, 2, 10, 14].map((x) => (
         <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, 6.6]}>
@@ -337,14 +339,14 @@ export function Streets() {
           <meshBasicMaterial color="#f8f9fa" />
         </mesh>
       ))}
-      {/* pavement edge */}
-      <mesh position={[0, 0.06, 5.15]}>
-        <boxGeometry args={[60, 0.12, 0.12]} />
-        <Flat color="#dee2e6" />
+      {/* kerbs painted red and white */}
+      <mesh position={[0, 0.07, 5.2]}>
+        <boxGeometry args={[60, 0.14, 0.16]} />
+        <meshStandardMaterial map={road.kerbX} roughness={0.6} />
       </mesh>
-      <mesh position={[6.35, 0.06, 0]}>
-        <boxGeometry args={[0.12, 0.12, 60]} />
-        <Flat color="#dee2e6" />
+      <mesh position={[6.35, 0.07, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[60, 0.14, 0.16]} />
+        <meshStandardMaterial map={road.kerbZ} roughness={0.6} />
       </mesh>
       <Taxi path={front} speed={0.045} />
       <Taxi path={front} speed={0.045} offset={0.5} />
