@@ -230,7 +230,7 @@ export const hasPass = () => {
 }
 
 // ------------------------------------------------------------------ the game saved online
-const SAVE_KEYS = ['babiland-arcade-v2', 'babiland-turf-v3', 'babiland-missions', 'babiland-seen']
+const SAVE_KEYS = ['babiland-arcade-v2', 'babiland-turf-v3', 'babiland-missions', 'babiland-seen', 'babiland-profile', 'babiland-story']
 export async function pushSave(fame: number) {
   if (!isOnline()) return
   const save: Record<string, string | null> = {}

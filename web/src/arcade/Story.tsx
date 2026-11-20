@@ -11,6 +11,7 @@ import { CHAPTERS, currentStep, skipToProgress, storyCtx, tickStory, useStory, t
 import { DISTRICTS, useTurf } from './turf'
 import { useVip } from './vip'
 import { ToonPerson } from './ToonPerson'
+import { ApiError, ONLINE_ON, pullSave, pushSave, signIn, useOnline } from './online'
 
 // The start of the game (name, character, home place, the story told in a few pictures), the dialogues of the
 // chapters, the current goal on screen and the arrow in the shop that shows where to go.
@@ -63,7 +64,7 @@ export function Intro() {
   const profile = useProfile((s) => s.profile)
   const start = useGame((s) => s.start)
   const hasSave = useArcade((s) => s.served > 0 || s.owned.length > 1 || s.money > 0)
-  const [step, setStep] = useState<'continue' | 'name' | 'who' | 'home' | 'story'>(profile ? 'continue' : 'name')
+  const [step, setStep] = useState<'continue' | 'name' | 'account' | 'who' | 'home' | 'story'>(profile ? 'continue' : 'name')
   const [name, setName] = useState(profile?.name ?? '')
   const [who, setWho] = useState<Profile['who']>(profile?.who ?? 'aya')
   const [home, setHome] = useState<PlaceId>(profile?.home ?? 'yopougon')
@@ -75,6 +76,7 @@ export function Intro() {
     if (fresh) useArcade.setState({ current: p.home, owned: [p.home] })
     start(p.name)
     sfx.unlock()
+    setTimeout(() => void pushSave(useArcade.getState().fame), 1500)
   }
   const done = () => {
     const p = { name: name.trim() || 'Boss', who, home }
@@ -117,11 +119,12 @@ export function Intro() {
           <p className="mt-1 text-center text-base font-semibold">Pars d’un petit coin sur le trottoir et deviens le boss de la bouffe à Babi.</p>
           <label className="mt-4 block text-sm font-extrabold">Ton nom</label>
           <input value={name} onChange={(e) => setName(e.target.value.slice(0, 14))} placeholder="Ex. : Tantie Aya" className="mt-1 w-full rounded-2xl border-[3px] border-[var(--color-ink)] bg-white px-4 py-2.5 text-lg font-bold outline-none" />
-          <button className="btn btn-green mt-4 w-full text-xl" disabled={name.trim().length < 2} onClick={() => setStep('who')}>
+          <button className="btn btn-green mt-4 w-full text-xl" disabled={name.trim().length < 2} onClick={() => setStep(ONLINE_ON && !useOnline.getState().token ? 'account' : 'who')}>
             Suivant
           </button>
         </div>
       )}
+      {step === 'account' && <Account name={name.trim()} onDone={() => setStep('who')} />}
       {step === 'who' && (
         <div className={card}>
           <div className="text-center text-xl font-extrabold">Choisis ton personnage</div>
@@ -179,6 +182,57 @@ export function Intro() {
       {step === 'story' && (
         <StorySlides slides={SLIDES(home, name.trim() || 'Boss')} slide={slide} setSlide={setSlide} onDone={done} />
       )}
+    </div>
+  )
+}
+
+/** Your account (as in Babi Life): your game saved online, your rivals, the shop. Or later. */
+function Account({ name, onDone }: { name: string; onDone: () => void }) {
+  const [create, setCreate] = useState(true)
+  const [boss, setBoss] = useState(name)
+  const [password, setPassword] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      await signIn(boss.trim(), password, create)
+      // an account that already has a game: bring it back on this phone
+      if (!create && (await pullSave())) {
+        location.reload()
+        return
+      }
+      sfx.unlock()
+      onDone()
+    } catch (e) {
+      setErr((e as ApiError).message)
+    }
+    setBusy(false)
+  }
+  return (
+    <div className="card pop w-full max-w-md">
+      <div className="text-center text-4xl">🔐</div>
+      <div className="text-center text-xl font-extrabold">Ton compte</div>
+      <p className="text-center text-sm font-semibold opacity-75">Ta partie est sauvegardée en ligne (tu la retrouves sur un autre téléphone), tu as de vrais rivaux et la boutique.</p>
+      <div className="mt-3 flex gap-1 rounded-xl bg-[#f1e4cc] p-1 text-sm font-extrabold">
+        {[true, false].map((c) => (
+          <button key={String(c)} className={`flex-1 rounded-lg py-1.5 ${create === c ? 'bg-white shadow' : 'opacity-60'}`} onClick={() => setCreate(c)}>
+            {c ? 'Créer mon compte' : 'J’ai déjà un compte'}
+          </button>
+        ))}
+      </div>
+      <label className="mt-3 block text-sm font-extrabold">Nom de boss</label>
+      <input className="mt-1 w-full rounded-xl border-2 border-[var(--color-ink)] px-3 py-2 font-bold" value={boss} maxLength={20} onChange={(e) => setBoss(e.target.value)} />
+      <label className="mt-2 block text-sm font-extrabold">Mot de passe</label>
+      <input className="mt-1 w-full rounded-xl border-2 border-[var(--color-ink)] px-3 py-2 font-bold" type="password" placeholder="6 caractères au moins" value={password} onChange={(e) => setPassword(e.target.value)} />
+      {err && <div className="mt-2 text-sm font-extrabold text-[#e03131]">{err}</div>}
+      <button className="btn btn-green mt-3 w-full text-xl" disabled={busy || boss.trim().length < 3 || password.length < 6} onClick={go}>
+        {busy ? '…' : create ? 'Créer mon compte' : 'Me connecter'}
+      </button>
+      <button className="mt-3 w-full text-center text-xs font-bold underline opacity-60" onClick={onDone}>
+        Plus tard (jouer sans compte)
+      </button>
     </div>
   )
 }
