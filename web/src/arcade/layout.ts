@@ -92,7 +92,7 @@ export const BULK_TIME = 100 // seconds to fill it
 export const BULK_PAY = 1.6 // x the price of a plate
 
 /** the pad to grow the place (little corner -> maquis -> restaurant -> grand restaurant) */
-export const GROW_PAD = V(-4.9, 1.75)
+export const GROW_PAD = V(-3.5, 1.85)
 /** The bin, between the counter and the terrace, in plain view: stand on it half a second to throw away the
  *  plates you carry (a dish nobody orders any more, a counter full for that dish). */
 export const BIN = V(1.25, 1.2)
@@ -110,3 +110,24 @@ export const HUB = V(11.8, -0.9)
 export const PARK_SPOTS = [V(15.0, -1.3), V(15.0, 0.4), V(15.0, 2.1), V(15.0, 3.8)]
 /** the kitchen, around the stoves: a tiled floor, two half walls, the hood, the pass */
 export const KITCHEN = { minX: -5.55, maxX: 0.95, minZ: -2.2, maxZ: -0.95 }
+
+// ------------------------------------------------------------------ upstairs (the restaurant's terrace)
+/** the height of the upstairs floor (the slab of the building, Shop.tsx) */
+export const FLOOR1 = 3.02
+/** the four tables upstairs, and their eight seats (seat i is at table floor(i / 2)) */
+export const UP_TABLES = [-4.1, -1.6, 0.5, 2.8].map((x) => new THREE.Vector3(x, FLOOR1, -2.85))
+export const UP_SEATS = UP_TABLES.flatMap((t) => [t.clone().add(V(-0.62, 0)), t.clone().add(V(0.62, 0))])
+/** all the tables and seats: the 3 of the ground terrace first, then the 4 upstairs (from the restaurant on) */
+export const ALL_TABLES = [...TABLES, ...UP_TABLES]
+export const ALL_SEATS = [...SEATS, ...UP_SEATS]
+export const isUp = (seat: number) => seat >= SEATS.length
+/** where you stand to sit down / get up: in front of the chair, on the side of the street */
+export const approach = (i: number) => (isUp(i) ? new THREE.Vector3(ALL_SEATS[i].x, FLOOR1, -2.25) : seatApproach(i))
+/** the stairs, along the left wall: you start climbing at the foot (STAIR_IN), you arrive at the top (STAIR_TOP) */
+export const STAIR_X = -5.3
+export const STAIR_IN = V(STAIR_X, 1.65)
+export const STAIR_FOOT = V(STAIR_X, 1.25)
+export const STAIR_TOP = new THREE.Vector3(STAIR_X, FLOOR1, -2.15)
+export const STAIR_SOLID = { c: V(STAIR_X, -0.35), hx: 0.33, hz: 1.6 }
+/** where you can walk upstairs */
+export const UP_BOUNDS = { minX: -5.45, maxX: 4.4, minZ: -3.75, maxZ: -2.05 }

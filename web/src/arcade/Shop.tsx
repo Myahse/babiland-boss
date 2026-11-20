@@ -125,7 +125,8 @@ function shutterTexture() {
  * 1 the maquis (open kitchen, awning, sign), 2 the restaurant (the upstairs terrace opens, the sign lights up),
  * 3 the grand restaurant (golden sign, red carpet, lamps).
  */
-export function Building({ name, place: own, stage = 2, look = 1 }: { name: string; place: Place; stage?: number; look?: number }) {
+/** `live`: the upstairs terrace is played (its tables and customers are the game's, Sim.tsx), not decor */
+export function Building({ name, place: own, stage = 2, look = 1, live = false }: { name: string; place: Place; stage?: number; look?: number; live?: boolean }) {
   // the front's colours follow its style level (level 1: the colours of the place itself)
   const place = useMemo(() => ({ ...own, ...facadeColours(look, own) }), [own, look])
   const sign = useMemo(
@@ -191,15 +192,15 @@ export function Building({ name, place: own, stage = 2, look = 1 }: { name: stri
         </RoundedBox>
       )}
       {stage < 2 && [-3.5, -1, 1.5, 4].map((x) => <Window key={`c${x}`} x={x} y={H1 + 1.15} w={0.9} h={0.9} z={D / 2 + 0.02} />)}
-      {stage >= 2 && Array.from({ length: 27 }, (_, i) => (
+      {stage >= 2 && Array.from({ length: 27 }, (_, i) => (live && -W / 2 + 0.2 + i * 0.395 < -4.45 ? null :
         <mesh key={i} position={[-W / 2 + 0.2 + i * 0.395, H1 + 0.45, D / 2 + 0.55]}>
           <boxGeometry args={[0.05, 0.7, 0.05]} />
           <Flat color="#495057" />
         </mesh>
       ))}
       {stage >= 2 && (
-        <mesh position={[0, H1 + 0.82, D / 2 + 0.55]}>
-          <boxGeometry args={[W + 0.1, 0.07, 0.08]} />
+        <mesh position={[live ? 0.4 : 0, H1 + 0.82, D / 2 + 0.55]}>
+          <boxGeometry args={[live ? W - 0.7 : W + 0.1, 0.07, 0.08]} />
           <Flat color="#495057" />
         </mesh>
       )}
@@ -216,7 +217,7 @@ export function Building({ name, place: own, stage = 2, look = 1 }: { name: stri
           <meshStandardMaterial color="#fff3bf" emissive="#ffd43b" emissiveIntensity={1.5} />
         </mesh>
       ))}
-      <group position={[0, H1 + 0.12, 0.55]} visible={stage >= 2}>
+      <group position={[0, H1 + 0.12, 0.55]} visible={stage >= 2 && !live}>
         {[-3.6, -1.1, 1.0, 3.3].map((x, i) => (
           <TerraceTable key={x} position={[x, 0, 0.2]} parasol={['#e03131', '#1c7ed6', '#2f9e44', '#f59f00'][i]} plates={1 + (i % 2)} />
         ))}

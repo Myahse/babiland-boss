@@ -285,7 +285,7 @@ export default function ArcadeApp() {
             ) : (
               <>
                 <ArcadeWorld stage={stage} room={style.room} />
-                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} look={style.facade} />
+                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} look={style.facade} live={phase !== 'title'} />
                 {stage >= 3 && <GrandDecor />}
                 <Streets />
                 <StreetDecor />

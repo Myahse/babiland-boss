@@ -60,7 +60,7 @@ type Arcade = PlaceState & {
   bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE }, vitrine: 0 })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0, 0, 0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE }, vitrine: 0 })
 /** saved games from before the particular dishes: make every list the right length */
 function norm(p: Partial<PlaceState> = {}): PlaceState {
   const f = fresh()

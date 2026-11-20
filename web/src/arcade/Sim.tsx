@@ -9,7 +9,7 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
@@ -17,6 +17,8 @@ import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './s
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx, has } from './items'
 import { arrivals, Zones } from './Annexe'
+import { TerraceTable } from './Shop'
+import { Stairs } from './Stairs'
 import { tier } from './looks'
 import { Icon, type IconName } from './Icons'
 import { STAGE_ICONS } from './HudExtras'
@@ -75,7 +77,8 @@ const carryMax = () => (useArcade.getState().unlocks.plateau ? 16 : 8)
 const COUNTER_MAX = 8 // per dish
 const TICK = 0.13 // one plate moves every TICK seconds
 
-const player = { pos: START.clone(), rot: 0, moving: false, vel: new THREE.Vector3() }
+/** `floor`: 0 downstairs, 1 upstairs (the restaurant's terrace); `climb`: going up or down the stairs */
+const player = { pos: START.clone(), rot: 0, moving: false, vel: new THREE.Vector3(), floor: 0 as 0 | 1, climb: null as null | { pts: THREE.Vector3[]; t: number; to: 0 | 1 }, armed: true }
 const cashier = { pos: CASHIER.clone(), rot: 0, moving: false }
 const moto: MotoObj = { pos: MOTO.clone(), rot: Math.PI, visible: true }
 const MOTO_BOX = () => moto.pos.clone().add(new THREE.Vector3(0, 1.0, 0.55))
@@ -181,6 +184,8 @@ export function Sim({ name }: { name: string }) {
   useEffect(() => {
     player.pos.copy(START)
     player.vel.set(0, 0, 0)
+    player.floor = 0
+    player.climb = null
     moto.pos.copy(MOTO)
     moto.visible = true
   }, [])
@@ -192,8 +197,9 @@ export function Sim({ name }: { name: string }) {
       ...SIDE_SOLIDS,
       ...([s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2] as (true | undefined)[]).flatMap((on, i) => (on ? [{ c: STATIONS[i + 1], hx: 0.6, hz: 0.45 }] : [])),
       ...(s.unlocks.table ? TABLE_SOLIDS : []),
+      ...(s.stage >= 2 ? [STAIR_SOLID] : []),
     ],
-    [s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2, s.unlocks.table],
+    [s.unlocks.pan2, s.unlocks.plat1, s.unlocks.plat2, s.unlocks.table, s.stage],
   )
 
   const redraw = useRef(0)
@@ -241,11 +247,31 @@ export function Sim({ name }: { name: string }) {
     v.z += (inp.z * SPEED - v.z) * Math.min(1, dt * 10)
     if (Math.hypot(inp.x, inp.z) < 0.05 && v.length() < 0.08) v.set(0, 0, 0)
     player.moving = v.length() > 0.05
-    if (player.moving) {
+    if (player.climb) {
+      // going up or down the stairs: along the steps, then one step off them
+      const c = player.climb
+      c.t = Math.min(1, c.t + dt / 1.6)
+      const [a, b, e] = c.pts
+      const k = c.t < 0.82 ? c.t / 0.82 : (c.t - 0.82) / 0.18
+      const from = c.t < 0.82 ? a : b
+      const to = c.t < 0.82 ? b : e
+      const prev = player.pos.clone()
+      player.pos.lerpVectors(from, to, k)
+      player.moving = true
+      v.set(0, 0, 0)
+      player.rot = turn(player.rot, Math.atan2(player.pos.x - prev.x, player.pos.z - prev.z), Math.min(1, dt * 12))
+      if (c.t >= 1) {
+        player.floor = c.to
+        player.climb = null
+        player.armed = false
+      }
+    } else if (player.moving) {
       const p = player.pos
-      p.x = THREE.MathUtils.clamp(p.x + v.x * dt, BOUNDS.minX, BOUNDS.maxX)
-      p.z = THREE.MathUtils.clamp(p.z + v.z * dt, BOUNDS.minZ, BOUNDS.maxZ)
-      for (const b of solids) {
+      const B = player.floor ? UP_BOUNDS : BOUNDS
+      p.x = THREE.MathUtils.clamp(p.x + v.x * dt, B.minX, B.maxX)
+      p.z = THREE.MathUtils.clamp(p.z + v.z * dt, B.minZ, B.maxZ)
+      p.y = player.floor ? FLOOR1 : 0
+      for (const b of player.floor ? [] : solids) {
         const dx = p.x - b.c.x
         const dz = p.z - b.c.z
         const ox = b.hx + 0.28 - Math.abs(dx)
@@ -256,6 +282,22 @@ export function Sim({ name }: { name: string }) {
         }
       }
       if (v.length() > 0.3) player.rot = turn(player.rot, Math.atan2(v.x, v.z), Math.min(1, dt * 12))
+    }
+
+    // the stairs (from the restaurant on): walk into the foot to go up, into the top to come down
+    if (st.stage >= 2 && !player.climb) {
+      const flat = (a: THREE.Vector3, b: THREE.Vector3) => Math.hypot(a.x - b.x, a.z - b.z)
+      const at = player.floor ? flat(player.pos, STAIR_TOP) : flat(player.pos, STAIR_IN)
+      if (at > 0.75) player.armed = true
+      if (player.armed && at < 0.42) {
+        player.climb = player.floor
+          ? { pts: [STAIR_TOP.clone(), STAIR_FOOT.clone(), V(STAIR_X + 0.55, 2.2)], t: 0, to: 0 }
+          : { pts: [STAIR_FOOT.clone(), STAIR_TOP.clone(), STAIR_TOP.clone().add(new THREE.Vector3(0.65, 0, -0.45))], t: 0, to: 1 }
+        sfx.pick()
+      }
+    } else if (st.stage < 2 && player.floor) {
+      player.floor = 0
+      player.pos.set(STAIR_X + 0.55, 0, 2.2)
     }
 
     // 3. picking up / dropping / collecting, one plate at a time
@@ -340,10 +382,10 @@ export function Sim({ name }: { name: string }) {
       }
     }
     // tips left on the tables
-    const tableCash = [...st.tableCash]
+    const tableCash = ALL_TABLES.map((_, i) => st.tableCash[i] ?? 0)
     tableCash.forEach((v, i) => {
-      if (v > 0 && player.pos.distanceTo(TABLES[i]) < 1.25) {
-        for (let k = 0; k < Math.min(6, Math.ceil(v / 200)); k++) fly('cash', up(TABLES[i], 0.9), hands(player, () => 0), k * 0.05, 0.35)
+      if (v > 0 && player.pos.distanceTo(ALL_TABLES[i]) < 1.25) {
+        for (let k = 0; k < Math.min(6, Math.ceil(v / 200)); k++) fly('cash', up(ALL_TABLES[i], 0.9), hands(player, () => 0), k * 0.05, 0.35)
         sfx.cash()
         money += v
         popText(`+${v} FCFA`)
@@ -482,15 +524,21 @@ export function Sim({ name }: { name: string }) {
     const leavePaid = (c: Cust) => {
       c.moving = true
       const taken = new Set(custs.current.filter((o) => o.state === 'eat').map((o) => o.seat))
-      const free = unlocks.table ? SEATS.findIndex((_, i) => !taken.has(i)) : -1
+      // the free seats: the terrace downstairs once it is open, and upstairs from the restaurant on (some like it
+      // up there: half of them go up when there is room)
+      const freeSeats = ALL_SEATS.map((_, i) => i).filter((i) => !taken.has(i) && (isUp(i) ? st.stage >= 2 : unlocks.table))
+      const ups = freeSeats.filter(isUp)
+      const downs = freeSeats.filter((i) => !isUp(i))
+      const free = ups.length && (!downs.length || Math.random() < 0.5) ? ups[Math.floor(Math.random() * ups.length)] : downs.length ? downs[0] : -1
       // walk along the aisle behind the tables, then step into the chair (never through a table)
       const aisle = (z: number) => [V(c.pos.x - 0.6, z)]
       if (free >= 0) {
         c.state = 'eat'
         c.seat = free
         c.eat = 7
-        const a = seatApproach(free)
-        c.path = [...aisle(a.z), a, SEATS[free].clone()]
+        const a = approach(free)
+        // upstairs: to the foot of the stairs, up the steps, along the terrace to the chair
+        c.path = isUp(free) ? [V(c.pos.x - 0.6, 1.65), STAIR_IN.clone(), STAIR_FOOT.clone(), STAIR_TOP.clone(), a, ALL_SEATS[free].clone()] : [...aisle(a.z), a, ALL_SEATS[free].clone()]
       } else {
         c.state = 'out'
         c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
@@ -589,6 +637,23 @@ export function Sim({ name }: { name: string }) {
     custs.current.forEach((c) => {
       if (c.state === 'line') return
       // follow the path one point at a time
+      if (c.path.length && Math.abs(c.path[0].y - c.pos.y) > 0.01) {
+        // on the stairs: straight up (or down) the steps
+        const d = c.path[0].clone().sub(c.pos)
+        const l = d.length()
+        if (l < 0.06) {
+          c.pos.copy(c.path[0])
+          c.path.shift()
+        } else {
+          c.pos.addScaledVector(d, Math.min(1, (1.3 * dt) / l))
+          c.rot = turn(c.rot, Math.atan2(d.x, d.z), Math.min(1, dt * 8))
+        }
+        if (!c.moving) {
+          c.moving = true
+          bump()
+        }
+        return
+      }
       if (c.path.length) {
         const last = c.path.length === 1
         const r = step(c.pos, c.path[0], 1.4, dt, last)
@@ -610,16 +675,16 @@ export function Sim({ name }: { name: string }) {
         c.moving = false
         bump()
       }
-      const seat = SEATS[c.seat]
-      const tb = TABLES[Math.floor(c.seat / 2)]
+      const seat = ALL_SEATS[c.seat]
+      const tb = ALL_TABLES[Math.floor(c.seat / 2)]
       c.rot = turn(c.rot, Math.atan2(tb.x - seat.x, tb.z - seat.z), Math.min(1, dt * 8))
       c.eat -= dt
       if (c.eat <= 0) {
         c.state = 'out'
         // they leave a tip on the table
         tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips)
-        const a = seatApproach(c.seat)
-        c.path = [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
+        const a = approach(c.seat)
+        c.path = isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, 1.65), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
         changed = true
         bump()
       }
@@ -764,6 +829,18 @@ export function Sim({ name }: { name: string }) {
         </group>
       ))}
       <Zones player={player} />
+      {s.stage >= 2 && (
+        <>
+          <Stairs />
+          <PadHint at={STAIR_IN} who={player} icon="up" title="L’escalier" text="Monte à la terrasse du haut : les clients y mangent et y laissent leurs pourboires." />
+          {UP_TABLES.map((t, i) => (
+            <group key={`up${i}`}>
+              <TerraceTable position={t} parasol={['#e03131', '#1c7ed6', '#2f9e44', '#f59f00'][i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === 3 + i).length} />
+              {(s.tableCash[3 + i] ?? 0) > 0 && <CashPile amount={s.tableCash[3 + i]} position={[t.x, t.y + 0.76, t.z]} scale={0.7} />}
+            </group>
+          ))}
+        </>
+      )}
       <Bin position={BIN} />
       <PadHint at={BIN} who={player} icon="trash" title="Poubelle" text="Reste dessus pour jeter les plats que tu portes (un plat que personne ne commande)." />
       <FX />
@@ -956,7 +1033,7 @@ function Follow() {
     const out = cam === 'dehors'
     const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom * (out ? 1.65 : 1)
     const follow = out ? 0.9 : 0.7
-    const t = new THREE.Vector3(player.pos.x * follow, 0, player.pos.z * follow)
+    const t = new THREE.Vector3(player.pos.x * follow, player.pos.y * 0.85, player.pos.z * follow)
     camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), k)
     look.lerp(t, k)
     camera.lookAt(look)

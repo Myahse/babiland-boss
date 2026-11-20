@@ -101,7 +101,8 @@ export function Staff() {
     // the commis: picks up the money on the floor and the tips on the tables
     if (has(st.current, 'ramasseur')) {
       const c = commis.current
-      const tip = st.tableCash.findIndex((v) => v > 0)
+      // (only the tables downstairs: the commis doesn't climb)
+      const tip = st.tableCash.slice(0, TABLES.length).findIndex((v) => v > 0)
       const to = st.cash > 0 ? CASH : tip >= 0 ? TABLES[tip].clone().add(V(0, -0.75)) : IDLE
       const r = step(c.pos, to, SPEED, dt)
       c.moving = r.moving
