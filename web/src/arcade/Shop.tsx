@@ -101,7 +101,9 @@ const UP_PEOPLE: { who: PersonId; x: number; z: number; r: number }[] = [
 ]
 
 /** Rolling metal shutters of a shop that isn't yours yet. */
+let shutterTex: THREE.Texture | null = null
 function shutterTexture() {
+  if (shutterTex) return shutterTex
   const c = document.createElement('canvas')
   c.width = 256
   c.height = 256
@@ -114,7 +116,7 @@ function shutterTexture() {
   }
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
-  return t
+  return (shutterTex = t)
 }
 
 /**

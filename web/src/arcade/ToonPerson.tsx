@@ -87,6 +87,17 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
     return m
   }, [scene])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
+  // Each copy of a person has its own skeleton, whose bone matrices live in a texture on the graphics card. Nothing
+  // frees it when the person leaves the screen (a customer goes, you walk out of the maquis), so it piled up until
+  // the phone ran out of memory and reloaded the page. Free it, and the animations, when the person goes.
+  useEffect(
+    () => () => {
+      mixer.stopAllAction()
+      mixer.uncacheRoot(model)
+      model.traverse((o) => (o as THREE.SkinnedMesh).skeleton?.dispose())
+    },
+    [mixer, model],
+  )
   const walkPace = useRef(1.25)
   const acts = useMemo(() => {
     const walk = mixer.clipAction(inPlace(walkFile.animations[0]))

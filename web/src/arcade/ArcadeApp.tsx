@@ -238,6 +238,10 @@ function Hud({ street }: { street: boolean }) {
   )
 }
 
+// Screen sharpness: on a phone (high pixel density) the 3D and its effects at full density need a lot of graphics
+// memory; 1.5 looks the same on a small screen and uses about half.
+const PHONE_DPR: [number, number] = [1, typeof window !== 'undefined' && window.devicePixelRatio > 2 && 'ontouchstart' in window ? 1.5 : 2]
+
 export default function ArcadeApp() {
   const phase = useGame((s) => s.phase)
   const name = useGame((s) => s.name)
@@ -247,9 +251,31 @@ export default function ArcadeApp() {
   // the place you are standing in front of, in the street
   const [spot, setSpot] = useState<Spot | null>(null)
   const street = phase !== 'title' && view === 'quartier'
+  const [lost, setLost] = useState(false)
   return (
     <div className="relative h-full w-full">
-      <Canvas shadows dpr={[1, 2]} camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}>
+      {lost && (
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[#fff4e0] p-8 text-center text-[#2b1a12]">
+          <p className="text-lg font-extrabold">Ton téléphone a manqué de mémoire pour la 3D.</p>
+          <p className="text-sm">Ta partie est sauvegardée.</p>
+          <button className="rounded-2xl bg-[#2f9e44] px-6 py-3 font-extrabold text-white shadow" onClick={() => location.reload()}>
+            Relancer le jeu
+          </button>
+        </div>
+      )}
+      <Canvas
+        shadows
+        dpr={PHONE_DPR}
+        camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}
+        onCreated={({ gl }) => {
+          // if the phone runs out of graphics memory anyway, say so and offer to restart, instead of a blank screen
+          gl.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault()
+            setLost(true)
+          })
+          gl.domElement.addEventListener('webglcontextrestored', () => setLost(false))
+        }}
+      >
         <Suspense fallback={null}>
           <DishCtx.Provider value={PLACES[current].dish}>
             {street ? (

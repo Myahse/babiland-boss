@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef, useState } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { DishCtx, DISHES, type Dish } from './places'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
 import { Html, RoundedBox } from '@react-three/drei'
@@ -318,6 +318,8 @@ function padTexture(label: string, left: number, icon?: IconName) {
 /** An unlock / upgrade pad on the floor, like in the shop games: price, a bill, the name. It fills while you stand on it. */
 export function Pad({ label, left, price, icon, ...props }: { label: string; left: number; price: number; icon?: IconName } & ThreeElements['group']) {
   const tex = useMemo(() => padTexture(label, left, icon), [label, left, icon])
+  // a new texture each time the price changes (many times a second while you pay): free the old one
+  useEffect(() => () => tex.dispose(), [tex])
   const done = Math.max(0.001, 1 - left / price)
   return (
     <group {...props}>
@@ -375,7 +377,9 @@ export function SquareTable({ plates = 0, cash = 0, ...props }: { plates?: numbe
 }
 
 /** Wooden planks for the floor of the maquis. */
+let woodTex: THREE.Texture | null = null
 export function woodTexture() {
+  if (woodTex) return woodTex
   const c = document.createElement('canvas')
   c.width = c.height = 256
   const g = c.getContext('2d')!
@@ -391,7 +395,7 @@ export function woodTexture() {
   t.colorSpace = THREE.SRGBColorSpace
   t.wrapS = t.wrapT = THREE.RepeatWrapping
   t.repeat.set(5, 5)
-  return t
+  return (woodTex = t)
 }
 
 export function Palm({ s = 1, ...props }: { s?: number } & ThreeElements['group']) {

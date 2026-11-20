@@ -202,11 +202,11 @@ function BossMaquis({ x, boss, wall, who }: { x: number; boss: string; wall: str
 
 /** The camera follows you along the street, from the same corner as in the maquis. */
 function Follow() {
-  const { camera, size } = useThree()
+  const { camera, size, gl } = useThree()
   const look = useMemo(() => walker.pos.clone(), [])
   const scene = useThree((s) => s.scene)
   useEffect(() => {
-    if (import.meta.env.DEV) Object.assign(window, { __cam: camera, __scene: scene })
+    if (import.meta.env.DEV) Object.assign(window, { __cam: camera, __scene: scene, __gl: gl })
     camera.position.copy(walker.pos).add(CAM)
     camYaw.v = Math.atan2(CAM.x, CAM.z)
   }, [camera])

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
@@ -179,6 +179,7 @@ function Tele() {
     t.colorSpace = THREE.SRGBColorSpace
     return { c, t }
   }, [])
+  useEffect(() => () => tex.t.dispose(), [tex])
   const last = useRef(0)
   useFrame(({ clock }) => {
     const now = clock.elapsedTime

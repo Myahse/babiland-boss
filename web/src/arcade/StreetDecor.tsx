@@ -6,6 +6,15 @@ import { glowing } from './daynight'
 // What makes the street look like a street of Abidjan: asphalt with its patches, the red laterite, the kerbs
 // painted red and white, street lamps, wooden electricity poles with their sagging wires, plants in clay pots.
 
+// The textures are drawn once and shared: drawing them again each time a scene opens filled the phone's memory
+// (they are never freed), until the browser killed the page.
+const textures = new Map<string, THREE.Texture>()
+function cached(key: string, make: () => THREE.Texture) {
+  let t = textures.get(key)
+  if (!t) textures.set(key, (t = make()))
+  return t
+}
+
 function tex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, repeat: [number, number]) {
   const c = document.createElement('canvas')
   c.width = w
@@ -23,6 +32,7 @@ const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
 
 /** Asphalt: grey with grain, darker patches and a few cracks. */
 export const asphalt = (repeat: [number, number]) =>
+  cached(`asphalt:${repeat}`, () =>
   tex(
     256,
     256,
@@ -52,10 +62,12 @@ export const asphalt = (repeat: [number, number]) =>
       }
     },
     repeat,
+  ),
   )
 
 /** Laterite: the red-orange earth of Abidjan, with darker and lighter patches. */
 export const laterite = (repeat: [number, number]) =>
+  cached(`laterite:${repeat}`, () =>
   tex(
     256,
     256,
@@ -74,10 +86,12 @@ export const laterite = (repeat: [number, number]) =>
       }
     },
     repeat,
+  ),
   )
 
 /** Kerb stripes, red and white. */
 export const kerb = (n: number) =>
+  cached(`kerb:${n}`, () =>
   tex(
     64,
     16,
@@ -88,6 +102,7 @@ export const kerb = (n: number) =>
       g.fillRect(0, 0, 32, 16)
     },
     [n, 1],
+  ),
   )
 
 const pole = new THREE.MeshStandardMaterial({ color: '#2f3e46', roughness: 0.5, metalness: 0.4 })
