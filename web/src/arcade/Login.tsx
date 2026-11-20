@@ -4,7 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { Bounds } from '@react-three/drei'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { sfx } from './sfx'
-import { API, ApiError, GOOGLE_ID, googleSignIn, pullSave, signIn } from './online'
+import { API, ApiError, GOOGLE_ID, googleSignIn, pullSave, signIn, wake } from './online'
 import { CHARACTERS } from './profile'
 import { ToonPerson } from './ToonPerson'
 
@@ -25,21 +25,35 @@ const BACK = 'M15 18l-6-6 6-6'
 /** How many bosses play, how many are online now. */
 function useStats() {
   const [s, setS] = useState<{ players: number; online: number } | null>(null)
+  // 'waking': no answer yet after a few seconds (a free Render server asleep); 'down': still nothing after a minute
+  const [state, setState] = useState<'ok' | 'waiting' | 'waking' | 'down'>('waiting')
   useEffect(() => {
     let alive = true
+    const slow = setTimeout(() => alive && setState((v) => (v === 'waiting' ? 'waking' : v)), 3500)
     const get = () =>
-      fetch(`${API}/api/v1/stats`)
+      fetch(`${API}/api/v1/stats`, { signal: AbortSignal.timeout(20000) })
         .then((r) => r.json())
-        .then((j) => alive && setS(j))
+        .then((j) => {
+          if (!alive) return
+          setS(j)
+          setState('ok')
+        })
         .catch(() => undefined)
     get()
+    // wake the server up as soon as the page opens, so it is ready when the player has typed his name
+    void wake().then((up) => {
+      if (!alive) return
+      if (up) get()
+      else setState('down')
+    })
     const t = setInterval(get, 20000)
     return () => {
       alive = false
+      clearTimeout(slow)
       clearInterval(t)
     }
   }, [])
-  return s
+  return { s, state }
 }
 const fmt = (n: number) => n.toLocaleString('fr-FR').replace(/ | /g, ' ')
 
@@ -67,7 +81,7 @@ const input = 'w-full rounded-2xl border-[3px] border-[#2b1a12] bg-white py-3 pr
 
 /** `onDone(boss, created)`: signed in (an account with no game yet, or a new one); `onGuest`: play without. */
 export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created: boolean) => void; onGuest: () => void }) {
-  const stats = useStats()
+  const { s: stats, state: server } = useStats()
   const [view, setView] = useState<'home' | 'register' | 'login' | 'name'>('home')
   const [boss, setBoss] = useState('')
   const [password, setPassword] = useState('')
@@ -127,7 +141,7 @@ export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created:
           onSuccess={(r) => {
             if (r.credential) void withGoogle(r.credential)
           }}
-          onError={() => setErr('Connexion Google annulée')}
+          onError={() => setErr('Google n’a pas pu te connecter. Réessaie, ou crée un compte avec un nom et un mot de passe.')}
           text="continue_with"
           shape="pill"
           size="large"
@@ -150,6 +164,11 @@ export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created:
         <div className="-mt-2 h-[30vh] max-h-72 min-h-40 w-full max-w-md">
           <Crew />
         </div>
+        {server === 'waking' || server === 'down' ? (
+          <div className="rounded-full bg-[#2b1a12]/80 px-3 py-1 text-xs font-extrabold text-white shadow">
+            {server === 'waking' ? 'Le serveur se réveille… (jusqu’à 1 minute)' : 'Serveur injoignable pour le moment'}
+          </div>
+        ) : (
         <div className="flex items-center gap-2 rounded-full bg-[#2b1a12]/80 px-3 py-1 text-xs font-extrabold text-white shadow">
           <span className="flex items-center gap-1"><GameIcon name="plate" size={16} />{stats ? fmt(stats.players) : '…'} boss</span>
           <span className="opacity-40">•</span>
@@ -157,6 +176,7 @@ export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created:
             <span className="h-2 w-2 animate-pulse rounded-full bg-[#69db7c]" /> {stats ? fmt(stats.online) : '…'} en ligne
           </span>
         </div>
+        )}
       </div>
 
       {/* the panel */}
@@ -219,7 +239,7 @@ export function LoginPage({ onDone, onGuest }: { onDone: (boss: string, created:
                 </p>
               )}
               <button className="btn btn-green w-full !py-3 !text-xl" disabled={busy || boss.trim().length < 3 || (view !== 'name' && password.length < 6)}>
-                {busy ? '…' : view === 'login' ? 'Me connecter' : 'C’est parti !'}
+                {busy ? (server === 'ok' ? '…' : 'Le serveur se réveille…') : view === 'login' ? 'Me connecter' : 'C’est parti !'}
               </button>
               <p className="text-center text-xs font-semibold opacity-60">{view === 'login' ? 'Ta partie revient telle que tu l’as laissée.' : 'Ta partie est sauvegardée en ligne, sur tous tes téléphones.'}</p>
             </form>

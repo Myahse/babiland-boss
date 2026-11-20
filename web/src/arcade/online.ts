@@ -62,16 +62,62 @@ export class ApiError extends Error {
   }
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const host = () => API.replace(/^https?:\/\//, '')
+
+/** The server is up: GET /stats answers. On Render's free plan it falls asleep after 15 minutes without players
+ *  and takes up to a minute to wake up: keep asking for up to ~75 s. */
+export async function wake(maxMs = 75000) {
+  const until = Date.now() + maxMs
+  for (;;) {
+    try {
+      const r = await fetch(`${API}/api/v1/stats`, { signal: AbortSignal.timeout(20000) })
+      if (r.ok) return true
+    } catch {
+      /* asleep, or not reachable */
+    }
+    if (Date.now() > until) return false
+    await sleep(3000)
+  }
+}
+
+/** One call to the server, with the ways it can fail said plainly: no address, the server asleep or out of reach,
+ *  the server restarting, or its own message (« ce nom est déjà pris »). */
+async function call(method: string, path: string, body?: unknown, auth = true): Promise<{ r: Response; j: Record<string, unknown> }> {
+  if (!API) throw new ApiError(0, 'Le jeu n’a pas l’adresse du serveur (VITE_API_URL manque sur Vercel).')
+  const tok = auth ? useOnline.getState().token : null
+  const send = () =>
+    fetch(`${API}/api/v1${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(75000),
+    })
+  for (let attempt = 0; ; attempt++) {
+    let r: Response
+    try {
+      r = await send()
+    } catch {
+      // the request never got an answer: the server is probably waking up. Wait until it answers, then once more.
+      if (attempt === 0 && (await wake())) continue
+      throw new ApiError(0, `Impossible de joindre le serveur (${host()}). S’il dormait, il se réveille : réessaie dans une minute. Sinon il est arrêté, ou il refuse ce site (ALLOWED_ORIGINS).`)
+    }
+    const j = (await r.json().catch(() => ({}))) as Record<string, unknown>
+    // Render answers 502/503/504 for a moment while the server starts
+    if (r.status >= 502 && r.status <= 504 && !j.error && attempt < 4) {
+      await sleep(4000)
+      continue
+    }
+    if (!r.ok && !j.error) j.error = r.status >= 500 ? `Le serveur a un problème (erreur ${r.status}). Réessaie dans un instant.` : `Le serveur a refusé (erreur ${r.status}).`
+    return { r, j }
+  }
+}
+
 export async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
   const tok = useOnline.getState().token
-  const r = await fetch(`${API}/api/v1${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  const j = await r.json().catch(() => ({}))
+  const { r, j } = await call(method, path, body)
   if (r.status === 401 && tok) signOut()
-  if (!r.ok) throw new ApiError(r.status, (j as { error?: string }).error ?? 'le serveur ne répond pas')
+  if (!r.ok) throw new ApiError(r.status, String(j.error))
   return j as T
 }
 
@@ -83,12 +129,11 @@ export async function signIn(name: string, password: string, create: boolean) {
 }
 /** Signed in with Google's button: the boss of that Google account, or `needName` (a new one: his boss name first). */
 export async function googleSignIn(credential: string, name?: string): Promise<{ name: string; created: boolean } | { needName: true; suggestion?: string; error?: string }> {
-  const r = await fetch(`${API}/api/v1/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, ...(name ? { name } : {}) }) })
-  const j = await r.json().catch(() => ({}))
-  if (j.needName) return { needName: true, suggestion: j.suggestion, error: name ? j.error : undefined }
-  if (!r.ok) throw new ApiError(r.status, j.error ?? 'Google ne répond pas')
-  useOnline.setState({ token: j.token, name: j.name })
-  return { name: j.name, created: !!name }
+  const { r, j } = await call('POST', '/auth/google', { credential, ...(name ? { name } : {}) }, false)
+  if (j.needName) return { needName: true, suggestion: j.suggestion as string | undefined, error: name ? (j.error as string | undefined) : undefined }
+  if (!r.ok) throw new ApiError(r.status, String(j.error))
+  useOnline.setState({ token: j.token as string, name: j.name as string })
+  return { name: j.name as string, created: !!name }
 }
 export const GOOGLE_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? ''
 
