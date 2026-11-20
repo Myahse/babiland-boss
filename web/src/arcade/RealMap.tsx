@@ -23,6 +23,20 @@ type AnyMap = {
   getCanvas: () => HTMLCanvasElement
 }
 
+/** Load the map library in advance (when the phone is idle after the game starts), so the map opens fast. */
+export function preloadMap() {
+  const go = () => {
+    if (TOKEN) void import('mapbox-gl').catch(() => {})
+    void import('maplibre-gl').catch(() => {})
+    void import('maplibre-gl/dist/maplibre-gl.css').catch(() => {})
+    // the style of the free map, so it is in the browser's cache
+    if (!TOKEN) void fetch('https://tiles.openfreemap.org/styles/liberty').catch(() => {})
+  }
+  const w = window as unknown as { requestIdleCallback?: (f: () => void, o?: unknown) => void }
+  if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 8000 })
+  else setTimeout(go, 4000)
+}
+
 export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; owners: ('me' | 'boss')[]; selected: number; onPick: (i: number) => void }) {
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<AnyMap | null>(null)
@@ -52,9 +66,13 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
         zoom: 13.1,
         attributionControl: { compact: true },
         // 3D: the camera is tilted and a little turned, you can rotate / tilt with two fingers
-        pitch: 55,
+        // tilted less than before: a steep camera loads the tiles all the way to the horizon (slow on phones)
+        pitch: 38,
         bearing: -18,
-        maxPitch: 70,
+        maxPitch: 60,
+        fadeDuration: 0,
+        renderWorldCopies: false,
+        pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
       }
       // Mapbox when there is a token; if it refuses (wrong or restricted token, no network to it), the free map
       const free = async () => {
@@ -74,7 +92,7 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
           lib.current = mb as never
           mapbox = true
           const ok = await new Promise<boolean>((res) => {
-            const t = setTimeout(() => res(false), 9000)
+            const t = setTimeout(() => res(false), 7000)
             m.on('load', () => (clearTimeout(t), res(true)))
             m.on('error', (e: unknown) => {
               const st = (e as { error?: { status?: number } })?.error?.status
@@ -103,7 +121,7 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
         const bsrc = mapbox ? 'composite' : 'openmaptiles'
         const h = mapbox ? ['coalesce', ['get', 'height'], 8] : ['coalesce', ['get', 'render_height'], 8]
         try {
-          m.addLayer({ id: 'b3d', type: 'fill-extrusion', source: bsrc, 'source-layer': 'building', minzoom: 12.5, paint: { 'fill-extrusion-color': '#efe3cf', 'fill-extrusion-height': h, 'fill-extrusion-opacity': 0.85 } })
+          m.addLayer({ id: 'b3d', type: 'fill-extrusion', source: bsrc, 'source-layer': 'building', minzoom: 14.5, paint: { 'fill-extrusion-color': '#efe3cf', 'fill-extrusion-height': h, 'fill-extrusion-opacity': 0.85 } })
         } catch {
           /* style without buildings */
         }
@@ -170,5 +188,17 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
     })
   }, [ready, owners, selected, geo, place])
 
-  return <div ref={box} className="h-full w-full" />
+  return (
+    <div className="relative h-full w-full">
+      <div ref={box} className="h-full w-full" />
+      {!ready && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-[#f3ead8]">
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 font-extrabold shadow">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-[3px] border-[#2b1a12] border-t-transparent" />
+            Chargement de la carte…
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

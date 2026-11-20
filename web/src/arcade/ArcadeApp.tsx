@@ -1,4 +1,5 @@
-import { Suspense, useState } from 'react'
+import { preloadMap } from './RealMap'
+import { Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
@@ -258,6 +259,10 @@ export default function ArcadeApp() {
   const view = useArcade((s) => s.view)
   // the place you are standing in front of, in the street
   const [spot, setSpot] = useState<Spot | null>(null)
+  // load the real map's library in the background once the game is on, so « Quartiers » opens fast
+  useEffect(() => {
+    if (phase !== 'title') preloadMap()
+  }, [phase === 'title'])
   const street = phase !== 'title' && view === 'quartier'
   const building = useArcade((s) => s.building)
   const [lost, setLost] = useState(false)

@@ -17,10 +17,10 @@ import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './s
 import { bonusOf, cutFor, payCut, tickTurf } from './turf'
 import { fx, has } from './items'
 import { arrivals, Zones } from './Annexe'
-import { applyLayout } from './furniture'
+import { applyLayout, DEFAULT_LAYOUT, rectOf } from './furniture'
 import { BuildEditor, DecorLayer } from './Build'
 import { TerraceTable } from './Shop'
-import { Stairs } from './Stairs'
+import { StairMarks, Stairs } from './Stairs'
 import { tier } from './looks'
 import { Icon, type IconName } from './Icons'
 import { STAGE_ICONS } from './HudExtras'
@@ -112,6 +112,7 @@ export const WISHES: Record<Wish, { text: string; icon: IconName }> = {
 const ASK_WAIT = 16 // seconds they wait to be taken to a table, then they find a place themselves
 const LEAD_TIME = 35 // seconds they follow you before giving up and sitting anywhere
 let askHinted = false
+let stairHinted = false
 type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'ask' | 'eat' | 'out'; wish?: Wish; follow?: boolean; trail?: THREE.Vector3[]; tip?: number; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number; vip?: string }
 const WHO: PersonId[] = ['koffi', 'awa', 'yao', 'fatou']
 
@@ -194,6 +195,26 @@ export function Sim({ name }: { name: string }) {
   const binT = useRef(0)
   const vitT = useRef(3)
   const worker = useRef({ pos: V(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
+  // once the stairs are there, nothing you placed before may stand at their foot: it goes back to its first place
+  const stage = s.stage
+  const layout = s.layout
+  useEffect(() => {
+    if (stage < 2 || !layout) return
+    const foot = { x0: -5.75, x1: -4.75, z0: 1.15, z1: 2.15 }
+    const hit = (r: { x0: number; x1: number; z0: number; z1: number }) => r.x0 < foot.x1 && foot.x0 < r.x1 && r.z0 < foot.z1 && foot.z0 < r.z1
+    // the pieces' solid part only (the room around them can be walked through)
+    const solid = (x: number, z: number, hx: number, hz: number) => hit({ x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz })
+    const L = { ...layout, st: [...layout.st], tables: [...layout.tables] }
+    let moved = false
+    L.st.forEach(([x, z], i) => solid(x, z, 0.6, 0.45) && ((L.st[i] = DEFAULT_LAYOUT.st[i]), (moved = true)))
+    L.tables.forEach(([x, z], i) => solid(x, z, 0.95, 0.45) && ((L.tables[i] = DEFAULT_LAYOUT.tables[i]), (moved = true)))
+    if (solid(L.counter[0], L.counter[1], 0.9, 0.42)) (L.counter = DEFAULT_LAYOUT.counter), (moved = true)
+    if (hit(rectOf({ kind: 'bin' }, L.bin[0], L.bin[1]))) (L.bin = DEFAULT_LAYOUT.bin), (moved = true)
+    if (moved) {
+      useArcade.setState({ layout: L })
+      popText('Un meuble gênait l’escalier : il est revenu à sa place')
+    }
+  }, [stage, layout])
   // arriving in this maquis: start at the entrance, the moto parked
   useEffect(() => {
     player.pos.copy(START)
@@ -302,13 +323,17 @@ export function Sim({ name }: { name: string }) {
     if (st.stage >= 2 && !player.climb) {
       const flat = (a: THREE.Vector3, b: THREE.Vector3) => Math.hypot(a.x - b.x, a.z - b.z)
       const at = player.floor ? flat(player.pos, STAIR_TOP) : flat(player.pos, STAIR_IN)
-      if (at > 0.75) player.armed = true
-      if (player.armed && at < 0.42) {
+      if (at > 0.9) player.armed = true
+      if (player.armed && at < 0.6) {
         player.climb = player.floor
           ? { pts: [STAIR_TOP.clone(), STAIR_FOOT.clone(), V(STAIR_X + 0.55, 2.2)], t: 0, to: 0 }
           : { pts: [STAIR_FOOT.clone(), STAIR_TOP.clone(), STAIR_TOP.clone().add(new THREE.Vector3(0.65, 0, -0.45))], t: 0, to: 1 }
         sfx.pick()
       }
+    } else if (st.stage < 2 && !stairHinted && player.pos.x < -4.6 && player.pos.z < 1.0) {
+      // walking along the left wall before the stairs exist: say when they come
+      stairHinted = true
+      popText(`L’escalier et l’étage arrivent quand ton maquis devient un Restaurant (marche sur le carré « Agrandir »)`)
     } else if (st.stage < 2 && player.floor) {
       player.floor = 0
       player.pos.set(STAIR_X + 0.55, 0, 2.2)
@@ -987,6 +1012,7 @@ export function Sim({ name }: { name: string }) {
       {s.stage >= 2 && (
         <>
           <Stairs />
+          <StairMarks />
           <PadHint at={STAIR_IN} who={player} icon="up" title="L’escalier" text="Monte à la terrasse du haut : les clients y mangent et y laissent leurs pourboires." />
           {UP_TABLES.map((t, i) => (
             <group key={`up${i}`}>
