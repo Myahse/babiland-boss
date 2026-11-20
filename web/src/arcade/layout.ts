@@ -49,6 +49,21 @@ export const PADS: Record<Unlock, { pos: THREE.Vector3; price: number; label: st
   livreur: { pos: V(4.5, 0.9), price: 3000, label: 'Livreur', needs: 'moto' },
 }
 
+/** What each pad is for, said on the pad (icon) and in the bubble when you walk up to it. */
+export const PAD_INFO: Record<Unlock, { icon: string; text: string }> = {
+  pan2: { icon: '🔥', text: 'Un 2e réchaud pour ton plat principal : deux fois plus de plats.' },
+  plat1: { icon: '🍽️', text: 'Un réchaud pour un plat particulier de chez toi : de nouveaux clients le demandent.' },
+  plat2: { icon: '🍽️', text: 'Le 2e plat particulier, avec son réchaud.' },
+  plateau: { icon: '🧺', text: 'Un grand plateau : tu portes 16 plats d’un coup au lieu de 8.' },
+  serveur: { icon: '🧑🏾‍🍳', text: 'Un serveur : il porte les plats des réchauds au comptoir pour toi.' },
+  table: { icon: '🪑', text: 'La terrasse : des tables où les clients mangent et laissent des pourboires.' },
+  caisse: { icon: '💁🏾‍♀️', text: 'Une caissière : elle sert les clients au comptoir même quand tu n’es pas là.' },
+  rapide: { icon: '⚡', text: 'Ton serveur va plus vite et porte plus de plats.' },
+  moto: { icon: '🛵', text: 'La livraison à moto : des commandes au téléphone, mieux payées.' },
+  livreur: { icon: '🏍️', text: 'Un livreur : il charge la moto tout seul depuis le comptoir.' },
+}
+export const UPGRADE_INFO = { icon: '⚡', text: 'Ce réchaud cuit plus vite et garde plus de plats prêts.' }
+
 export const PLATE_PRICE = 500
 
 /** Station upgrades « Plus vite »: level 1 -> 2 -> 3 (MAX). Faster cooking and room for more plates. */

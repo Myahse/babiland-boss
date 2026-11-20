@@ -9,8 +9,8 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { moveInput } from './input'
-import { CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
-import { CashPile, Counter, Pad, PlateStack, SquareTable, Station } from './Props'
+import { PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, seatApproach, SLOT0, SLOT_STEP, SEATS, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
 import { addFame, celebrate, maxQueue, popText, priceLeft, useArcade } from './store'
@@ -20,7 +20,7 @@ import { saleBoost } from './online'
 import { others, playerWho } from './profile'
 import { StoryArrow } from './Story'
 import { Staff } from './Staff'
-import { useStory } from './story'
+import { currentStep, useStory } from './story'
 import { DISHES, placeDishes, PLACES, type Dish, type Place } from './places'
 import { missionEvent } from './missions'
 import { FAME, fameLevel, fameSpawn, sellPrice, stagePrice, STAGES } from './growth'
@@ -28,6 +28,30 @@ import { RECIPES, vipCall, useVip, vipPay, VIPS, VIP_EVERY, VIP_FIRST, VIP_MIN_S
 
 /** Can this pad show up here: a little corner only has a 2nd stove and a bigger tray to unlock. */
 const padOpen = (u: Unlock, stage: number) => stage >= 1 || CORNER_PADS.includes(u)
+
+/** The pads you can see now: only the next few things to buy (the cheapest first, and any you started paying),
+ * so the floor isn't covered with prices. The same list decides what you can pay on. */
+const SHOWN = 3
+type PadView = { key: string; u?: Unlock; i?: number; price: number; left: number; pos: THREE.Vector3; label: string; icon: string; text: string }
+function padsShown(st: ReturnType<typeof useArcade.getState>): PadView[] {
+  const place = PLACES[st.current]
+  const all: PadView[] = []
+  for (const u of Object.keys(PADS) as Unlock[]) {
+    const need = PADS[u].needs
+    if (st.unlocks[u] || !padOpen(u, st.stage) || (need && !st.unlocks[need])) continue
+    all.push({ key: `u:${u}`, u, price: PADS[u].price, left: PADS[u].price - (st.paid[u] ?? 0), pos: PADS[u].pos, label: padLabel(u, place), icon: PAD_INFO[u].icon, text: u === 'plat1' || u === 'plat2' ? `${padLabel(u, place)} : ${PAD_INFO[u].text}` : PAD_INFO[u].text })
+  }
+  STATIONS.forEach((_, i) => {
+    if (!(i === 0 || st.unlocks[(['pan2', 'plat1', 'plat2'] as Unlock[])[i - 1]]) || st.level[i] >= 3) return
+    const price = UPGRADE_PRICES[st.level[i] - 1]
+    all.push({ key: `up:${i}`, i, price, left: price - st.upPaid[i], pos: UPGRADE_PADS[i], label: `Plus vite · niv ${st.level[i] + 1}`, icon: UPGRADE_INFO.icon, text: UPGRADE_INFO.text })
+  })
+  // always shown: the ones you started paying, and the one the story points at
+  const goal = currentStep()?.target?.()
+  const keep = all.filter((p) => p.left < p.price || (goal && p.pos.distanceTo(goal) < 0.01))
+  const next = all.filter((p) => !keep.includes(p)).sort((a, b) => a.price - b.price).slice(0, Math.max(0, SHOWN - keep.length))
+  return [...keep, ...next]
+}
 
 /** The name on a pad: the particular-dish pads show the dish of the place. */
 const padLabel = (u: Unlock, p: Place) => (u === 'plat1' ? DISHES[p.extras[0]].label : u === 'plat2' ? DISHES[p.extras[1]].label : PADS[u].label)
@@ -306,9 +330,10 @@ export function Sim({ name }: { name: string }) {
     // 4. unlock pads: money pours in while you stand on one
     const unlocks = { ...st.unlocks }
     const paid = { ...st.paid }
+    const shown = new Set(padsShown(st).map((p) => p.key))
     for (const u of Object.keys(PADS) as Unlock[]) {
       const need = PADS[u].needs
-      if (unlocks[u] || !padOpen(u, st.stage) || (need && !unlocks[need]) || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
+      if (!shown.has(`u:${u}`) || unlocks[u] || !padOpen(u, st.stage) || (need && !unlocks[need]) || money <= 0 || player.pos.distanceTo(PADS[u].pos) > 0.6) continue
       const give = Math.min(money, Math.ceil((PADS[u].price / 1.4) * dt), priceLeft(u))
       money -= give
       paid[u] = (paid[u] ?? 0) + give
@@ -345,7 +370,7 @@ export function Sim({ name }: { name: string }) {
     const level = [...st.level]
     const upPaid = [...st.upPaid]
     for (const i of active) {
-      if (level[i] >= 3 || money <= 0 || player.pos.distanceTo(UPGRADE_PADS[i]) > 0.6) continue
+      if (!shown.has(`up:${i}`) || level[i] >= 3 || money <= 0 || player.pos.distanceTo(UPGRADE_PADS[i]) > 0.6) continue
       const price = UPGRADE_PRICES[level[i] - 1]
       const give = Math.min(money, Math.ceil((price / 1.4) * dt), price - upPaid[i])
       money -= give
@@ -670,11 +695,12 @@ export function Sim({ name }: { name: string }) {
           <Station key={i} plates={s.station[i]} progress={progress.current[i]} level={s.level[i]} dish={dishes[STATION_SLOT[i]]} position={pos} />
         ) : null,
       )}
-      {STATIONS.map((_, i) =>
-        (i === 0 || s.unlocks[(['pan2', 'plat1', 'plat2'] as Unlock[])[i - 1]]) && s.level[i] < 3 ? (
-          <Pad key={`up${i}`} label={`Plus vite · niv ${s.level[i] + 1}`} price={UPGRADE_PRICES[s.level[i] - 1]} left={UPGRADE_PRICES[s.level[i] - 1] - s.upPaid[i]} position={UPGRADE_PADS[i]} />
-        ) : null,
-      )}
+      {padsShown(s).map((p) => (
+        <group key={p.key}>
+          <Pad label={p.label} icon={p.icon} price={p.price} left={p.left} position={p.pos} />
+          <PadHint at={p.pos} who={player} icon={p.icon} title={p.label} text={p.text} price={p.left} />
+        </group>
+      ))}
       <FX />
       <SideStands player={player} />
       <StoryArrow />
@@ -686,8 +712,7 @@ export function Sim({ name }: { name: string }) {
         TABLES.map((t, i) => (
           <SquareTable key={i} position={t} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
-      {STAGES[s.stage + 1] && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
-      {(Object.keys(PADS) as Unlock[]).map((u) => (!s.unlocks[u] && padOpen(u, s.stage) && (!PADS[u].needs || s.unlocks[PADS[u].needs!]) ? <Pad key={u} label={padLabel(u, PLACES[s.current])} price={PADS[u].price} left={PADS[u].price - (s.paid[u] ?? 0)} position={PADS[u].pos} /> : null))}
+      {STAGES[s.stage + 1] && fameLevel(s.fame) >= STAGES[s.stage + 1].fame && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
       <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />
       {s.unlocks.serveur && <Mover who={others(["yao"])[0]} obj={worker.current} carried={s.workerCarried.map((k) => dishes[k])} />}
       {s.unlocks.caisse && <Mover who={others(["fatou"])[0]} obj={cashier} />}

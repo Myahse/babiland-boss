@@ -6,7 +6,7 @@ import { signTexture } from '../three/textures'
 import { burst, fly } from './fx'
 import { V } from './layout'
 import { levelOf } from './places'
-import { CashPile, Flat, Pad } from './Props'
+import { CashPile, Flat, Pad, PadHint } from './Props'
 import { sfx } from './sfx'
 import { popText, totalServed, useArcade } from './store'
 import { SIDE, SIDE_MAX, SIDE_PAD, SIDE_POS, sideCap, sidePerMin, sidePrice } from './side'
@@ -95,13 +95,19 @@ export function SideStands({ player }: { player: { pos: THREE.Vector3 } }) {
           ) : (
             <Planter position={SIDE_POS[i]} />
           )}
-          {side[i] < SIDE_MAX && stage >= 1 && (
-            <Pad
-              label={level < b.level ? `🔒 ${b.short} · niv ${b.level}` : side[i] ? `${b.short} · niv ${side[i] + 1}` : b.name}
-              price={sidePrice(i, side[i])}
-              left={sidePrice(i, side[i]) - sidePaid[i]}
-              position={SIDE_PAD[i]}
-            />
+          {/* a stand's pad shows once your level opens it (a locked price on the floor only confuses) */}
+          {side[i] < SIDE_MAX && stage >= 1 && level >= b.level && (
+            <>
+              <Pad label={side[i] ? `${b.short} · niv ${side[i] + 1}` : b.short} icon={b.icon} price={sidePrice(i, side[i])} left={sidePrice(i, side[i]) - sidePaid[i]} position={SIDE_PAD[i]} />
+              <PadHint
+                at={SIDE_PAD[i]}
+                who={player}
+                icon={b.icon}
+                title={side[i] ? `${b.name} : niveau ${side[i] + 1}` : b.name}
+                text={side[i] ? 'Le stand vend plus vite et garde plus d’argent.' : 'Un stand sur le trottoir avec sa vendeuse : il vend tout seul aux passants, viens ramasser l’argent.'}
+                price={sidePrice(i, side[i]) - sidePaid[i]}
+              />
+            </>
           )}
         </group>
       ))}

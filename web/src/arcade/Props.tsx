@@ -1,7 +1,7 @@
-import { useContext, useMemo, useRef } from 'react'
+import { useContext, useMemo, useRef, useState } from 'react'
 import { DishCtx, DISHES, type Dish } from './places'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
+import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import { DishModel } from './DishModels'
@@ -214,7 +214,7 @@ export function CashPile({ amount, ...props }: { amount: number } & ThreeElement
   )
 }
 
-function padTexture(label: string, left: number) {
+function padTexture(label: string, left: number, icon = '') {
   const c = document.createElement('canvas')
   c.width = c.height = 256
   const g = c.getContext('2d')!
@@ -237,30 +237,33 @@ function padTexture(label: string, left: number) {
   g.stroke()
   g.setLineDash([])
   g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  // what it is: a big picture, then the price, then its name in big letters
+  if (icon) {
+    g.font = '64px sans-serif'
+    g.fillText(icon, 128, 72)
+  }
   g.fillStyle = '#ffffff'
   g.strokeStyle = '#a0612a'
   g.lineWidth = 8
-  g.font = '800 78px "Baloo 2", sans-serif'
+  g.font = `800 ${icon ? 60 : 78}px "Baloo 2", sans-serif`
   const t = left >= 1000 ? `${(left / 1000).toFixed(left % 1000 ? 1 : 0)}K` : String(left)
-  g.strokeText(t, 128, 120)
-  g.fillText(t, 128, 120)
-  // a green bill
-  g.fillStyle = '#69db3c'
-  r(96, 140, 64, 40, 8)
-  g.fill()
-  g.fillStyle = '#f2e86d'
-  g.fillRect(122, 140, 12, 40)
-  g.font = '800 26px "Baloo 2", sans-serif'
-  g.fillStyle = '#7a4a1e'
-  g.fillText(label.toUpperCase(), 128, 218)
+  g.strokeText(t, 128, icon ? 140 : 110)
+  g.fillText(t, 128, icon ? 140 : 110)
+  g.fillStyle = '#5c3310'
+  let size = 34
+  g.font = `800 ${size}px "Baloo 2", sans-serif`
+  const name = label.toUpperCase()
+  while (g.measureText(name).width > 200 && size > 20) g.font = `800 ${(size -= 2)}px "Baloo 2", sans-serif`
+  g.fillText(name, 128, 196)
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
 }
 
 /** An unlock / upgrade pad on the floor, like in the shop games: price, a bill, the name. It fills while you stand on it. */
-export function Pad({ label, left, price, ...props }: { label: string; left: number; price: number } & ThreeElements['group']) {
-  const tex = useMemo(() => padTexture(label, left), [label, left])
+export function Pad({ label, left, price, icon = '', ...props }: { label: string; left: number; price: number; icon?: string } & ThreeElements['group']) {
+  const tex = useMemo(() => padTexture(label, left, icon), [label, left, icon])
   const done = Math.max(0.001, 1 - left / price)
   return (
     <group {...props}>
@@ -354,3 +357,24 @@ export function Palm({ s = 1, ...props }: { s?: number } & ThreeElements['group'
   )
 }
 
+
+/** The bubble over a pad when you walk up to it: what it is, what it does. */
+export function PadHint({ at, who, icon, title, text, price }: { at: THREE.Vector3; who: { pos: THREE.Vector3 }; icon: string; title: string; text: string; price?: number }) {
+  const [near, setNear] = useState(false)
+  useFrame(() => {
+    const n = who.pos.distanceTo(at) < 1.25
+    if (n !== near) setNear(n)
+  })
+  if (!near) return null
+  return (
+    <Html position={[at.x, 1.25, at.z]} center zIndexRange={[15, 0]} style={{ pointerEvents: 'none' }}>
+      <div className="pop w-52 rounded-2xl border-[3px] border-[var(--color-ink)] bg-white px-2.5 py-1.5 text-center shadow-lg">
+        <div className="text-sm leading-tight font-extrabold">
+          {icon} {title}
+        </div>
+        <div className="mt-0.5 text-[11px] leading-snug font-semibold">{text}</div>
+        {price !== undefined && <div className="mt-0.5 text-[11px] font-extrabold text-[#2b8a3e]">Reste dessus pour payer · {price.toLocaleString('fr-FR')} F</div>}
+      </div>
+    </Html>
+  )
+}
