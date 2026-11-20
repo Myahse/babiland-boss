@@ -1,3 +1,4 @@
+import { facadeColours } from './looks'
 import { useMemo, useRef } from 'react'
 import { useFrame, type ThreeElements } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
@@ -124,10 +125,12 @@ function shutterTexture() {
  * 1 the maquis (open kitchen, awning, sign), 2 the restaurant (the upstairs terrace opens, the sign lights up),
  * 3 the grand restaurant (golden sign, red carpet, lamps).
  */
-export function Building({ name, place, stage = 2 }: { name: string; place: Place; stage?: number }) {
+export function Building({ name, place: own, stage = 2, look = 1 }: { name: string; place: Place; stage?: number; look?: number }) {
+  // the front's colours follow its style level (level 1: the colours of the place itself)
+  const place = useMemo(() => ({ ...own, ...facadeColours(look, own) }), [own, look])
   const sign = useMemo(
-    () => (stage >= 3 ? signTexture(`★ ${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()} ★`, '#2b1a12', '#ffd43b', 1024, 192) : signTexture(`${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#c92a2a', '#ffe066', 1024, 192)),
-    [name, place, stage],
+    () => (stage >= 3 ? signTexture(`★ ${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()} ★`, '#2b1a12', '#ffd43b', 1024, 192) : signTexture(`${place.dishLabel.toUpperCase()} CHEZ ${name.toUpperCase()}`, look >= 9 ? '#1f1f24' : '#c92a2a', look >= 9 ? '#e8b923' : '#ffe066', 1024, 192)),
+    [name, place, stage, look],
   )
   const shutters = useMemo(() => shutterTexture(), [])
   const forRent = useMemo(() => signTexture('À LOUER', '#ffffff', '#e03131', 384, 128), [])

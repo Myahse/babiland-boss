@@ -1,7 +1,8 @@
 import { RoundedBox } from '@react-three/drei'
 import { signTexture } from '../three/textures'
 import { useMemo } from 'react'
-import { Flat, Palm, woodTexture } from './Props'
+import { Flat, Palm } from './Props'
+import { floorTexture, tier } from './looks'
 import { laterite } from './StreetDecor'
 import { DayNight } from './daynight'
 
@@ -15,8 +16,8 @@ const SHOPS = [
 ]
 
 /** `stage` 0 (a little corner on the pavement): bare packed earth instead of the maquis' wooden floor. */
-export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
-  const wood = useMemo(() => woodTexture(), [])
+export function ArcadeWorld({ stage = 1, room = 3 }: { stage?: number; room?: number }) {
+  const floor = floorTexture(room)
   const ground = useMemo(() => laterite([10, 7]), [])
   return (
     <>
@@ -29,9 +30,10 @@ export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
       </mesh>
       {/* the plot: bare packed earth for a little corner, the wooden floor once it's a maquis (both kept, one shown:
           swapping the material would leave the floor black) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow visible={stage >= 1}>
+      {/* the floor of the room: its look follows the room's style level (looks.ts); a new mesh for each look */}
+      <mesh key={`floor${room}`} rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow visible={stage >= 1}>
         <planeGeometry args={[11.4, 7.8]} />
-        <meshStandardMaterial map={wood} roughness={0.7} />
+        <meshStandardMaterial map={floor} roughness={room >= 9 ? 0.35 : 0.7} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 1.3]} receiveShadow visible={stage < 1}>
         <planeGeometry args={[11.4, 7.8]} />
@@ -40,11 +42,11 @@ export function ArcadeWorld({ stage = 1 }: { stage?: number }) {
       {/* low side wall with a red trim (the open side faces the camera) */}
       <mesh position={[-6.25, 0.8, 1.3]} castShadow receiveShadow>
         <boxGeometry args={[0.3, 1.6, 7.8]} />
-        <Flat color="#ffe8b0" />
+        <Flat color={room >= 2 ? tier(room).body : '#ffe8b0'} />
       </mesh>
       <mesh position={[-6.25, 1.63, 1.3]}>
         <boxGeometry args={[0.36, 0.1, 7.86]} />
-        <Flat color="#e8432e" />
+        <Flat color={room >= 2 ? tier(room).trim : '#e8432e'} />
       </mesh>
       <Palm position={[-6.8, 0, -1.8]} />
       <Palm position={[-6.6, 0, 4.4]} s={1.1} />

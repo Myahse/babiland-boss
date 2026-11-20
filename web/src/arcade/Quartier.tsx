@@ -224,6 +224,7 @@ function Follow() {
 export function Quartier({ onSpot }: { onSpot: (s: Spot | null) => void }) {
   const current = useArcade((s) => s.current)
   const stage = useArcade((s) => s.stage)
+  const facade = useArcade((s) => s.style.facade)
   const place = PLACES[current]
   const name = useProfile((s) => s.profile?.name ?? 'Boss')
   const road = useMemo(() => ({ main: asphalt([28, 2]), ground: laterite([24, 6]), kerb: kerb(140) }), [])
@@ -333,7 +334,7 @@ export function Quartier({ onSpot }: { onSpot: (s: Spot | null) => void }) {
       ))}
       {/* your maquis, as big as it has grown */}
       <group position={[MY_X + 0.5, 0, -4.1]}>
-        <Building name={name} place={place} stage={stage} />
+        <Building name={name} place={place} stage={stage} look={facade} />
       </group>
       {rivals.map((r, k) => (
         <BossMaquis key={k} x={r.x} boss={r.boss} wall={['#9775fa', '#4dabf7'][k]} who={(['yao', 'koffi'] as PersonId[])[k]} />

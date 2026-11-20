@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import { DishModel } from './DishModels'
 import { drawIcon, Icon, type IconName } from './Icons'
-import { StationBody } from './LookModels'
+import { CounterBody, StationBody, TableSet } from './LookModels'
 import { STATION_LEVELS } from './layout'
 
 // The arcade-idle look: chunky simple shapes, flat-shaded facets, bright saturated colours,
@@ -154,15 +154,10 @@ export function ProgressRing({ progress, ...props }: { progress: number } & Thre
 
 /** The selling counter: red body, yellow top, a cash register, the plates waiting for customers. */
 /** `stock[i]`: plates of `dishes[i]` waiting on the counter (main dish, then the particular dishes). */
-export function Counter({ stock, dishes, name, dish = 'Garba', ...props }: { stock: number[]; dishes: Dish[]; name: string; dish?: string } & ThreeElements['group']) {
+export function Counter({ stock, dishes, name, dish = 'Garba', look = 1, ...props }: { stock: number[]; dishes: Dish[]; name: string; dish?: string; look?: number } & ThreeElements['group']) {
   return (
     <group {...props}>
-      <RoundedBox args={[1.8, 0.95, 0.85]} radius={0.05} position={[0, 0.475, 0]} castShadow receiveShadow>
-        <Flat color="#e8432e" />
-      </RoundedBox>
-      <RoundedBox args={[1.9, 0.08, 0.95]} radius={0.03} position={[0, 0.98, 0]} castShadow receiveShadow>
-        <Flat color="#ffd43b" />
-      </RoundedBox>
+      <CounterBody level={look} />
       <mesh position={[0, 0.55, 0.43]}>
         <planeGeometry args={[1.5, 0.36]} />
         <meshStandardMaterial map={signTexture(`${dish.toUpperCase()} CHEZ ${name.toUpperCase()}`, '#ffd43b', '#c92a2a', 768, 192)} roughness={0.5} />
@@ -318,38 +313,10 @@ export function Pad({ label, left, price, icon, ...props }: { label: string; lef
 }
 
 /** Square red and yellow table with two chairs; `cash` is the tip left on it, `plates` what is being eaten. */
-export function SquareTable({ plates = 0, cash = 0, ...props }: { plates?: number; cash?: number } & ThreeElements['group']) {
+export function SquareTable({ plates = 0, cash = 0, look = 2, ...props }: { plates?: number; cash?: number; look?: number } & ThreeElements['group']) {
   return (
     <group {...props}>
-      <RoundedBox args={[0.95, 0.08, 0.8]} radius={0.03} position={[0, 0.74, 0]} castShadow receiveShadow>
-        <Flat color="#e8432e" />
-      </RoundedBox>
-      <mesh position={[0, 0.7, 0]}>
-        <boxGeometry args={[1.0, 0.04, 0.85]} />
-        <Flat color="#ffd43b" />
-      </mesh>
-      <mesh position={[0, 0.35, 0]}>
-        <boxGeometry args={[0.6, 0.7, 0.5]} />
-        <Flat color="#ffd43b" />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <group key={s} position={[s * 0.68, 0, 0]} rotation={[0, (s * -Math.PI) / 2, 0]}>
-          <RoundedBox args={[0.46, 0.08, 0.44]} radius={0.02} position={[0, 0.45, 0]} castShadow>
-            <Flat color="#ffd43b" />
-          </RoundedBox>
-          <RoundedBox args={[0.46, 0.55, 0.07]} radius={0.02} position={[0, 0.72, -0.21]} castShadow>
-            <Flat color="#e8432e" />
-          </RoundedBox>
-          {[-0.19, 0.19].map((x) =>
-            [-0.18, 0.18].map((z) => (
-              <mesh key={`${x}${z}`} position={[x, 0.21, z]}>
-                <boxGeometry args={[0.05, 0.42, 0.05]} />
-                <Flat color="#c92a2a" />
-              </mesh>
-            )),
-          )}
-        </group>
-      ))}
+      <TableSet level={look} />
       {Array.from({ length: plates }, (_, i) => (
         <Plate key={i} position={[(i % 2 ? 0.22 : -0.22), 0.8, 0]} />
       ))}

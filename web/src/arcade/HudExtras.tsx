@@ -1,4 +1,6 @@
 import { RoundButton } from './HudButton'
+import { STEPS, tier } from './looks'
+import { STYLE_PARTS, stylePrice, type StyleKey } from './styles'
 import { Icon, type IconName } from './Icons'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -252,6 +254,7 @@ function AmenagerPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="text-sm font-semibold opacity-75">{PLACES[place].name} : prends du monde avec toi et équipe ta salle.</p>
+        <StyleSection />
         {(['staff', 'room'] as const).map((kind) => (
           <div key={kind}>
             <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">{kind === 'staff' ? 'Assistants' : 'La salle'}</div>
@@ -280,6 +283,73 @@ function AmenagerPanel({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/** « Le style »: each part of the maquis goes through the ten looks (looks.ts); each level shows and helps. */
+function StyleSection() {
+  const place = useArcade((s) => s.current)
+  const money = useArcade((s) => s.money)
+  const style = useArcade((s) => s.style)
+  const buy = (key: StyleKey) => {
+    const s = useArcade.getState()
+    const to = s.style[key] + 1
+    const price = stylePrice(place, key, to)
+    if (to > STEPS || s.money < price) return
+    useArcade.setState({ money: s.money - price, style: { ...s.style, [key]: to } })
+    missionEvent('unlock')
+    sfx.unlock()
+    popText(`${STYLE_PARTS.find((p) => p.key === key)!.label} : ${tier(to).name} !`)
+  }
+  const nameOf = (key: StyleKey, l: number) => (key === 'facade' && l === 1 ? 'Les couleurs de la maison' : tier(l).name)
+  return (
+    <div>
+      <div className="mt-3 text-xs font-extrabold tracking-wide uppercase">Le style · 10 looks chacun</div>
+      <div className="mt-1 space-y-1.5">
+        {STYLE_PARTS.map((p) => {
+          const l = style[p.key]
+          const max = l >= STEPS
+          const price = max ? 0 : stylePrice(place, p.key, l + 1)
+          const next = tier(l + 1)
+          return (
+            <div key={p.key} className="rounded-xl border-2 border-[var(--color-ink)] bg-white px-2.5 py-1.5">
+              <div className="flex items-center gap-2">
+                <Icon name={p.icon} size={34} />
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="text-sm font-extrabold">{p.label}</div>
+                  <div className="text-[11px] font-bold text-[#e8590c]">
+                    Niveau {l}/{STEPS} · {nameOf(p.key, l)}
+                  </div>
+                </div>
+                {max ? (
+                  <span className="rounded-full bg-[#fff3bf] px-2 py-0.5 text-xs font-extrabold">MAX</span>
+                ) : (
+                  <button className="btn !px-2.5 !py-1.5 !text-sm" disabled={money < price} onClick={() => buy(p.key)}>
+                    {fcfa(price)} F
+                  </button>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <div className="flex flex-1 gap-0.5">
+                  {Array.from({ length: STEPS }, (_, i) => (
+                    <span key={i} className={`h-1.5 flex-1 rounded-full ${i < l ? 'bg-[#40c057]' : 'bg-[#e9ecef]'}`} />
+                  ))}
+                </div>
+                {!max && (
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] font-extrabold opacity-80">
+                    suivant : {next.name}
+                    {[next.body, next.front, next.trim].map((c, i) => (
+                      <span key={i} className="inline-block h-3 w-3 rounded-full border border-[var(--color-ink)]" style={{ background: c }} />
+                    ))}
+                  </span>
+                )}
+              </div>
+              <div className="mt-0.5 text-[10px] font-semibold opacity-60">{p.bonus}</div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

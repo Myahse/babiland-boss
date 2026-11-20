@@ -1,3 +1,4 @@
+import { styleFx } from './styles'
 import type { IconName } from './Icons'
 import { PLACES, type PlaceId } from './places'
 import { placeState } from './store'
@@ -25,14 +26,15 @@ export const has = (place: PlaceId, id: ItemId) => placeState(place).items.inclu
 
 /** What the things in the room do (1 = nothing). */
 export const fx = (place: PlaceId) => {
-  const s = placeState(place).items
-  const h = (id: ItemId) => s.includes(id)
+  const st = placeState(place)
+  const h = (id: ItemId) => st.items.includes(id)
+  const sf = styleFx(st.style)
   return {
-    cook: h('cuisiniere') ? 1.35 : 1,
-    customers: (h('tele') ? 1.15 : 1) * (h('musique') ? 1.1 : 1),
-    patience: (h('ventilo') ? 1.6 : 1) * (h('tele') ? 1.2 : 1),
-    tips: h('chaises') ? 1.6 : 1,
+    cook: (h('cuisiniere') ? 1.35 : 1) * sf.cook,
+    customers: (h('tele') ? 1.15 : 1) * (h('musique') ? 1.1 : 1) * sf.customers,
+    patience: (h('ventilo') ? 1.6 : 1) * (h('tele') ? 1.2 : 1) * sf.patience,
+    tips: (h('chaises') ? 1.6 : 1) * sf.tips,
     drink: h('frigo') ? 100 : 0,
-    fame: h('musique') ? 1.1 : 1,
+    fame: (h('musique') ? 1.1 : 1) * sf.fame,
   }
 }

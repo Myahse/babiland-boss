@@ -1,3 +1,4 @@
+import { FRESH_STYLE, grownStyle, normStyle, type Style } from './styles'
 import { create } from 'zustand'
 import { PADS, type Unlock } from './layout'
 import { PLACES, type PlaceId } from './places'
@@ -30,6 +31,8 @@ type PlaceState = {
   growPaid: number
   /** assistants and things for the room bought in « Aménager » (items.ts) */
   items: string[]
+  /** the look of each part of the place, 1..10 (styles.ts) */
+  style: Style
 }
 
 type Arcade = PlaceState & {
@@ -53,7 +56,7 @@ type Arcade = PlaceState & {
   bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [] })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE } })
 /** saved games from before the particular dishes: make every list the right length */
 function norm(p: Partial<PlaceState> = {}): PlaceState {
   const f = fresh()
@@ -61,9 +64,9 @@ function norm(p: Partial<PlaceState> = {}): PlaceState {
   // saves from before the growth stages: a place you already worked in is a maquis, and people know you a bit
   const old = p.stage === undefined && ((p.served ?? 0) > 0 || Object.keys(p.unlocks ?? {}).length > 0)
   if (old) p = { ...p, stage: 1, fame: Math.max(FAME_AT[1], p.served ?? 0) }
-  return { ...f, ...p, items: Array.isArray(p.items) ? p.items : [], level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash), side: fit(p.side, f.side), sidePaid: fit(p.sidePaid, f.sidePaid), sideCash: fit(p.sideCash, f.sideCash) }
+  return { ...f, ...p, items: Array.isArray(p.items) ? p.items : [], style: p.style ? normStyle(p.style) : grownStyle(p.stage ?? 0), level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash), side: fit(p.side, f.side), sidePaid: fit(p.sidePaid, f.sidePaid), sideCash: fit(p.sideCash, f.sideCash) }
 }
-const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items })
+const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items, style: s.style })
 
 const KEY = 'babiland-arcade-v2'
 function load(): Partial<Arcade> {

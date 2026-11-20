@@ -160,3 +160,111 @@ export function tierMaterial(level: number, part: 'body' | 'front' | 'trim' | 't
   mats.set(key, m)
   return m
 }
+
+/** The floor of the room at its style level: concrete, terracotta, wood, white tiles, grey tiles, the colours of
+ *  the country, wax tiles, dark parquet, black and gold, marble. */
+export function floorTexture(level: number) {
+  const L = Math.max(1, Math.min(STEPS, level))
+  const t = tier(L)
+  return painted(`floor${L}`, 256, (g, s) => {
+    const tiles = (n: number, a: string, b: string, grout: string, w = 3) => {
+      const c = s / n
+      for (let y = 0; y < n; y++)
+        for (let x = 0; x < n; x++) {
+          g.fillStyle = (x + y) % 2 ? a : b
+          g.fillRect(x * c, y * c, c, c)
+        }
+      g.strokeStyle = grout
+      g.lineWidth = w
+      for (let i = 0; i <= n; i++) {
+        g.beginPath()
+        g.moveTo(i * c, 0)
+        g.lineTo(i * c, s)
+        g.moveTo(0, i * c)
+        g.lineTo(s, i * c)
+        g.stroke()
+      }
+    }
+    const planks = (base: string) => {
+      for (let i = 0; i < 8; i++) {
+        g.fillStyle = new THREE.Color(base).offsetHSL(0, 0, ((i * 37) % 7) / 100 - 0.03).getStyle()
+        g.fillRect(0, (i * s) / 8, s, s / 8)
+        g.fillStyle = 'rgba(0,0,0,.25)'
+        g.fillRect(0, (i * s) / 8, s, 2)
+        g.fillRect(((i * 97) % s), (i * s) / 8, 2, s / 8)
+      }
+    }
+    switch (L) {
+      case 1:
+        g.fillStyle = '#b9b2a6'
+        g.fillRect(0, 0, s, s)
+        for (let i = 0; i < 1500; i++) {
+          g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.1)'
+          g.fillRect(Math.random() * s, Math.random() * s, 2, 2)
+        }
+        g.strokeStyle = 'rgba(60,50,40,.35)'
+        g.lineWidth = 1.5
+        g.beginPath()
+        g.moveTo(20, 40)
+        g.lineTo(90, 70)
+        g.lineTo(120, 140)
+        g.moveTo(180, 200)
+        g.lineTo(230, 170)
+        g.stroke()
+        break
+      case 2:
+        tiles(4, '#c8693f', '#bb5d35', '#e6cfb3', 4)
+        break
+      case 3:
+        planks('#d39a5c')
+        break
+      case 4:
+        tiles(6, '#f8f9fa', '#f1f3f5', '#ced4da', 2)
+        break
+      case 5:
+        tiles(3, '#adb5bd', '#b8c0c8', '#868e96', 2)
+        break
+      case 6:
+        tiles(6, '#f77f00', '#ffffff', '#009e60', 3)
+        break
+      case 7: {
+        tiles(4, '#ffd166', '#ffd166', '#264653', 3)
+        const cols = ['#e76f51', '#2a9d8f']
+        for (let y = 0; y < 4; y++)
+          for (let x = 0; x < 4; x++) {
+            g.fillStyle = cols[(x + y) % 2]
+            g.beginPath()
+            g.arc(x * 64 + 32, y * 64 + 32, 18, 0, Math.PI * 2)
+            g.fill()
+            g.fillStyle = '#ffd166'
+            g.beginPath()
+            g.arc(x * 64 + 32, y * 64 + 32, 8, 0, Math.PI * 2)
+            g.fill()
+          }
+        break
+      }
+      case 8:
+        planks('#6f4518')
+        break
+      case 9:
+        tiles(4, '#1f1f24', '#26262c', '#e8b923', 3)
+        break
+      default: {
+        g.fillStyle = t.body
+        g.fillRect(0, 0, s, s)
+        g.drawImage((patternTexture(t, t.body)!.image as HTMLCanvasElement), 0, 0, s, s)
+        g.strokeStyle = '#e0b53a'
+        g.lineWidth = 3
+        g.strokeRect(0, 0, s, s)
+      }
+    }
+  }, [5, 3.5])
+}
+
+/** The colours of the front of the building at its style level (level 1: the colours of the place itself). */
+export function facadeColours(level: number, own: { wall: string; awning: [string, string] }) {
+  if (level <= 1) return own
+  const t = tier(level)
+  const awning: [string, string] = level === 6 ? [t.front, t.trim] : level >= 9 ? [t.trim, t.body] : [t.front, t.body === t.front ? t.trim : t.body]
+  return { wall: t.body, awning }
+}

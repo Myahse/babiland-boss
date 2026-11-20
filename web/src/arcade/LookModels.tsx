@@ -158,3 +158,120 @@ export function StationBody({ level }: { level: number }) {
     </group>
   )
 }
+
+/** The counter's body at its style level (the sign, the register and the plates are drawn by Counter). Top at 1.02. */
+export function CounterBody({ level }: { level: number }) {
+  const L = Math.max(1, Math.min(10, level))
+  const body = tierMaterial(L, 'body', { pattern: true, repeat: [2, 1] })
+  const top = tierMaterial(L, L >= 9 ? 'top' : 'trim', { pattern: L === 10 })
+  if (L === 1)
+    // la récup: planks laid on two oil drums
+    return (
+      <group>
+        {[-0.6, 0.6].map((x) => (
+          <mesh key={x} position={[x, 0.47, 0]} material={rust} castShadow>
+            <cylinderGeometry args={[0.3, 0.3, 0.94, 14]} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.98, 0]} material={tierMaterial(3, 'top')} castShadow receiveShadow>
+          <boxGeometry args={[1.95, 0.08, 0.9]} />
+        </mesh>
+      </group>
+    )
+  return (
+    <group>
+      <RoundedBox args={[1.8, 0.95, 0.85]} radius={0.04} position={[0, 0.475, 0]} material={body} castShadow receiveShadow />
+      <RoundedBox args={[1.92, 0.08, 0.96]} radius={0.03} position={[0, 0.98, 0]} material={top} castShadow receiveShadow />
+      {/* a kick plate, then gold lines on the top looks */}
+      {L >= 4 && (
+        <mesh position={[0, 0.06, 0.43]} material={tierMaterial(L, 'trim')}>
+          <boxGeometry args={[1.8, 0.1, 0.02]} />
+        </mesh>
+      )}
+      {L >= 9 &&
+        [0.85, 0.2].map((y) => (
+          <mesh key={y} position={[0, y, 0.43]} material={gold}>
+            <boxGeometry args={[1.78, 0.03, 0.02]} />
+          </mesh>
+        ))}
+    </group>
+  )
+}
+
+/** A table of the terrace with its two seats, at the terrace's style level. Table top at 0.78. */
+export function TableSet({ level }: { level: number }) {
+  const L = Math.max(1, Math.min(10, level))
+  const t = tier(L)
+  const wood = tierMaterial(L, 'body', { pattern: L !== 6 })
+  const seat = tierMaterial(L, 'front', { pattern: L === 6 })
+  const leg = L >= 9 ? gold : tierMaterial(L, 'trim')
+  const plastic = new THREE.Color(L === 2 ? '#f8f9fa' : t.front)
+  return (
+    <group>
+      {/* the table */}
+      {L === 1 ? (
+        <>
+          <mesh position={[0, 0.35, 0]} material={wood} castShadow>
+            <boxGeometry args={[0.7, 0.7, 0.55]} />
+          </mesh>
+          <mesh position={[0, 0.74, 0]} material={tierMaterial(3, 'top')} castShadow receiveShadow>
+            <boxGeometry args={[1.0, 0.06, 0.82]} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <RoundedBox args={[0.98, 0.07, 0.82]} radius={0.03} position={[0, 0.74, 0]} material={L === 2 ? whitePlastic : L === 10 ? tierMaterial(10, 'body', { pattern: true }) : wood} castShadow receiveShadow />
+          {[
+            [-0.4, -0.32],
+            [0.4, -0.32],
+            [-0.4, 0.32],
+            [0.4, 0.32],
+          ].map(([x, z]) => (
+            <mesh key={`${x}${z}`} position={[x, 0.36, z]} material={L === 2 ? whitePlastic : leg}>
+              <boxGeometry args={[0.05, 0.72, 0.05]} />
+            </mesh>
+          ))}
+          {/* a cloth from the émail look on, a little candle at the top */}
+          {L >= 4 && (
+            <mesh position={[0, 0.785, 0]} rotation={[-Math.PI / 2, 0, 0]} material={tierMaterial(L, 'front', { pattern: L >= 6 && L <= 7 })}>
+              <planeGeometry args={[0.5, 0.82]} />
+            </mesh>
+          )}
+          {L >= 8 && (
+            <mesh position={[0.3, 0.84, 0.2]} material={candle}>
+              <cylinderGeometry args={[0.03, 0.03, 0.1, 8]} />
+            </mesh>
+          )}
+        </>
+      )}
+      {/* the two seats */}
+      {[-1, 1].map((s) => (
+        <group key={s} position={[s * 0.68, 0, 0]} rotation={[0, (s * -Math.PI) / 2, 0]}>
+          {L === 1 ? (
+            // a crate turned upside down
+            <mesh position={[0, 0.22, 0]} material={crate} castShadow>
+              <boxGeometry args={[0.42, 0.44, 0.4]} />
+            </mesh>
+          ) : (
+            <>
+              <RoundedBox args={[0.46, 0.07, 0.44]} radius={0.02} position={[0, 0.45, 0]} castShadow>
+                {L === 2 ? <primitive object={whitePlastic} attach="material" /> : <meshStandardMaterial color={plastic} roughness={t.rough} metalness={0} />}
+              </RoundedBox>
+              <RoundedBox args={[0.46, L >= 8 ? 0.7 : 0.55, 0.07]} radius={0.02} position={[0, L >= 8 ? 0.8 : 0.72, -0.21]} material={L === 2 ? whitePlastic : seat} castShadow />
+              {[-0.19, 0.19].map((x) =>
+                [-0.18, 0.18].map((z) => (
+                  <mesh key={`${x}${z}`} position={[x, 0.21, z]} material={L === 2 ? whitePlastic : leg}>
+                    <boxGeometry args={[0.05, 0.42, 0.05]} />
+                  </mesh>
+                )),
+              )}
+            </>
+          )}
+        </group>
+      ))}
+    </group>
+  )
+}
+const whitePlastic = new THREE.MeshStandardMaterial({ color: '#f8f9fa', roughness: 0.35 })
+const crate = new THREE.MeshStandardMaterial({ color: '#e8590c', roughness: 0.6 })
+const candle = new THREE.MeshStandardMaterial({ color: '#fff3bf', emissive: '#ffd43b', emissiveIntensity: 1.2 })

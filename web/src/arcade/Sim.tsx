@@ -735,11 +735,11 @@ export function Sim({ name }: { name: string }) {
       <StoryArrow />
       <Staff />
       {s.bulk && <Crate dish={dishes[s.bulk.dish]} got={s.bulk.got} want={s.bulk.want} />}
-      <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} position={COUNTER} />
+      <Counter stock={s.counter} dishes={dishes} name={name} dish={PLACES[s.current].dishLabel} look={s.style.counter} position={COUNTER} />
       <CashPile amount={s.cash} position={CASH} />
       {s.unlocks.table &&
         TABLES.map((t, i) => (
-          <SquareTable key={i} position={t} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
+          <SquareTable key={i} position={t} look={s.style.terrace} cash={s.tableCash[i]} plates={custs.current.filter((c) => c.state === 'eat' && !c.moving && Math.floor(c.seat / 2) === i).length} />
         ))}
       {STAGES[s.stage + 1] && fameLevel(s.fame) >= STAGES[s.stage + 1].fame && <GrowPad stage={s.stage} fame={s.fame} paid={s.growPaid} />}
       <Mover who={playerWho()} obj={player} carried={s.carried.map((k) => dishes[k])} full={s.carried.length >= (s.unlocks.plateau ? 16 : 8)} />

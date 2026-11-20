@@ -247,6 +247,7 @@ export default function ArcadeApp() {
   const name = useGame((s) => s.name)
   const current = useArcade((s) => s.current)
   const stage = useArcade((s) => s.stage)
+  const style = useArcade((s) => s.style)
   const view = useArcade((s) => s.view)
   // the place you are standing in front of, in the street
   const [spot, setSpot] = useState<Spot | null>(null)
@@ -282,8 +283,8 @@ export default function ArcadeApp() {
               <Quartier key={`q-${current}`} onSpot={setSpot} />
             ) : (
               <>
-                <ArcadeWorld stage={stage} />
-                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} />
+                <ArcadeWorld stage={stage} room={style.room} />
+                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} look={style.facade} />
                 {stage >= 3 && <GrandDecor />}
                 <Streets />
                 <StreetDecor />
