@@ -133,6 +133,25 @@ const GUIT = [0, 1, 2, 1, 0, 2, 1, 2, -1, 1, 2, 3, 2, 1, 2, -1]
 const midi = (n: number) => 440 * 2 ** ((n - 69) / 12)
 
 let musicOn = false
+/** the music alone can be switched off (the sounds and the voices stay); remembered on the phone */
+let musicMuted = (() => {
+  try {
+    return localStorage.getItem('babiland-music') === 'off'
+  } catch {
+    return false
+  }
+})()
+export const isMusicMuted = () => musicMuted
+export function setMusicMuted(m: boolean) {
+  musicMuted = m
+  try {
+    localStorage.setItem('babiland-music', m ? 'off' : 'on')
+  } catch {
+    /* private mode */
+  }
+  if (m) stopMusic()
+  else startMusic()
+}
 let musicGain: GainNode | null = null
 let timer: ReturnType<typeof setInterval> | null = null
 let nextAt = 0
@@ -212,7 +231,7 @@ function playStep(a: AudioContext, out: AudioNode, t: number, k: number) {
 }
 
 export function startMusic() {
-  if (musicOn || muted) return
+  if (musicOn || muted || musicMuted) return
   const a = audio()
   if (!a) return
   musicOn = true

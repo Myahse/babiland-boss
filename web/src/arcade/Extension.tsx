@@ -177,7 +177,6 @@ export function Extension({ stage, room }: { stage: number; room: number }) {
           </mesh>
         )),
       )}
-      <pointLight position={[CX, 2.4, CZ]} intensity={6} distance={7} color="#fff3bf" />
     </group>
   )
 }

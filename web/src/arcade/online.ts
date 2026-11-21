@@ -291,7 +291,8 @@ export async function pushSave(fame: number) {
   if (!isOnline()) return
   const save: Record<string, string | null> = {}
   for (const k of SAVE_KEYS) save[k] = localStorage.getItem(k)
-  await api('PUT', '/me/save', { save, fame }).catch(() => undefined)
+  // whole points only (some bonuses give halves; the server wants an integer)
+  await api('PUT', '/me/save', { save, fame: Math.max(0, Math.round(fame || 0)) }).catch(() => undefined)
 }
 /** a new phone: the game saved online, put back (true: reload to play it) */
 export async function pullSave(): Promise<boolean> {

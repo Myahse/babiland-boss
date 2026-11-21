@@ -4,6 +4,7 @@ package player
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"time"
 
@@ -72,14 +73,14 @@ func nonNull(b []byte) []byte {
 func (h *Handler) store(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Save json.RawMessage `json:"save"`
-		Fame int             `json:"fame"`
+		Fame float64         `json:"fame"` // older phones send halves: rounded here
 	}
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10))
 	if err := dec.Decode(&req); err != nil || len(req.Save) == 0 || req.Save[0] != '{' {
 		httpx.Error(w, http.StatusBadRequest, "sauvegarde invalide")
 		return
 	}
-	if _, err := h.DB.Exec(r.Context(), `UPDATE users SET save = $2, save_at = now(), fame = least($3, 100000) WHERE id = $1`, auth.UserID(r.Context()), []byte(req.Save), max(req.Fame, 0)); err != nil {
+	if _, err := h.DB.Exec(r.Context(), `UPDATE users SET save = $2, save_at = now(), fame = least($3, 100000) WHERE id = $1`, auth.UserID(r.Context()), []byte(req.Save), max(int(math.Round(req.Fame)), 0)); err != nil {
 		httpx.Error(w, http.StatusInternalServerError, "base de données indisponible")
 		return
 	}

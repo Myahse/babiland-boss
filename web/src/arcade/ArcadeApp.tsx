@@ -14,7 +14,7 @@ import { stick } from './input'
 import { BuildButton, BuildHud } from './Build'
 import { buy, goTo, popText, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
-import { isMuted, preloadVoices, setMuted, startMusic } from './sfx'
+import { isMusicMuted, isMuted, preloadVoices, setMusicMuted, setMuted, startMusic } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
 import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
@@ -159,6 +159,7 @@ function Hud({ street }: { street: boolean }) {
   const pop = useArcade((s) => s.pop)
   const goal = PER_LEVEL
   const [sound, setSound] = useState(!isMuted())
+  const [music, setMusic] = useState(!isMusicMuted())
   const map = useArcade((s) => s.mapOpen)
   const setMap = (v: boolean) => useArcade.setState({ mapOpen: v })
   const level = levelOf(served)
@@ -180,6 +181,18 @@ function Hud({ street }: { street: boolean }) {
           aria-label={sound ? 'Couper le son' : 'Remettre le son'}
         >
           <Icon name={sound ? 'soundOn' : 'soundOff'} size={28} />
+        </button>
+        {/* the music alone (the sounds and the voices stay) */}
+        <button
+          className="pointer-events-auto grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-[0_4px_0_rgba(0,0,0,.2)] active:translate-y-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => {
+            setMusicMuted(!isMusicMuted())
+            setMusic(!isMusicMuted())
+          }}
+          aria-label={music ? 'Couper la musique' : 'Remettre la musique'}
+        >
+          <Icon name={music ? 'music' : 'musicOff'} size={28} />
         </button>
         {/* level gauge: customers served toward the next level */}
         <div className="relative flex min-w-0 flex-1 items-center">
