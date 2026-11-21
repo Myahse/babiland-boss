@@ -14,7 +14,7 @@ import { stick } from './input'
 import { BuildButton, BuildHud } from './Build'
 import { buy, goTo, popText, totalServed, useArcade } from './store'
 import { DishCtx, levelOf, PER_LEVEL, PLACE_IDS, PLACES, type PlaceId } from './places'
-import { isMuted, setMuted } from './sfx'
+import { isMuted, preloadVoices, setMuted, startMusic } from './sfx'
 import { TurfButton, TurfLayer } from './TurfUI'
 import { SIDE, SIDE_MAX } from './side'
 import { VipLayer } from './VipCook'
@@ -261,7 +261,12 @@ export default function ArcadeApp() {
   const [spot, setSpot] = useState<Spot | null>(null)
   // load the real map's library in the background once the game is on, so « Quartiers » opens fast
   useEffect(() => {
-    if (phase !== 'title') preloadMap()
+    if (phase !== 'title') {
+      preloadMap()
+      // the maquis music and the voices (the sound itself waits for the first tap, browsers want it so)
+      startMusic()
+      preloadVoices()
+    }
   }, [phase === 'title'])
   const street = phase !== 'title' && view === 'quartier'
   const building = useArcade((s) => s.building)

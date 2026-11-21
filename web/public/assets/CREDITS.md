@@ -37,3 +37,8 @@ Ceux des autres lieux (`maps/cocody.json`, `abobo`, `treichville`, `bouake`, `ko
 quartiers et limites de commune trouvés sur OpenStreetMap avec Nominatim (même licence ODbL), par `tools/quarters.py`
 puis `tools/cities.py`.
 Le fond de carte : Mapbox si `VITE_MAPBOX_TOKEN` est fourni, sinon OpenFreeMap (© OpenMapTiles, données OpenStreetMap).
+
+## Voix (public/assets/voices)
+
+Phrases en nouchi générées avec ElevenLabs (voix « Kéké », « Alimata », « le vieux ») sur le compte du projet.
+La musique du maquis est jouée en direct par le jeu (Web Audio), composition originale.

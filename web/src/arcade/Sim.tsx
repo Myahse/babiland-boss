@@ -4,7 +4,7 @@ import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { Avatar } from './Avatar'
 import { burst, floatText, fly, FX, sparks } from './fx'
-import { sfx } from './sfx'
+import { say, sfx } from './sfx'
 import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
@@ -112,6 +112,7 @@ export const WISHES: Record<Wish, { text: string; icon: IconName }> = {
 }
 const ASK_WAIT = 16 // seconds they wait to be taken to a table, then they find a place themselves
 const LEAD_TIME = 35 // seconds they follow you before giving up and sitting anywhere
+const woman = (c: { who: PersonId }) => c.who === 'awa' || c.who === 'fatou' || c.who === 'aya'
 let askHinted = false
 let stairHinted = false
 type Cust = { id: number; who: PersonId; pos: THREE.Vector3; rot: number; state: 'line' | 'ask' | 'eat' | 'out'; wish?: Wish; follow?: boolean; trail?: THREE.Vector3[]; tip?: number; dish: number; want: number; got: number; moving: boolean; seat: number; eat: number; path: THREE.Vector3[]; wait: number; vip?: string }
@@ -440,6 +441,7 @@ export function Sim({ name }: { name: string }) {
     tableCash.forEach((v, i) => {
       if (v > 0 && player.pos.distanceTo(ALL_TABLES[i]) < 1.25) {
         for (let k = 0; k < Math.min(6, Math.ceil(v / 200)); k++) fly('cash', up(ALL_TABLES[i], 0.9), hands(player, () => 0), k * 0.05, 0.35)
+        say('cadeau', { chance: 0.3 })
         sfx.cash()
         money += v
         popText(`+${v} FCFA`)
@@ -487,6 +489,7 @@ export function Sim({ name }: { name: string }) {
       changed = true
       if (growPaid >= price) {
         stage++
+        say('grand', { important: true })
         growPaid = 0
         missionEvent('unlock')
         burst(GROW_PAD, 80)
@@ -570,6 +573,7 @@ export function Sim({ name }: { name: string }) {
       custs.current.push({ id: nextId.current, who: 'koffi', pos: ENTER.clone(), rot: -Math.PI / 2, state: 'line', dish: 0, want: 2 + Math.floor(Math.random() * 2), got: 0, moving: true, seat: -1, eat: 0, path: [], wait: 0, vip })
       nextId.current++
       popText(`Un client VIP arrive : ${vip} !`)
+      say('vip', { important: true })
       sfx.unlock()
       bump()
     }
@@ -676,6 +680,8 @@ export function Sim({ name }: { name: string }) {
       else c.rot = turn(c.rot, Math.PI, Math.min(1, dt * 6))
       if (atSpot === c.moving) {
         c.moving = !atSpot
+        // at the counter: « Tantie, on dit quoi ? »
+        if (atSpot && k === 0 && !c.vip) say('salut', { woman: woman(c), chance: 0.35 })
         bump()
       }
       // someone has to be at the till: Tantie Aya herself, or the cashier once hired
@@ -698,11 +704,13 @@ export function Sim({ name }: { name: string }) {
       // the first in line loses patience if their dish never comes: they leave, the next one steps up
       if (k === 0 && atSpot && c.state === 'line') {
         c.wait += dt
+        if (c.got === 0 && c.wait > 14 * F.patience && c.wait - dt <= 14 * F.patience) say('lent', { woman: woman(c), chance: 0.7 })
         if (c.wait > 25 * F.patience && c.got === 0) {
           c.state = 'out'
           c.moving = true
           c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
           popText(`Trop long… le client est parti`)
+          say('part', { woman: woman(c), important: true })
           bump()
           return
         }
@@ -728,6 +736,7 @@ export function Sim({ name }: { name: string }) {
           missionEvent('serve')
           for (let k = 0; k < Math.min(4, c.want); k++) fly('cash', up(c.pos, 1.0), up(CASH, 0.3 + k * 0.1), k * 0.06, 0.3)
           sfx.pay()
+          say('doux', { woman: woman(c), chance: 0.25 })
           // with the terrace open, they go and sit to eat; otherwise they take it away
           leavePaid(c)
         }
@@ -759,6 +768,7 @@ export function Sim({ name }: { name: string }) {
           c.path = []
           c.trail = [player.pos.clone()]
           floatText(c.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), 'Je te suis !', '#1c7ed6')
+          say('suis', { woman: woman(c), important: true })
           sfx.pick()
           bump()
         } else if (c.wait > ASK_WAIT) {
@@ -813,10 +823,12 @@ export function Sim({ name }: { name: string }) {
             c.tip = 3
             addFame(FAME.customer * 2 * F.fame)
             floatText(at, 'Parfait, merci !', '#2f9e44')
+            say('parfait', { woman: woman(c), important: true })
             sparks(at, 16)
             sfx.unlock()
           } else {
             floatText(at, 'Bof… c’est pas ce que j’ai demandé', '#e8590c')
+            say('bof', { woman: woman(c), important: true })
           }
           bump()
           return
