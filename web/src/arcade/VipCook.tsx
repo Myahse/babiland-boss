@@ -1,5 +1,6 @@
 import { Icon } from './Icons'
-import { Food, hasSection } from './Food'
+import { Food } from './Food'
+import { cookLive, GUIDE_X, HALF, KitchenCanvas, pickBoard, useKitchen } from './Kitchen3D'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PLACES } from './places'
 import { sfx } from './sfx'
@@ -56,10 +57,17 @@ function VipCook({ recipe, name, want }: { recipe: Recipe; name: string; want: n
   }
   const score = scores.current.length ? scores.current.reduce((a, b) => a + b, 0) / scores.current.length : 0
   const STEPS = ['Couper', recipe.cook.on === 'pot' ? 'Mijoter' : recipe.cook.on === 'grill' ? 'Griller' : 'Frire', 'Dresser']
+  // the 3D kitchen follows the steps
+  useEffect(() => {
+    useKitchen.setState({ step })
+  }, [step])
+  useEffect(() => {
+    useKitchen.setState({ step: 0, item: null, cuts: [], used: [false, false, false], flashes: [], finished: false, knife: null, on: recipe.cook.on, food: recipe.cook.food.icon, plate: recipe.plate.map((p) => p.icon), placed: 0 })
+  }, [recipe])
   const STEP_ICONS = ['knife', recipe.cook.on === 'pot' ? 'pot' : 'fire', 'plate'] as const
   return (
     <div className="pointer-events-auto absolute inset-0 z-40 flex flex-col overflow-hidden select-none" onPointerDown={stop} style={{ touchAction: 'none' }}>
-      <Kitchen />
+      <KitchenCanvas />
       {/* header: the VIP's card and the three steps */}
       <div className="relative z-10 mx-3 mt-3 rounded-3xl border-[3px] border-[#2b1a12] bg-white/90 px-3 py-2 shadow-[0_5px_0_rgba(43,26,18,.25)] backdrop-blur" style={{ marginTop: 'max(12px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-2.5">
@@ -100,39 +108,6 @@ function VipCook({ recipe, name, want }: { recipe: Recipe; name: string; want: n
   )
 }
 
-/** The kitchen behind: a tiled wall, a strip of wax print, the wooden worktop, warm light. */
-function Kitchen() {
-  return (
-    <div className="pointer-events-none absolute inset-0">
-      <div className="absolute inset-x-0 top-0 h-[42%] bg-[#eef4f6] bg-[repeating-linear-gradient(0deg,#cfdde3_0_2px,transparent_2px_44px),repeating-linear-gradient(90deg,#cfdde3_0_2px,transparent_2px_44px)]" />
-      <div className="absolute inset-x-0 top-[42%] h-5 border-y-[3px] border-[#2b1a12] bg-[repeating-linear-gradient(45deg,#f08c00_0_12px,#2f9e44_12px_24px,#e8432e_24px_36px,#ffd43b_36px_48px)]" />
-      <div className="absolute inset-x-0 top-[calc(42%+20px)] bottom-0 bg-[#b9773d] bg-[repeating-linear-gradient(90deg,rgba(0,0,0,.06)_0_3px,transparent_3px_38px),linear-gradient(#c98a4b,#9c5f2c)]" />
-      <div className="absolute inset-x-0 top-[calc(42%+20px)] h-4 bg-gradient-to-b from-black/25 to-transparent" />
-      {/* the warm light of the kitchen, darker in the corners */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(255,236,190,.35),transparent_55%,rgba(40,20,5,.35))]" />
-    </div>
-  )
-}
-
-/** A knife, drawn (blade + wooden handle), pointing down-left. */
-function Knife({ size = 90 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 100 100" width={size} height={size} style={{ overflow: 'visible' }}>
-      <defs>
-        <linearGradient id="kblade" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset=".5" stopColor="#cfd8dc" />
-          <stop offset="1" stopColor="#78909c" />
-        </linearGradient>
-      </defs>
-      <path d="M8 92L58 34l10 10L20 96c-6 2-12 0-12-4z" fill="url(#kblade)" stroke="#455a64" strokeWidth="2" />
-      <rect x="60" y="14" width="14" height="40" rx="5" transform="rotate(45 67 34)" fill="#6d4c41" stroke="#3e2723" strokeWidth="2" />
-      <circle cx="68" cy="26" r="2" fill="#ffe082" />
-      <circle cx="76" cy="18" r="2" fill="#ffe082" />
-    </svg>
-  )
-}
-
 function Say({ text }: { text: { id: number; t: string; good: boolean } | null }) {
   if (!text) return null
   return (
@@ -148,66 +123,68 @@ function useSay() {
 }
 
 // ---------------------------------------------------------------- 1. cut
-const BOX = 240 // size of the vegetable on screen (px)
-const GUIDES = [-54, 0, 54] // dotted lines, from its centre
-
+// (in the 3D kitchen's units: the ingredient spans x -HALF..HALF on the board, the guides at GUIDE_X)
 function CutStep({ items, onDone }: { items: Ing[]; onDone: (s: number) => void }) {
   const [idx, setIdx] = useState(0)
   const [cuts, setCuts] = useState<number[]>([])
-  const [knife, setKnife] = useState<{ x: number; y: number } | null>(null)
+  const [touching, setTouching] = useState(false)
   const [text, say] = useSay()
   const used = useRef([false, false, false])
   const scores = useRef<number[]>([])
-  const board = useRef<HTMLDivElement>(null)
-  const stroke = useRef<{ x: number; y: number; top: number; bottom: number; cross: number | null; cut: boolean } | null>(null)
+  const stroke = useRef<{ x: number; z: number; top: number; bottom: number; cross: number | null; cut: boolean } | null>(null)
   const busy = useRef(false)
+  const flashId = useRef(0)
+  const item = items[idx]
+  // the 3D board shows this ingredient and its cuts
+  useEffect(() => {
+    useKitchen.setState({ item: item.icon, cuts, used: [...used.current], finished: cuts.length === GUIDE_X.length })
+  }, [item, cuts])
 
-  const centre = () => {
-    const r = board.current!.getBoundingClientRect()
-    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 }
-  }
   const down = (e: React.PointerEvent) => {
     ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
-    const { cx, cy } = centre()
-    const x = e.clientX - cx
-    const y = e.clientY - cy
-    stroke.current = { x, y, top: y, bottom: y, cross: null, cut: false }
-    setKnife({ x, y })
+    const p = pickBoard(e.clientX, e.clientY)
+    if (!p) return
+    stroke.current = { x: p[0], z: p[1], top: p[1], bottom: p[1], cross: null, cut: false }
+    useKitchen.setState({ knife: p })
+    setTouching(true)
   }
   const move = (e: React.PointerEvent) => {
     const s = stroke.current
-    if (!s) return
-    const { cx, cy } = centre()
-    const x = e.clientX - cx
-    const y = e.clientY - cy
-    // where the knife crossed the middle of the vegetable
-    if ((s.y < 0 && y >= 0) || (s.y > 0 && y <= 0)) s.cross = s.x + ((x - s.x) * (0 - s.y)) / (y - s.y || 1)
-    s.top = Math.min(s.top, y)
-    s.bottom = Math.max(s.bottom, y)
+    const p = pickBoard(e.clientX, e.clientY)
+    if (!s || !p) return
+    const [x, z] = p
+    // where the knife crossed the middle of the ingredient
+    if ((s.z < 0 && z >= 0) || (s.z > 0 && z <= 0)) s.cross = s.x + ((x - s.x) * (0 - s.z)) / (z - s.z || 1e-6)
+    s.top = Math.min(s.top, z)
+    s.bottom = Math.max(s.bottom, z)
     s.x = x
-    s.y = y
-    setKnife({ x, y })
-    // a cut: the knife went through most of the vegetable, top to bottom (or back)
-    if (!s.cut && !busy.current && s.cross !== null && s.top < -BOX * 0.28 && s.bottom > BOX * 0.28) {
+    s.z = z
+    useKitchen.setState({ knife: p })
+    // a cut: the knife went through most of the ingredient, front to back (or back)
+    if (!s.cut && !busy.current && s.cross !== null && s.top < -HALF * 0.5 && s.bottom > HALF * 0.5) {
       s.cut = true
       cut(s.cross)
     }
   }
   const up = () => {
     stroke.current = null
-    setKnife(null)
+    useKitchen.setState({ knife: null })
+    setTouching(false)
   }
   function cut(at: number) {
-    if (Math.abs(at) > BOX / 2 - 8) return
-    const free = GUIDES.map((g, i) => ({ i, d: Math.abs(g - at) })).filter((o) => !used.current[o.i])
+    if (Math.abs(at) > HALF - 0.07) return
+    const free = GUIDE_X.map((g, i) => ({ i, d: Math.abs(g - at) })).filter((o) => !used.current[o.i])
     const best = free.sort((a, b) => a.d - b.d)[0]
     if (!best) return
     used.current[best.i] = true
-    const s = best.d < 11 ? 1 : best.d < 22 ? 0.7 : best.d < 40 ? 0.4 : 0.15
+    const s = best.d < 0.1 ? 1 : best.d < 0.2 ? 0.7 : best.d < 0.36 ? 0.4 : 0.15
     scores.current.push(s)
     sfx.chop()
+    if (navigator.vibrate) navigator.vibrate(15)
     say(s === 1 ? 'Parfait !' : s >= 0.7 ? 'Bien !' : s > 0.3 ? 'Bof…' : 'Raté !', s >= 0.7)
-    setCuts((c) => [...c, Math.max(-BOX / 2 + 14, Math.min(BOX / 2 - 14, at))])
+    const x = Math.max(-HALF + 0.12, Math.min(HALF - 0.12, at))
+    useKitchen.setState((k) => ({ flashes: [...k.flashes.slice(-4), { x, id: ++flashId.current }] }))
+    setCuts((c) => [...c, x])
     if (used.current.every(Boolean)) {
       busy.current = true
       setTimeout(() => {
@@ -215,75 +192,21 @@ function CutStep({ items, onDone }: { items: Ing[]; onDone: (s: number) => void 
           setIdx(idx + 1)
           setCuts([])
           used.current = [false, false, false]
+          useKitchen.setState({ flashes: [] })
           busy.current = false
         } else onDone(scores.current.reduce((a, b) => a + b, 0) / scores.current.length)
-      }, 700)
+      }, 900)
     }
   }
-  const sorted = [...cuts].sort((a, b) => a - b)
-  const edges = [-BOX / 2, ...sorted, BOX / 2]
-  const item = items[idx]
-  const finished = cuts.length === GUIDES.length
   return (
     <div className="absolute inset-0 touch-none" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
       <Say text={text} />
-      <Hint title={`Coupe ${item.name.toLowerCase()} !`} sub="Glisse le couteau de haut en bas, sur les pointillés" count={`${idx + 1}/${items.length}`} />
-      {/* the chopping board, on the worktop */}
-      <div className="absolute top-[54%] left-1/2 h-[330px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-[44px] border-[5px] border-[#6d4321] bg-[#d9a066] bg-[repeating-linear-gradient(92deg,rgba(120,70,30,.12)_0_2px,transparent_2px_17px),radial-gradient(ellipse_at_30%_25%,#f0c590,#cf955a_70%)] shadow-[0_14px_0_#7a4f27,0_24px_34px_rgba(0,0,0,.35)]">
-        <div className="absolute top-4 left-1/2 h-5 w-14 -translate-x-1/2 rounded-full bg-[#7a4f27]/70 shadow-inner" />
-      </div>
-      <div ref={board} className="pointer-events-none absolute top-[56%] left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: BOX, height: BOX }}>
-        {/* the slices: the same picture, cut into pieces that move apart; once all cut, the rounds tumble out */}
-        {!finished &&
-          edges.slice(0, -1).map((l, i) => {
-            const r = edges[i + 1]
-            const spread = (i - (edges.length - 2) / 2) * 16
-            return (
-              <div
-                key={`${idx}-${i}`}
-                className="absolute inset-0 grid place-items-center transition-transform duration-300 ease-out"
-                style={{ clipPath: `inset(0 ${((BOX / 2 - r) / BOX) * 100}% 0 ${((l + BOX / 2) / BOX) * 100}%)`, transform: `translateX(${spread}px) rotate(${spread * 0.25}deg)` }}
-              >
-                <Food icon={item.icon} size={BOX * 0.82} />
-              </div>
-            )
-          })}
-        {finished && (
-          <div className="absolute inset-0 flex items-center justify-center gap-1">
-            {[0, 1, 2, 3].map((k) => (
-              <div key={k} className="tumble" style={{ animationDelay: `${k * 60}ms`, ['--r' as string]: `${(k - 1.5) * 24}deg` }}>
-                <Food icon={item.icon} size={hasSection(item.icon) ? 62 : 70} section />
-              </div>
-            ))}
-          </div>
-        )}
-        {/* dotted lines where to cut */}
-        {!finished &&
-          GUIDES.map((g, i) => (
-            <div key={i} className="absolute top-[-18px] bottom-[-18px] w-0 border-l-[4px] border-dashed transition-opacity duration-300" style={{ left: BOX / 2 + g - 2, borderColor: '#ffffff', opacity: used.current[i] ? 0 : 0.95, filter: 'drop-shadow(0 0 3px rgba(0,0,0,.35))' }} />
-          ))}
-        {/* the cuts: a white flash and drops of juice */}
-        {sorted.map((x) => (
-          <div key={`${idx}-s${x}`} className="pointer-events-none absolute inset-y-[-30px]" style={{ left: BOX / 2 + x - 3 }}>
-            <div className="slash h-full w-1.5 rounded-full bg-white shadow-[0_0_12px_#fff]" />
-            {Array.from({ length: 7 }, (_, k) => (
-              <div key={k} className="juice absolute top-1/2 h-2.5 w-2.5 rounded-full" style={{ background: JUICE[item.icon] ?? '#ffe082', ['--dx' as string]: `${(k - 3) * 14}px`, ['--dy' as string]: `${-30 - ((k * 17) % 40)}px` }} />
-            ))}
-          </div>
-        ))}
-      </div>
-      {/* how to: a hand showing the gesture, on the first vegetable */}
-      {idx === 0 && cuts.length === 0 && !knife && <div className="swipe-hint pointer-events-none absolute top-1/2 left-1/2"><Icon name="hand" size={56} /></div>}
-      {knife && (
-        <div className="pointer-events-none absolute top-[56%] left-1/2" style={{ transform: `translate(${knife.x - 12}px, ${knife.y - 82}px)` }}>
-          <Knife />
-        </div>
-      )}
+      <Hint title={`Coupe ${item.name.toLowerCase()} !`} sub="Glisse le couteau du haut vers le bas, sur les pointillés" count={`${idx + 1}/${items.length}`} />
+      {/* how to: a hand showing the gesture, on the first ingredient */}
+      {idx === 0 && cuts.length === 0 && !touching && <div className="swipe-hint pointer-events-none absolute top-1/2 left-1/2"><Icon name="hand" size={56} /></div>}
     </div>
   )
 }
-/** the colour of the juice when you cut */
-const JUICE: Partial<Record<string, string>> = { tomato: '#ff5252', onion: '#f3e5f5', chili: '#ff1744', pepper: '#aed581', aubergine: '#f5f0dc', plantain: '#fff3c4', leaves: '#7cb342' }
 
 /** the instruction at the top of a step */
 function Hint({ title, sub, count }: { title: string; sub: string; count?: string }) {
@@ -358,66 +281,16 @@ function CookStep({ cook, onDone }: { cook: Recipe['cook']; onDone: (s: number) 
   // what you see: the side facing up (once flipped, the side that cooked first)
   const shown = cook.on === 'pot' ? v : side.current === 0 ? c.current[0] * 0.3 : c.current[0]
   const f = flip.current
-  const burnt = Math.max(0, shown - 0.85) / 0.3
-  const filter = `sepia(${Math.min(1, shown * 1.6)}) saturate(${1 + shown * 1.8}) brightness(${1.05 - shown * 0.15 - burnt * 0.5}) hue-rotate(${-shown * 8}deg)`
   const inZone = v >= zone[0] && v <= zone[1]
+  // what the 3D pan shows
+  cookLive.shown = shown
+  cookLive.side = side.current
+  cookLive.flip = f
+  cookLive.done = done.current
   return (
     <div className="absolute inset-0">
       <Say text={text} />
       <Hint title={`${cook.verb} !`} sub={cook.on === 'pot' ? 'Touche quand l’aiguille est dans le doré, puis retire du feu' : 'Retourne quand l’aiguille est dans le doré, puis sors-le'} />
-      {/* the stove: the fire under the pan / grill / pot */}
-      <div className="absolute top-[44%] left-1/2 -translate-x-1/2 -translate-y-1/2 scale-90">
-        <div className="absolute -bottom-9 left-1/2 h-10 w-72 -translate-x-1/2 rounded-[50%] bg-[#212529] shadow-[0_6px_0_#000]" />
-        <div className="absolute -bottom-6 left-1/2 flex -translate-x-1/2 gap-1">
-          {[0, 1, 2, 3, 4, 5, 6].map((k) => (
-            <div key={k} className="flicker h-12 w-7 origin-bottom rounded-[50%_50%_40%_40%] bg-[radial-gradient(ellipse_at_50%_90%,#fff3bf,#ffd43b_30%,#ff6b00_65%,transparent_72%)]" style={{ animationDelay: `${(k * 0.07) % 0.3}s`, animationDuration: `${0.16 + (k % 3) * 0.05}s` }} />
-          ))}
-        </div>
-        {cook.on === 'pan' && (
-          <div className="relative h-64 w-64 rounded-full bg-[radial-gradient(circle_at_40%_35%,#6c757d,#212529_70%)] p-3 shadow-[0_12px_0_#111,0_20px_30px_rgba(0,0,0,.4)]">
-            <div className="absolute top-1/2 -right-36 h-7 w-36 -translate-y-1/2 rounded-r-full bg-[linear-gradient(#5c3b24,#3e2716)] shadow-[0_4px_0_#1e130a]" />
-            <div className="relative h-full w-full overflow-hidden rounded-full bg-[radial-gradient(circle_at_45%_40%,#f7dc7a,#d9a73a_60%,#a1741f)]">
-              <div className="shimmer absolute inset-0 bg-[linear-gradient(115deg,transparent_35%,rgba(255,255,255,.45)_50%,transparent_65%)]" />
-            </div>
-          </div>
-        )}
-        {cook.on === 'grill' && (
-          <div className="relative h-60 w-72 overflow-hidden rounded-3xl border-[8px] border-[#343a40] bg-[radial-gradient(circle,#ff8a00,#c92a2a_45%,#3b0a00_85%)] shadow-[0_12px_0_#111,0_20px_30px_rgba(0,0,0,.4)]">
-            <div className="shimmer absolute inset-0 bg-[radial-gradient(circle_at_30%_60%,rgba(255,200,0,.5),transparent_30%),radial-gradient(circle_at_70%_40%,rgba(255,120,0,.5),transparent_30%)]" />
-            {Array.from({ length: 8 }, (_, k) => (
-              <div key={k} className="absolute inset-y-0 w-2.5 bg-[linear-gradient(90deg,#adb5bd,#495057)]" style={{ left: 12 + k * 34 }} />
-            ))}
-          </div>
-        )}
-        {cook.on === 'pot' && (
-          <div className="relative h-56 w-72 rounded-t-3xl rounded-b-[120px] border-[10px] border-[#343a40] bg-[radial-gradient(ellipse_at_50%_15%,#ff7a3d,#c2410c_55%,#7c2d12)] shadow-[0_12px_0_#111,0_20px_30px_rgba(0,0,0,.4)]">
-            <div className="absolute top-6 -left-12 h-6 w-12 rounded-l-full bg-[#495057]" />
-            <div className="absolute top-6 -right-12 h-6 w-12 rounded-r-full bg-[#495057]" />
-            <div className="shimmer absolute inset-x-4 top-2 h-10 rounded-full bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)]" />
-          </div>
-        )}
-        {/* oil / sauce: bubbles and spatters, the steam above */}
-        {!done.current &&
-          Array.from({ length: 12 }, (_, k) => (
-            <div key={k} className="bubble absolute h-3 w-3 rounded-full bg-[#fff3bf]/80" style={{ left: 40 + ((k * 53) % 190), top: 50 + ((k * 37) % 140), animationDelay: `${(k * 0.17) % 1}s` }} />
-          ))}
-        {!done.current &&
-          cook.on !== 'pot' &&
-          Array.from({ length: 8 }, (_, k) => (
-            <div key={`s${k}`} className="spatter absolute top-1/2 left-1/2 h-1.5 w-1.5 rounded-full bg-[#fff8e1]" style={{ animationDelay: `${(k * 0.23) % 1.4}s`, ['--dx' as string]: `${Math.cos(k * 0.8) * 120}px`, ['--dy' as string]: `${-50 - ((k * 29) % 70)}px` }} />
-          ))}
-        {[0, 1, 2].map((k) => (
-          <div key={`v${k}`} className="steam absolute -top-6 h-20 w-12 rounded-full bg-white/50 blur-md" style={{ left: 60 + k * 60, animationDelay: `${k * 0.6}s` }} />
-        ))}
-        <div
-          className="pointer-events-none absolute top-1/2 left-1/2"
-          style={{ transform: `translate(-50%, ${-50 - Math.sin(f * Math.PI) * 70}%) rotateX(${side.current && cook.on !== 'pot' ? (1 - f) * 180 - 180 : 0}deg) rotate(${cook.on === 'pot' ? Math.sin(c.current[side.current] * 40) * 6 : 0}deg)`, filter }}
-        >
-          <Food icon={cook.food.icon} size={170} />
-        </div>
-        {/* smoke when it burns */}
-        {shown > 0.9 && <div className="smoke absolute -top-24 left-1/2 h-28 w-28 rounded-full bg-[#495057]/50 blur-xl" />}
-      </div>
       {/* the gauge: raw, golden, burnt, and the needle */}
       <div className="absolute inset-x-6 bottom-32 mx-auto max-w-sm">
         <div className="relative h-8 rounded-full border-4 border-[#2b1a12] bg-[linear-gradient(90deg,#ffe3c4,#ffc078_45%,#d9480f_80%,#3b1d0b)] shadow-[0_4px_0_rgba(0,0,0,.25)]">
@@ -458,6 +331,10 @@ function PlateStep({ plate, decoy, onDone }: { plate: Ing[]; decoy: Ing[]; onDon
     }
     return all
   }, [plate, decoy])
+  // the 3D plate fills up
+  useEffect(() => {
+    useKitchen.setState({ placed: n })
+  }, [n])
   const pick = (i: number, b: number) => {
     if (n >= plate.length) return
     if (i === n) {
@@ -490,21 +367,6 @@ function PlateStep({ plate, decoy, onDone }: { plate: Ing[]; decoy: Ing[]; onDon
             <Food icon={p.icon} size={38} />
           </div>
         ))}
-      </div>
-      {/* the plate, with a wax-print rim, filling up */}
-      <div className="absolute top-[47%] left-1/2 h-60 w-60 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[repeating-conic-gradient(#f08c00_0_10deg,#2f9e44_10deg_20deg,#ffd43b_20deg_30deg)] p-3 shadow-[0_10px_0_rgba(0,0,0,.25),0_18px_28px_rgba(0,0,0,.3)]">
-        <div className="relative grid h-full w-full place-items-center rounded-full bg-[radial-gradient(circle_at_40%_35%,#ffffff,#eef1f3_70%)] shadow-inner">
-          {plate.slice(0, n).map((p, i) => {
-            const a = (i / Math.max(1, plate.length - 1)) * Math.PI * 2 - Math.PI / 2
-            const r = i === 0 ? 0 : 56
-            return (
-              <div key={i} className="drop-in absolute" style={{ ['--x' as string]: `${Math.cos(a) * r}px`, ['--y' as string]: `${Math.sin(a) * r}px` }}>
-                <Food icon={p.icon} size={i === 0 ? 96 : 58} />
-              </div>
-            )
-          })}
-          {n >= plate.length && <div className="sparkle-ring absolute inset-[-14px] rounded-full border-4 border-[#ffe066]" />}
-        </div>
       </div>
       <div className="absolute inset-x-0 bottom-0 mx-auto grid max-w-sm grid-cols-3 gap-2.5 p-4" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
         {choices.map((c, b) => {
@@ -556,7 +418,7 @@ function Result({ score, pay, name }: { score: number; pay: number; name: string
     return () => cancelAnimationFrame(raf)
   }, [pay])
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
+    <div className="absolute inset-0 flex flex-col items-center justify-end gap-3 p-5 pb-8">
       {/* confetti */}
       {stars >= 2 &&
         Array.from({ length: 28 }, (_, k) => (
