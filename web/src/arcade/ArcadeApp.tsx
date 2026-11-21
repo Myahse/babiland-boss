@@ -1,4 +1,5 @@
 import { preloadMap } from './RealMap'
+import { useTurf } from './turf'
 import { Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing'
@@ -127,6 +128,17 @@ function MapPanel({ level, onClose }: { level: number; onClose: () => void }) {
             <Icon name="cross" size={22} />
           </button>
         </div>
+        {/* the real map (OpenStreetMap) of your commune and its districts lives in « Quartiers »: a way there */}
+        <button
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border-[3px] border-[var(--color-ink)] bg-[#ffd43b] px-3 py-2.5 text-base font-extrabold shadow-[0_4px_0_rgba(0,0,0,.2)]"
+          onClick={() => {
+            onClose()
+            useTurf.setState({ panel: true })
+          }}
+        >
+          <Icon name="pin" size={22} />
+          Voir la vraie carte de ta commune
+        </button>
         <p className="mt-1 text-sm font-semibold">Monte de niveau (clients servis partout), ouvre un petit coin dans une autre commune, puis dans d’autres villes. Chaque coin commence petit et grandit quand les gens te connaissent : maquis, restaurant, grand restaurant. Chacun garde son matériel et son équipe.</p>
         {[false, true].map((city) => (
           <div key={String(city)}>
