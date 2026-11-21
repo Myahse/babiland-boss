@@ -172,6 +172,7 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
   const hips = useRef<THREE.Group>(null)
   const carryW = useRef(0)
   const sitW = useRef(0)
+  const skip = useRef(0)
   const fwd = useMemo(() => new THREE.Vector3(), [])
   const side = useMemo(() => new THREE.Vector3(), [])
   const d = useMemo(() => new THREE.Vector3(), [])
@@ -194,6 +195,13 @@ export function ToonPerson({ who, moving, carrying = false, sitting = false, tra
         acts.walk.timeScale = THREE.MathUtils.clamp(v / (walkPace.current * size), 0.6, 1.9)
       }
     }
+    // someone settled (seated at a table, or standing still in the queue) doesn't change pose: their skeleton is
+    // only refreshed now and then — with a full terrace, upstairs and the air-conditioned room that's 30+ people
+    const still = speed.current < 0.05 && !carrying && ((sitting && sitW.current > 0.98) || (!sitting && sitW.current < 0.02 && idleW.current > 0.98))
+    if (still) {
+      skip.current = (skip.current + 1) % 8
+      if (skip.current !== 0) return
+    } else skip.current = 0
     mixer.update(dt)
     // standing still: blend back to the rest pose (the walk / run fade out at the same time)
     idleW.current += ((cur.current ? 0 : 1) - idleW.current) * Math.min(1, dt * 6)

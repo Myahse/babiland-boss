@@ -579,6 +579,10 @@ export function Sim({ name }: { name: string }) {
       sfx.cash()
     }
 
+    // a calm start in each new place: customers come half as often and wait longer, then the pace climbs to the
+    // normal over the first ~70 served (so someone who just started can learn the moves)
+    const calm = 0.45 + 0.55 * Math.min(1, st.served / 70)
+    const easy = 1 + (1 - calm)
     // 6. customers: arrive, line up, take their plates, pay, leave
     spawn.current -= dt
     const line = custs.current.filter((c) => c.state === 'line')
@@ -594,7 +598,7 @@ export function Sim({ name }: { name: string }) {
     if (spawn.current <= 0 && line.length < maxQueue()) {
       // key zone « zone industrielle »: more customers
       // more customers when the place is bigger and more people know you
-      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame) * F.customers * nightCustomers())
+      spawn.current = (1.6 + Math.random() * 1.6) / ((1 + bonusOf(st.current, 'customers')) * STAGES[st.stage].spawn * fameSpawn(st.fame) * F.customers * nightCustomers() * calm)
       // what they want: mostly the main dish, sometimes a particular dish that is already on the menu
       const menu = [0, ...(unlocks.plat1 ? [1] : []), ...(unlocks.plat2 ? [2] : [])]
       const r = Math.random()
@@ -742,8 +746,8 @@ export function Sim({ name }: { name: string }) {
       // the first in line loses patience if their dish never comes: they leave, the next one steps up
       if (k === 0 && atSpot && c.state === 'line') {
         c.wait += dt
-        if (c.got === 0 && c.wait > 14 * F.patience && c.wait - dt <= 14 * F.patience) say('lent', { woman: woman(c), chance: 0.7 })
-        if (c.wait > 25 * F.patience && c.got === 0) {
+        if (c.got === 0 && c.wait > 14 * F.patience * easy && c.wait - dt <= 14 * F.patience * easy) say('lent', { woman: woman(c), chance: 0.7 })
+        if (c.wait > 25 * F.patience * easy && c.got === 0) {
           c.state = 'out'
           c.moving = true
           c.path = [V(c.pos.x - 0.6, sc(1.6)), V(LANE_X, sc(1.6)), ...OUT_PATH.map((v) => v.clone())]

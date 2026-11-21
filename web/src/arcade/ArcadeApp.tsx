@@ -357,7 +357,7 @@ export default function ArcadeApp() {
         }}
       >
         {/* a phone that can't keep up: lighter graphics (no glow, no shadows, sharpness 1), so the game stays smooth */}
-        <PerformanceMonitor bounds={() => [28, 60]} flipflops={1} onDecline={() => goLow(true)} />
+        <PerformanceMonitor bounds={() => [38, 60]} flipflops={1} onDecline={() => goLow(true)} />
         <Shadows on={!low} />
         <Suspense fallback={null}>
           <DishCtx.Provider value={PLACES[current].dish}>
