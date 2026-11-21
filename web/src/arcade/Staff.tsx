@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { signTexture } from '../three/textures'
 import { fly } from './fx'
 import { has, type ItemId } from './items'
-import { CASH, STATIONS, TABLES, V } from './layout'
+import { CASH, P, STATIONS, TABLES, V } from './layout'
 import { DISHES, placeDishes, PLACES } from './places'
 import { others } from './profile'
 import { Flat } from './Props'
@@ -23,11 +23,11 @@ import { night } from './daynight'
 const SPEED = 2.1
 const TICK = 0.15
 const STATION_SLOT = [0, 0, 1, 2]
-const TV = V(3.2, -2.36)
-const SPEAKERS = [V(-1.75, -2.1), V(1.0, -2.15)]
-const FANS = [V(-5.4, 0.6), V(0.55, 3.75)]
-const FRIDGE = V(-5.45, -1.85)
-const IDLE = V(3.2, 0.9)
+const TV = P(3.2, -2.36)
+const SPEAKERS = [P(-1.75, -2.1), P(1.0, -2.15)]
+const FANS = [P(-5.4, 0.6), P(0.55, 3.75)]
+const FRIDGE = P(-5.45, -1.85)
+const IDLE = P(3.2, 0.9)
 
 type Walker = { pos: THREE.Vector3; rot: number; moving: boolean }
 
@@ -39,8 +39,8 @@ export function Staff() {
   // (redrawn when you move the tables in « Construire »)
   useArcade((s) => s.layout)
   const h = (id: ItemId) => items.includes(id)
-  const cook = useRef<Walker & { at: number; wait: number }>({ pos: V(-3.5, -0.75), rot: Math.PI, moving: false, at: 0, wait: 0 })
-  const server = useRef<Walker & { state: 'toStation' | 'toCounter'; carried: number[]; acc: number }>({ pos: V(0.5, -0.3), rot: 0, moving: false, state: 'toStation', carried: [], acc: 0 })
+  const cook = useRef<Walker & { at: number; wait: number }>({ pos: P(-3.5, -0.75), rot: Math.PI, moving: false, at: 0, wait: 0 })
+  const server = useRef<Walker & { state: 'toStation' | 'toCounter'; carried: number[]; acc: number }>({ pos: P(0.5, -0.3), rot: 0, moving: false, state: 'toStation', carried: [], acc: 0 })
   const commis = useRef<Walker>({ pos: IDLE.clone(), rot: 0, moving: false })
   const [carried, setCarried] = useState<number[]>([])
 

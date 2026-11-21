@@ -9,7 +9,7 @@ import { Moto, type MotoObj } from './Moto'
 import { TOON_READY, ToonPerson } from './ToonPerson'
 import type { PersonId } from '../three/RealPerson'
 import { camYaw, moveInput } from './input'
-import { EXIT, EXT_AISLE_X, EXT_FRONT_Z, EXT_TABLES, EXT_TABLE_SOLIDS, EXT_WALK, extPath, isExt, tableZone, COUNTER_BACK, ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
+import { sc, P, EXIT, EXT_AISLE_X, EXT_FRONT_Z, EXT_TABLES, EXT_TABLE_SOLIDS, EXT_WALK, extPath, isExt, tableZone, COUNTER_BACK, ALL_SEATS, ALL_TABLES, approach, FLOOR1, isUp, STAIR_FOOT, STAIR_IN, STAIR_SOLID, STAIR_TOP, STAIR_X, UP_BOUNDS, UP_TABLES, BIN, VITRINE, VITRINE_DROP, VITRINE_MAX, PAD_INFO, UPGRADE_INFO, CORNER_PADS, GROW_PAD, BULK_CLIENTS, BULK_EVERY, BULK_MIN_SERVED, BULK_PAY, BULK_TIME, CRATE, BOUNDS, CASH, COUNTER, ENTER, LANE_X, OUT_PATH, PADS, SLOT0, SLOT_STEP, SOLIDS, CASHIER, MOTO,  START, STATION_LEVELS, STATION_SLOT, STATIONS, TABLE_SOLIDS, TABLES, UPGRADE_PADS, UPGRADE_PRICES, V, type Unlock } from './layout'
 import { Bin, CashPile, Counter, Pad, PadHint, PlateStack, SquareTable, Station } from './Props'
 import { SideStands } from './SideStands'
 import { SIDE_SOLIDS } from './side'
@@ -86,7 +86,7 @@ const moto: MotoObj = { pos: MOTO.clone(), rot: Math.PI, visible: true }
 const MOTO_BOX = () => moto.pos.clone().add(new THREE.Vector3(0, 1.0, 0.55))
 /** the moto rides off along the side street and comes back: t 0..1 */
 function motoPath(t: number) {
-  const road = new THREE.Vector3(7.2, 0, MOTO.z)
+  const road = new THREE.Vector3(sc(7.2), 0, MOTO.z)
   if (t < 0.15) return { p: MOTO.clone().lerp(road, t / 0.15), r: Math.PI / 2, vis: true }
   if (t < 0.4) return { p: road.clone().add(new THREE.Vector3(0, 0, -((t - 0.15) / 0.25) * 18)), r: Math.PI, vis: true }
   if (t < 0.6) return { p: road.clone().add(new THREE.Vector3(0, 0, -18)), r: Math.PI, vis: false }
@@ -133,8 +133,8 @@ if (typeof window !== 'undefined') {
     { passive: true },
   )
 }
-const TERRACE_CAM = new THREE.Vector3(2.4, 10.2, 9.2)
-const TERRACE_LOOK = new THREE.Vector3(-0.5, 3.1, -3.3)
+const TERRACE_CAM = new THREE.Vector3(sc(2.4), 10.2, sc(9.2))
+const TERRACE_LOOK = new THREE.Vector3(sc(-0.5), 3.1, sc(-3.3))
 // handy for the automatic play tests (move Tantie Aya directly)
 if (import.meta.env.DEV) Object.assign(window, { arcadePlayer: player, arcadeView: view })
 
@@ -234,13 +234,13 @@ export function Sim({ name }: { name: string }) {
   const fullHint = useRef(0)
   const binT = useRef(0)
   const vitT = useRef(3)
-  const worker = useRef({ pos: V(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
+  const worker = useRef({ pos: P(-1, -0.4), rot: 0, moving: false, state: 'toStation' as 'toStation' | 'toCounter', carried: [] as number[] })
   // once the stairs are there, nothing you placed before may stand at their foot: it goes back to its first place
   const stage = s.stage
   const layout = s.layout
   useEffect(() => {
     if (stage < 2 || !layout) return
-    const foot = { x0: -5.75, x1: -4.75, z0: 1.15, z1: 2.15 }
+    const foot = { x0: STAIR_X - 0.45, x1: STAIR_X + 0.55, z0: STAIR_IN.z - 0.5, z1: STAIR_IN.z + 0.5 }
     const hit = (r: { x0: number; x1: number; z0: number; z1: number }) => r.x0 < foot.x1 && foot.x0 < r.x1 && r.z0 < foot.z1 && foot.z0 < r.z1
     // the pieces' solid part only (the room around them can be walked through)
     const solid = (x: number, z: number, hx: number, hz: number) => hit({ x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz })
@@ -380,17 +380,17 @@ export function Sim({ name }: { name: string }) {
       if (at > 0.9) player.armed = true
       if (player.armed && at < 0.6) {
         player.climb = player.floor
-          ? { pts: [STAIR_TOP.clone(), STAIR_FOOT.clone(), V(STAIR_X + 0.55, 2.2)], t: 0, to: 0 }
+          ? { pts: [STAIR_TOP.clone(), STAIR_FOOT.clone(), V(STAIR_X + 0.55, sc(2.2))], t: 0, to: 0 }
           : { pts: [STAIR_FOOT.clone(), STAIR_TOP.clone(), STAIR_TOP.clone().add(new THREE.Vector3(0.65, 0, -0.45))], t: 0, to: 1 }
         sfx.pick()
       }
-    } else if (st.stage < 2 && !stairHinted && player.pos.x < -4.6 && player.pos.z < 1.0) {
+    } else if (st.stage < 2 && !stairHinted && player.pos.x < sc(-4.6) && player.pos.z < sc(1.0)) {
       // walking along the left wall before the stairs exist: say when they come
       stairHinted = true
       popText(`L’escalier et l’étage arrivent quand ton maquis devient un Restaurant (marche sur le carré « Agrandir »)`)
     } else if (st.stage < 2 && player.floor) {
       player.floor = 0
-      player.pos.set(STAIR_X + 0.55, 0, 2.2)
+      player.pos.set(STAIR_X + 0.55, 0, sc(2.2))
     }
 
     // 3. picking up / dropping / collecting, one plate at a time
@@ -676,13 +676,13 @@ export function Sim({ name }: { name: string }) {
         const a = approach(free)
         // upstairs: to the foot of the stairs, up the steps, along the terrace to the chair
         c.path = isUp(free)
-          ? [V(c.pos.x - 0.6, 1.65), STAIR_IN.clone(), STAIR_FOOT.clone(), STAIR_TOP.clone(), a, ALL_SEATS[free].clone()]
+          ? [V(c.pos.x - 0.6, sc(1.65)), STAIR_IN.clone(), STAIR_FOOT.clone(), STAIR_TOP.clone(), a, ALL_SEATS[free].clone()]
           : isExt(free)
             ? [...aisle(EXT_FRONT_Z), ...extPath(free)]
             : [...aisle(a.z), a, ALL_SEATS[free].clone()]
       } else {
         c.state = 'out'
-        c.path = [...aisle(1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+        c.path = [...aisle(sc(1.6)), V(LANE_X, sc(1.6)), ...OUT_PATH.map((v) => v.clone())]
       }
     }
     // the VIP's order is cooked: he pays (up to 3 times the price) and goes to eat
@@ -732,7 +732,7 @@ export function Sim({ name }: { name: string }) {
         if (c.wait > VIP_PATIENCE) {
           c.state = 'out'
           c.moving = true
-          c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+          c.path = [V(c.pos.x - 0.6, sc(1.6)), V(LANE_X, sc(1.6)), ...OUT_PATH.map((v) => v.clone())]
           useVip.setState({ ready: null })
           popText(`${c.vip} en a eu marre d’attendre…`)
           bump()
@@ -746,7 +746,7 @@ export function Sim({ name }: { name: string }) {
         if (c.wait > 25 * F.patience && c.got === 0) {
           c.state = 'out'
           c.moving = true
-          c.path = [V(c.pos.x - 0.6, 1.6), V(LANE_X, 1.6), ...OUT_PATH.map((v) => v.clone())]
+          c.path = [V(c.pos.x - 0.6, sc(1.6)), V(LANE_X, sc(1.6)), ...OUT_PATH.map((v) => v.clone())]
           popText(`Trop long… le client est parti`)
           say('part', { woman: woman(c), important: true })
           bump()
@@ -932,7 +932,7 @@ export function Sim({ name }: { name: string }) {
         // they leave a tip on the table
         tableCash[Math.floor(c.seat / 2)] += Math.round(100 * c.want * F.tips * (c.tip ?? 1))
         const a = approach(c.seat)
-        c.path = isExt(c.seat) ? [a, V(EXT_AISLE_X, a.z), V(EXT_AISLE_X, 5.6), EXIT.clone()] : isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, 1.65), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
+        c.path = isExt(c.seat) ? [a, V(EXT_AISLE_X, a.z), V(EXT_AISLE_X, sc(5.6)), EXIT.clone()] : isUp(c.seat) ? [a, STAIR_TOP.clone(), STAIR_FOOT.clone(), STAIR_IN.clone(), V(LANE_X, sc(1.65)), ...OUT_PATH.map((v) => v.clone())] : [a, V(LANE_X, a.z), ...OUT_PATH.map((v) => v.clone())]
         changed = true
         bump()
       }
@@ -1309,7 +1309,8 @@ function Follow() {
     const follow = out ? 0.9 : 0.7
     // in the extension (left of the side wall) the camera follows you fully, or you would leave the screen
     const px = player.pos.x
-    const tx = px < -6 ? -6 * follow + (px + 6) : px * follow
+    const edge = sc(-6)
+    const tx = px < edge ? edge * follow + (px - edge) : px * follow
     const t = new THREE.Vector3(tx, player.pos.y * 0.85, player.pos.z * follow)
     camera.position.lerp(t.clone().add(new THREE.Vector3(6.2 * far, 9.5 * far, 6.2 * far)), k)
     look.lerp(t, k)

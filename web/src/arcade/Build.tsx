@@ -5,8 +5,8 @@ import { useFrame, useThree, type ThreeEvent, type ThreeElements } from '@react-
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { create } from 'zustand'
-import { canPlace, DECOR, DEFAULT_LAYOUT, rectOf, snap, type Decor, type DecorKind, type Layout, type Piece } from './furniture'
-import { BIN, COUNTER, STATIONS, TABLES, type Unlock } from './layout'
+import { canPlace, PLOT, DECOR, DEFAULT_LAYOUT, rectOf, snap, type Decor, type DecorKind, type Layout, type Piece } from './furniture'
+import { sc, BIN, COUNTER, STATIONS, TABLES, type Unlock } from './layout'
 import { Flat, Palm } from './Props'
 import { Lamp, PottedPlant } from './StreetDecor'
 import { patternTexture, tier } from './looks'
@@ -151,7 +151,7 @@ export function BuildEditor() {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
       {/* the grid of the plot */}
-      <gridHelper args={[10.5, 42, '#ffffff', '#ffffff']} position={[-0.25, 0.03, 1.05]} scale={[1, 1, 6.1 / 10.5]} material-transparent material-opacity={0.25} />
+      <gridHelper args={[PLOT.x1 - PLOT.x0, Math.round((PLOT.x1 - PLOT.x0) * 4), '#ffffff', '#ffffff']} position={[(PLOT.x0 + PLOT.x1) / 2, 0.03, (PLOT.z0 + PLOT.z1) / 2]} scale={[1, 1, (PLOT.z1 - PLOT.z0) / (PLOT.x1 - PLOT.x0)]} material-transparent material-opacity={0.25} />
       {/* a touch area on each piece */}
       {all.map((o) => {
         const r = rectOf(o.p, o.x, o.z, o.kind ? DECOR[o.kind].size : 0.35)
@@ -547,7 +547,7 @@ export function BuildButton() {
       color="#5f3dc4"
       onClick={() => {
         useArcade.setState({ building: true })
-        useBuild.setState({ sel: null, target: new THREE.Vector3(-0.5, 0, 1) })
+        useBuild.setState({ sel: null, target: new THREE.Vector3(sc(-0.5), 0, sc(1)) })
       }}
     />
   )

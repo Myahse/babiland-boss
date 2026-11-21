@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { signTexture } from '../three/textures'
 import { Flat, Palm } from './Props'
 import { floorTexture, tier } from './looks'
-import { EXT } from './layout'
+import { EXT, EXT_AISLE_X } from './layout'
 
 // The extension of the « Grand restaurant »: an air-conditioned room built on the empty lot left of the maquis,
 // past its side wall. The back and the far side are walls (with the air conditioners and the big sign), the front
@@ -147,8 +147,8 @@ export function Extension({ stage, room }: { stage: number; room: number }) {
         <Flat color={t.trim} />
       </mesh>
       {/* the red carpet from the opening to the tables */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-6.95, 0.025, 1.3]}>
-        <planeGeometry args={[0.7, 5.6]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[EXT_AISLE_X, 0.025, CZ]}>
+        <planeGeometry args={[0.7, D - 0.4]} />
         <Flat color="#c92a2a" />
       </mesh>
       {/* plants in the corners */}

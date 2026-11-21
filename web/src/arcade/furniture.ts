@@ -1,4 +1,4 @@
-import { BIN, CASH, CASHIER, COUNTER, COUNTER_BACK, PADS, SEATS, SLOT0, STATIONS, TABLES, UPGRADE_PADS } from './layout'
+import { sc, BIN, CASH, CASHIER, COUNTER, COUNTER_BACK, PADS, SEATS, SLOT0, STATIONS, TABLES, UPGRADE_PADS } from './layout'
 import type { IconName } from './Icons'
 
 // Your own design of the maquis (« Construire »): where the stoves, the counter, the tables and the bin stand, and
@@ -39,9 +39,9 @@ export function applyLayout(L: Layout | null | undefined) {
 // ------------------------------------------------------------------ room taken on the floor
 export type Rect = { x0: number; x1: number; z0: number; z1: number }
 /** the plot of the maquis, where pieces can go */
-export const PLOT: Rect = { x0: -5.5, x1: 5.0, z0: -2.0, z1: 4.1 }
+export const PLOT: Rect = { x0: sc(-5.5), x1: sc(5.0), z0: sc(-2.0), z1: sc(4.1) }
 /** the stairs (from the restaurant on) */
-export const STAIRS_RECT: Rect = { x0: -5.7, x1: -4.9, z0: -2.0, z1: 1.95 }
+export const STAIRS_RECT: Rect = { x0: sc(-5.3) - 0.4, x1: sc(-5.3) + 0.4, z0: sc(-2.0), z1: sc(1.95) }
 
 /** the floor a piece takes at (x, z), with the room people need around it (the tray of a stove, the queue…) */
 export function rectOf(p: Piece, x: number, z: number, decorSize = 0.35): Rect {

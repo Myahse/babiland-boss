@@ -4,7 +4,6 @@ import { useMemo } from 'react'
 import { Flat, Palm } from './Props'
 import { floorTexture, tier } from './looks'
 import { laterite } from './StreetDecor'
-import { DayNight } from './daynight'
 import { Extension } from './Extension'
 
 // The street around the shop, kept simple and bright so the gameplay reads at a glance.
@@ -22,8 +21,6 @@ export function ArcadeWorld({ stage = 1, room = 3 }: { stage?: number; room?: nu
   const ground = useMemo(() => laterite([10, 7]), [])
   return (
     <>
-      {/* the sky, the sun or the moon, the fog: they follow the hour of the game (daynight.tsx) */}
-      <DayNight />
       {/* laterite all around, the shop's own paved plot, the street behind */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[60, 40]} />

@@ -1,7 +1,7 @@
 import type { Decor, Layout } from './furniture'
 import { FRESH_STYLE, grownStyle, normStyle, type Style } from './styles'
 import { create } from 'zustand'
-import { PADS, type Unlock } from './layout'
+import { PADS, S, type Unlock } from './layout'
 import { PLACES, type PlaceId } from './places'
 import { FAME_AT, fameLevel, fameNews, STAGES } from './growth'
 
@@ -39,6 +39,8 @@ type PlaceState = {
   /** your own design (furniture.ts): where the pieces stand (null: as the game puts them), your decorations */
   layout: Layout | null
   decor: Decor[]
+  /** the layout and decorations are in the wider maquis' coordinates (layout.ts S) */
+  wide?: boolean
 }
 
 type Arcade = PlaceState & {
@@ -66,7 +68,7 @@ type Arcade = PlaceState & {
   bulk: { name: string; dish: number; want: number; got: number; left: number; time: number } | null
 }
 
-const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE }, vitrine: 0, layout: null, decor: [] })
+const fresh = (): PlaceState => ({ served: 0, unlocks: {}, paid: {}, level: [1, 1, 1, 1], upPaid: [0, 0, 0, 0], station: [0, 0, 0, 0], counter: [0, 0, 0], cash: 0, tableCash: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], side: [0, 0, 0], sidePaid: [0, 0, 0], sideCash: [0, 0, 0], stage: 0, fame: 0, growPaid: 0, items: [], style: { ...FRESH_STYLE }, vitrine: 0, layout: null, decor: [], wide: true })
 /** saved games from before the particular dishes: make every list the right length */
 function norm(p: Partial<PlaceState> = {}): PlaceState {
   const f = fresh()
@@ -74,9 +76,20 @@ function norm(p: Partial<PlaceState> = {}): PlaceState {
   // saves from before the growth stages: a place you already worked in is a maquis, and people know you a bit
   const old = p.stage === undefined && ((p.served ?? 0) > 0 || Object.keys(p.unlocks ?? {}).length > 0)
   if (old) p = { ...p, stage: 1, fame: Math.max(FAME_AT[1], p.served ?? 0) }
+  // saves from before the wider maquis: what you placed yourself moves out with the rest
+  if (!p.wide) {
+    const w = (xz: [number, number]): [number, number] => [xz[0] * S, xz[1] * S]
+    const L = p.layout && Array.isArray(p.layout.st) ? p.layout : null
+    p = {
+      ...p,
+      wide: true,
+      layout: L ? { st: L.st.map(w), counter: w(L.counter), tables: L.tables.map(w), bin: w(L.bin) } : null,
+      decor: Array.isArray(p.decor) ? p.decor.map((d) => ({ ...d, x: d.x * S, z: d.z * S })) : [],
+    }
+  }
   return { ...f, ...p, decor: Array.isArray(p.decor) ? p.decor : [], layout: p.layout && Array.isArray(p.layout.st) ? p.layout : null, items: Array.isArray(p.items) ? p.items : [], style: p.style ? normStyle(p.style) : grownStyle(p.stage ?? 0), level: fit(p.level, f.level), upPaid: fit(p.upPaid, f.upPaid), station: fit(p.station, f.station), counter: typeof p.counter === 'number' ? [p.counter, 0, 0] : fit(p.counter, f.counter), tableCash: fit(p.tableCash, f.tableCash), side: fit(p.side, f.side), sidePaid: fit(p.sidePaid, f.sidePaid), sideCash: fit(p.sideCash, f.sideCash) }
 }
-const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items, style: s.style, vitrine: s.vitrine, layout: s.layout, decor: s.decor })
+const pick = (s: Arcade): PlaceState => ({ served: s.served, unlocks: s.unlocks, paid: s.paid, level: s.level, upPaid: s.upPaid, station: s.station, counter: s.counter, cash: s.cash, tableCash: s.tableCash, side: s.side, sidePaid: s.sidePaid, sideCash: s.sideCash, stage: s.stage, fame: s.fame, growPaid: s.growPaid, items: s.items, style: s.style, vitrine: s.vitrine, layout: s.layout, decor: s.decor, wide: true })
 
 const KEY = 'babiland-arcade-v2'
 function load(): Partial<Arcade> {

@@ -50,7 +50,8 @@ const mix = (out: THREE.Color, a: string, b: string, t: number) => out.copy(ca.s
 export const glowing: { lamps: THREE.MeshStandardMaterial[] } = { lamps: [] }
 
 /** In the shop's scene: the lights, the sky, the fog, following the hour. */
-export function DayNight() {
+/** `k`: how much wider the place is than drawn (the maquis: layout.ts S), for the shadows' reach and the lamps */
+export function DayNight({ k = 1 }: { k?: number }) {
   const sun = useRef<THREE.DirectionalLight>(null)
   const hemi = useRef<THREE.HemisphereLight>(null)
   const lampA = useRef<THREE.PointLight>(null)
@@ -96,19 +97,19 @@ export function DayNight() {
       <directionalLight
         ref={sun}
         castShadow
-        position={[7, 9, 3]}
+        position={[7 * k, 9, 3 * k]}
         intensity={2.7}
         color="#fff0d6"
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
+        shadow-camera-left={-10 * k}
+        shadow-camera-right={10 * k}
+        shadow-camera-top={10 * k}
+        shadow-camera-bottom={-10 * k}
         shadow-bias={-0.0004}
         shadow-radius={3}
       />
-      <pointLight ref={lampA} position={[1.6, 2.6, 0.2]} color="#ffb45a" intensity={0} distance={9} decay={1.6} />
-      <pointLight ref={lampB} position={[-2.7, 2.4, 2.9]} color="#ffc078" intensity={0} distance={8} decay={1.6} />
+      <pointLight ref={lampA} position={[1.6 * k, 2.6, 0.2 * k]} color="#ffb45a" intensity={0} distance={9} decay={1.6} />
+      <pointLight ref={lampB} position={[-2.7 * k, 2.4, 2.9 * k]} color="#ffc078" intensity={0} distance={8} decay={1.6} />
     </>
   )
 }

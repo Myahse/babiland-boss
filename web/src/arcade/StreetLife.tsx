@@ -7,6 +7,7 @@ import { glowing } from './daynight'
 import { others } from './profile'
 import { Flat } from './Props'
 import { ToonPerson } from './ToonPerson'
+import { S } from './layout'
 
 // Life in the street around the maquis: motos and scooters riding by on both roads (a rider, sometimes a
 // passenger, the headlight on at night), and people walking on the far pavements — some women with a basin on
@@ -16,11 +17,13 @@ import { ToonPerson } from './ToonPerson'
 /** A straight lane: from `a` to `b`, then again from `a` (the ends are out of sight). */
 export type Lane = { a: THREE.Vector3; b: THREE.Vector3 }
 export const lane = (ax: number, az: number, bx: number, bz: number): Lane => ({ a: new THREE.Vector3(ax, 0, az), b: new THREE.Vector3(bx, 0, bz) })
+/** a lane around the maquis, in the plan's metres (the streets are stretched to the wider maquis, layout.ts S) */
+const mlane = (ax: number, az: number, bx: number, bz: number) => lane(ax * S, az * S, bx * S, bz * S)
 
 // the front road runs along x (z 5.2..8.0, the taxis at z 6.2 going +x); the side road along z (x 6.4..9.2, taxis at x 7.6)
-const MOTO_LANES = [lane(18, 7.15, -18, 7.15), lane(-18, 7.65, 18, 7.65), lane(8.45, -16, 8.45, 16), lane(9.0, 16, 9.0, -16)]
+const MOTO_LANES = [mlane(18, 7.15, -18, 7.15), mlane(-18, 7.65, 18, 7.65), mlane(8.45, -16, 8.45, 16), mlane(9.0, 16, 9.0, -16)]
 // on the edge of the road on the maquis side (where people walk in Abidjan), and the far pavement of the side street
-const WALK_LANES = [lane(-18, 5.5, 18, 5.5), lane(18, 5.62, -18, 5.62), lane(9.75, 14, 9.75, -16), lane(10.1, -16, 10.1, 14)]
+const WALK_LANES = [mlane(-18, 5.5, 18, 5.5), mlane(18, 5.62, -18, 5.62), mlane(9.75, 14, 9.75, -16), mlane(10.1, -16, 10.1, 14)]
 
 const headlight = new THREE.MeshStandardMaterial({ color: '#fff9db', emissive: '#ffe066', emissiveIntensity: 1 })
 glowing.lamps.push(headlight)

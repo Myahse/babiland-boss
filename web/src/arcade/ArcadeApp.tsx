@@ -1,7 +1,10 @@
 import { preloadMap } from './RealMap'
 import { useTurf } from './turf'
+import { S } from './layout'
 import { Suspense, useEffect, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
+import { PerformanceMonitor } from '@react-three/drei'
+import * as THREE from 'three'
 import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, SMAA, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { useGame } from '../store'
@@ -10,7 +13,7 @@ import { Sim } from './Sim'
 import { Building, GrandDecor, Streets } from './Shop'
 import { StreetDecor } from './StreetDecor'
 import { StreetLife } from './StreetLife'
-import { GameClock } from './daynight'
+import { DayNight, GameClock } from './daynight'
 import { stick } from './input'
 import { BuildButton, BuildHud } from './Build'
 import { buy, goTo, popText, totalServed, useArcade } from './store'
@@ -273,6 +276,29 @@ function Hud({ street }: { street: boolean }) {
 
 // Screen sharpness: on a phone (high pixel density) the 3D and its effects at full density need a lot of graphics
 // memory; 1.5 looks the same on a small screen and uses about half.
+/** lighter graphics, decided once on this phone (it stays light next time) */
+const lowGfx = () => {
+  try {
+    return localStorage.getItem('babiland-lowgfx') === '1'
+  } catch {
+    return false
+  }
+}
+/** switch the shadows off and on without recreating the 3D scene */
+function Shadows({ on }: { on: boolean }) {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  useEffect(() => {
+    if (gl.shadowMap.enabled === on) return
+    gl.shadowMap.enabled = on
+    // the materials must be rebuilt to take it into account
+    scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined
+      if (m) (Array.isArray(m) ? m : [m]).forEach((x) => (x.needsUpdate = true))
+    })
+  }, [on, gl, scene])
+  return null
+}
 const PHONE_DPR: [number, number] = [1, typeof window !== 'undefined' && window.devicePixelRatio > 2 && 'ontouchstart' in window ? 1.5 : 2]
 
 export default function ArcadeApp() {
@@ -296,6 +322,16 @@ export default function ArcadeApp() {
   const street = phase !== 'title' && view === 'quartier'
   const building = useArcade((s) => s.building)
   const [lost, setLost] = useState(false)
+  const [low, setLow] = useState(lowGfx)
+  const goLow = (v: boolean) => {
+    if (!v || low) return
+    setLow(true)
+    try {
+      localStorage.setItem('babiland-lowgfx', '1')
+    } catch {
+      /* private mode */
+    }
+  }
   return (
     <div className="relative h-full w-full">
       {lost && (
@@ -309,7 +345,7 @@ export default function ArcadeApp() {
       )}
       <Canvas
         shadows
-        dpr={PHONE_DPR}
+        dpr={low ? 1 : PHONE_DPR}
         camera={{ fov: 34, near: 0.1, far: 140, position: [6, 10, 6] }}
         onCreated={({ gl }) => {
           // if the phone runs out of graphics memory anyway, say so and offer to restart, instead of a blank screen
@@ -320,23 +356,32 @@ export default function ArcadeApp() {
           gl.domElement.addEventListener('webglcontextrestored', () => setLost(false))
         }}
       >
+        {/* a phone that can't keep up: lighter graphics (no glow, no shadows, sharpness 1), so the game stays smooth */}
+        <PerformanceMonitor bounds={() => [28, 60]} flipflops={1} onDecline={() => goLow(true)} />
+        <Shadows on={!low} />
         <Suspense fallback={null}>
           <DishCtx.Provider value={PLACES[current].dish}>
             {street ? (
               <Quartier key={`q-${current}`} onSpot={setSpot} />
             ) : (
               <>
-                <ArcadeWorld stage={stage} room={style.room} />
-                <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} look={style.facade} live={phase !== 'title'} />
-                {stage >= 3 && <GrandDecor />}
-                <Streets />
-                <StreetDecor />
+                {/* the sky, the sun or the moon, the fog: they follow the hour of the game (daynight.tsx) */}
+                <DayNight k={S} />
+                {/* the ground, the walls, the building and the streets, stretched to the wider maquis (layout.ts S) */}
+                <group scale={[S, 1, S]}>
+                  <ArcadeWorld stage={stage} room={style.room} />
+                  <Building name={name || 'Boss'} place={PLACES[current]} stage={stage} look={style.facade} live={phase !== 'title'} />
+                  {stage >= 3 && <GrandDecor />}
+                  <Streets />
+                  <StreetDecor />
+                </group>
                 <StreetLife />
                 {phase !== 'title' && <Sim key={current} name={name} />}
               </>
             )}
           </DishCtx.Provider>
           {/* the look: lights that glow (bulbs, signs), colours a little warmer and livelier, the edges a little darker */}
+          {!low && (
           <EffectComposer multisampling={0}>
             <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.2} intensity={0.55} radius={0.6} />
             <HueSaturation saturation={0.12} />
@@ -345,6 +390,7 @@ export default function ArcadeApp() {
             <Vignette offset={0.32} darkness={0.42} />
             <SMAA />
           </EffectComposer>
+          )}
         </Suspense>
       </Canvas>
       {phase === 'title' ? (

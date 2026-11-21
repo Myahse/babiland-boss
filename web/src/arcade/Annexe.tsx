@@ -3,7 +3,7 @@ import { useFrame, type ThreeElements } from '@react-three/fiber'
 import { Html, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { signTexture } from '../three/textures'
-import { HUB, KITCHEN, PARK_SPOTS, VITRINE, VITRINE_DROP, VITRINE_MAX } from './layout'
+import { HUB, KITCHEN, PARK_SPOTS, VITRINE, VITRINE_DROP, VITRINE_MAX, S, sc } from './layout'
 import { has } from './items'
 import { Flat, PlateStack } from './Props'
 import { asphalt } from './StreetDecor'
@@ -26,10 +26,12 @@ export function Zones({ player }: { player: { pos: THREE.Vector3 } }) {
   return (
     <>
       {on('cuisine') && <Kitchen />}
-      <AnnexLot />
+      <group scale={[S, 1, S]}>
+        <AnnexLot />
+      </group>
       {on('vitrine') ? <Vitrine player={player} /> : stage >= 1 && <ForSale at={VITRINE} w={2.2} d={1.6} label="VITRINE" />}
       {on('livraison') ? <DeliveryHub /> : stage >= 1 && <ForSale at={HUB} w={2.6} d={1.8} label="LIVRAISON" />}
-      {on('parking') ? <Parking key={place} /> : stage >= 1 && <ForSale at={new THREE.Vector3(15, 0, 1.3)} w={2.8} d={6.6} label="PARKING" />}
+      {on('parking') ? <Parking key={place} /> : stage >= 1 && <ForSale at={new THREE.Vector3(sc(15), 0, sc(1.3))} w={sc(2.8)} d={sc(6.6)} label="PARKING" />}
     </>
   )
 }
@@ -291,7 +293,7 @@ function Parking() {
     spots.current.forEach((s, i) => {
       const g = cars.current[i]
       const p = PARK_SPOTS[i]
-      const road = new THREE.Vector3(p.x - 1.2, 0, 6.6)
+      const road = new THREE.Vector3(p.x - 1.2, 0, sc(6.6))
       s.t += dt
       if (s.state === 'empty' && s.t > s.wait) {
         s.state = 'in'
@@ -326,12 +328,12 @@ function Parking() {
   return (
     <group>
       {lines.map((z) => (
-        <mesh key={z} rotation={[-Math.PI / 2, 0, 0]} position={[15.2, 0.02, z]}>
+        <mesh key={z} rotation={[-Math.PI / 2, 0, 0]} position={[PARK_SPOTS[0].x + 0.2, 0.02, z]}>
           <planeGeometry args={[2.2, 0.08]} />
           <meshBasicMaterial color="#f8f9fa" />
         </mesh>
       ))}
-      <group position={[16.4, 0, -2.4]}>
+      <group position={[sc(16.4), 0, sc(-2.4)]}>
         <mesh position={[0, 1.2, 0]}>
           <cylinderGeometry args={[0.05, 0.05, 2.4, 6]} />
           <Flat color="#868e96" />
