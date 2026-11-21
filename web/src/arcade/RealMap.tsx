@@ -92,7 +92,10 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
           lib.current = mb as never
           mapbox = true
           const ok = await new Promise<boolean>((res) => {
-            const t = setTimeout(() => res(false), 7000)
+            // Mapbox has answered as soon as its style is there (the tiles can take longer on a slow connection):
+            // only a refused key, or nothing at all for 15 s, sends us to the free map
+            const t = setTimeout(() => res(false), 15000)
+            m.on('style.load', () => (clearTimeout(t), res(true)))
             m.on('load', () => (clearTimeout(t), res(true)))
             m.on('error', (e: unknown) => {
               const st = (e as { error?: { status?: number } })?.error?.status
@@ -113,8 +116,9 @@ export function RealMap({ place, owners, selected, onPick }: { place: PlaceId; o
       } else m = await free()
       if (gone) return m.remove()
       map.current = m
-      const loaded = (m as unknown as { loaded?: () => boolean }).loaded?.() && mapbox
-      const onLoad = (fn: () => void) => (loaded ? fn() : m.on('load', fn))
+      // (with Mapbox the style may be there before everything is loaded: add our layers as soon as it is)
+      const styled = mapbox && (m as unknown as { isStyleLoaded?: () => boolean }).isStyleLoaded?.()
+      const onLoad = (fn: () => void) => (styled ? fn() : m.on('load', fn))
       onLoad(() => {
         m.addSource('districts', { type: 'geojson', data: geo })
         // real buildings in relief (OpenFreeMap: « openmaptiles », Mapbox streets: « composite »)
