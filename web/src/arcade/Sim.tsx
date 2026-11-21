@@ -94,7 +94,45 @@ function motoPath(t: number) {
   return { p: road.clone().lerp(MOTO, (t - 0.85) / 0.15), r: -Math.PI / 2, vis: true }
 }
 /** camera distance (1 = normal); a « zoom out » button could change it */
-export const view = { zoom: 1 }
+/** how close the camera is (1 = the usual; smaller = closer): pinch with two fingers or the mouse wheel; remembered */
+export const view = {
+  zoom: (() => {
+    try {
+      const z = Number(localStorage.getItem('babiland-zoom'))
+      return z >= 0.55 && z <= 1.5 ? z : 1
+    } catch {
+      return 1
+    }
+  })(),
+}
+const setZoom = (z: number) => {
+  view.zoom = THREE.MathUtils.clamp(z, 0.55, 1.5)
+  try {
+    localStorage.setItem('babiland-zoom', view.zoom.toFixed(2))
+  } catch {
+    /* private mode */
+  }
+}
+// not while scrolling a panel (a list, a card) or on the map
+const inPanel = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('.card, .overflow-y-auto, .overflow-auto, .mapboxgl-map, .maplibregl-map')
+if (typeof window !== 'undefined') {
+  // the mouse wheel (computer)
+  window.addEventListener('wheel', (e) => !inPanel(e.target) && setZoom(view.zoom * (e.deltaY > 0 ? 1.08 : 1 / 1.08)), { passive: true })
+  // two fingers apart / together (phone)
+  let pinch = 0
+  const gap = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+  window.addEventListener('touchstart', (e) => (pinch = e.touches.length === 2 && !inPanel(e.target) ? gap(e.touches) : 0), { passive: true })
+  window.addEventListener(
+    'touchmove',
+    (e) => {
+      if (e.touches.length !== 2 || !pinch) return
+      const g = gap(e.touches)
+      setZoom(view.zoom * (pinch / g))
+      pinch = g
+    },
+    { passive: true },
+  )
+}
 const TERRACE_CAM = new THREE.Vector3(2.4, 10.2, 9.2)
 const TERRACE_LOOK = new THREE.Vector3(-0.5, 3.1, -3.3)
 // handy for the automatic play tests (move Tantie Aya directly)
@@ -1267,7 +1305,7 @@ function Follow() {
     // seen from a corner, high up: the shop looks like a diamond, like in the shop games. « Dehors »: further back
     // and following you more, to see the street, the annexe across the side street, the parking
     const out = cam === 'dehors'
-    const far = (size.width < size.height ? 1.85 : 1.2) * view.zoom * (out ? 1.65 : 1)
+    const far = (size.width < size.height ? 1.55 : 1.0) * view.zoom * (out ? 1.65 : 1)
     const follow = out ? 0.9 : 0.7
     // in the extension (left of the side wall) the camera follows you fully, or you would leave the screen
     const px = player.pos.x
